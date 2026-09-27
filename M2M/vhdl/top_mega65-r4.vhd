@@ -507,25 +507,9 @@ begin
    led_g_n_o             <= '1'; -- Off
    led_r_n_o             <= '1'; -- Off
    led_o                 <= '0'; -- Off
-   p1lo_io               <= (others => 'Z');
-   p1hi_io               <= (others => 'Z');
-   p2lo_io               <= (others => 'Z');
-   p2hi_io               <= (others => 'Z');
-   pmod1_en_o            <= '0';
-   pmod2_en_o            <= '0';
    qspidb_io             <= (others => 'Z');
    qspicsn_o             <= '1';
-   sdram_clk_o           <= '0';
-   sdram_cke_o           <= '0';
-   sdram_ras_n_o         <= '1';
-   sdram_cas_n_o         <= '1';
-   sdram_we_n_o          <= '1';
-   sdram_cs_n_o          <= '1';
-   sdram_ba_o            <= (others => '0');
-   sdram_a_o             <= (others => '0');
-   sdram_dqml_o          <= '0';
-   sdram_dqmh_o          <= '0';
-   sdram_dq_io           <= (others => 'Z');
+   -- Atari ST for MEGA65: the SDRAM and the PMOD headers are driven by the core (see CORE port map below)
 
 
    -----------------------------------------------------------------------------------------
@@ -723,7 +707,7 @@ begin
          clk_i                   => clk_i,
 
          -- Share clock and reset with the framework
-         main_clk_o              => main_clk,            -- CORE's 54 MHz clock
+         main_clk_o              => main_clk,            -- CORE's main clock
          main_rst_o              => main_rst,            -- CORE's reset, synchronized
 
          --------------------------------------------------------------------------------------------------------
@@ -922,7 +906,28 @@ begin
          --
          cart_addr_oe_o    => cart_addr_oe, -- 0 : tristate (i.e. input), 1 : output
          cart_a_i          => cart_a_in,
-         cart_a_o          => cart_a_out
+         cart_a_o          => cart_a_out,
+
+         -- Atari ST for MEGA65: SDRAM
+         sdram_clk_o             => sdram_clk_o,
+         sdram_cke_o             => sdram_cke_o,
+         sdram_ras_n_o           => sdram_ras_n_o,
+         sdram_cas_n_o           => sdram_cas_n_o,
+         sdram_we_n_o            => sdram_we_n_o,
+         sdram_cs_n_o            => sdram_cs_n_o,
+         sdram_ba_o              => sdram_ba_o,
+         sdram_a_o               => sdram_a_o,
+         sdram_dqml_o            => sdram_dqml_o,
+         sdram_dqmh_o            => sdram_dqmh_o,
+         sdram_dq_io             => sdram_dq_io,
+
+         -- Atari ST for MEGA65: PMOD headers (serial port, MIDI, parallel port)
+         p1lo_io                 => p1lo_io,
+         p1hi_io                 => p1hi_io,
+         p2lo_io                 => p2lo_io,
+         p2hi_io                 => p2hi_io,
+         pmod1_en_o              => pmod1_en_o,
+         pmod2_en_o              => pmod2_en_o
       ); -- CORE
 
 end architecture synthesis;

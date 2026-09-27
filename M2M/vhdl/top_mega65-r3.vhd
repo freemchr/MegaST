@@ -368,6 +368,11 @@ architecture synthesis of mega65_r3 is
    signal i2c_sda                : std_logic := 'H';
    signal i2c_scl                : std_logic := 'H';
 
+
+   -- Atari ST for MEGA65: dummy SDRAM data bus (the R3/R3A board has no SDRAM)
+   signal r3_dummy_sdram_dq      : std_logic_vector(15 downto 0);
+   signal r3_dummy_pmod          : std_logic_vector(15 downto 0);
+
 begin
 
    -----------------------------------------------------------------------------------------
@@ -874,7 +879,26 @@ begin
          --
          cart_addr_oe_o    => cart_addr_oe, -- 0 : tristate (i.e. input), 1 : output
          cart_a_i          => cart_a_in,
-         cart_a_o          => cart_a_out
+         cart_a_o          => cart_a_out,
+
+         -- Atari ST for MEGA65: The R3/R3A board has no SDRAM, the core does not work on R3/R3A
+         sdram_clk_o       => open,
+         sdram_cke_o       => open,
+         sdram_ras_n_o     => open,
+         sdram_cas_n_o     => open,
+         sdram_we_n_o      => open,
+         sdram_cs_n_o      => open,
+         sdram_ba_o        => open,
+         sdram_a_o         => open,
+         sdram_dqml_o      => open,
+         sdram_dqmh_o      => open,
+         sdram_dq_io       => r3_dummy_sdram_dq,
+         p1lo_io           => r3_dummy_pmod(3 downto 0),
+         p1hi_io           => r3_dummy_pmod(7 downto 4),
+         p2lo_io           => r3_dummy_pmod(11 downto 8),
+         p2hi_io           => r3_dummy_pmod(15 downto 12),
+         pmod1_en_o        => open,
+         pmod2_en_o        => open
       ); -- CORE
 
 end architecture synthesis;

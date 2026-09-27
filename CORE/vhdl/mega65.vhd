@@ -1,9 +1,10 @@
 ----------------------------------------------------------------------------------
--- MiSTer2MEGA65 Framework
+-- Atari ST/STe for MEGA65
 --
 -- MEGA65 main file that contains the whole machine
 --
 -- MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
+-- Atari ST port 2026, licensed under GPL v3
 ----------------------------------------------------------------------------------
 
 library ieee;
@@ -14,6 +15,7 @@ library work;
 use work.globals.all;
 use work.types_pkg.all;
 use work.video_modes_pkg.all;
+use work.vdrives_pkg.all;
 
 library xpm;
 use xpm.vcomponents.all;
@@ -104,7 +106,7 @@ port (
    clk_i                   : in  std_logic;              -- 100 MHz clock
 
    -- Share clock and reset with the framework
-   main_clk_o              : out std_logic;              -- CORE's 54 MHz clock
+   main_clk_o              : out std_logic;              -- CORE's 32.083 MHz clock
    main_rst_o              : out std_logic;              -- CORE's reset, synchronized
 
    -- M2M's reset manager provides 2 signals:
@@ -214,7 +216,28 @@ port (
    cart_a_o                : out unsigned(15 downto 0);
    cart_data_oe_o          : out std_logic; -- 0 : tristate (i.e. input), 1 : output
    cart_d_i                : in  unsigned( 7 downto 0);
-   cart_d_o                : out unsigned( 7 downto 0)
+   cart_d_o                : out unsigned( 7 downto 0);
+
+   -- SDRAM (MEGA65 R4/R5/R6): 32M x 16 bit, IS42S16320F
+   sdram_clk_o             : out   std_logic;
+   sdram_cke_o             : out   std_logic;
+   sdram_ras_n_o           : out   std_logic;
+   sdram_cas_n_o           : out   std_logic;
+   sdram_we_n_o            : out   std_logic;
+   sdram_cs_n_o            : out   std_logic;
+   sdram_ba_o              : out   std_logic_vector(1 downto 0);
+   sdram_a_o               : out   std_logic_vector(12 downto 0);
+   sdram_dqml_o            : out   std_logic;
+   sdram_dqmh_o            : out   std_logic;
+   sdram_dq_io             : inout std_logic_vector(15 downto 0);
+
+   -- PMOD headers: serial port, MIDI and parallel port (see main.vhd)
+   p1lo_io                 : inout std_logic_vector(3 downto 0);
+   p1hi_io                 : inout std_logic_vector(3 downto 0);
+   p2lo_io                 : inout std_logic_vector(3 downto 0);
+   p2hi_io                 : inout std_logic_vector(3 downto 0);
+   pmod1_en_o              : out   std_logic;
+   pmod2_en_o              : out   std_logic
 );
 end entity MEGA65_Core;
 
@@ -224,46 +247,137 @@ architecture synthesis of MEGA65_Core is
 -- Clocks and active high reset signals for each clock domain
 ---------------------------------------------------------------------------------------------
 
-signal main_clk               : std_logic;               -- Core main clock
+signal main_clk               : std_logic;               -- Core main clock (32.083 MHz)
 signal main_rst               : std_logic;
+signal sdram_clk              : std_logic;               -- SDRAM clock (96.25 MHz)
+signal ikbd_clk               : std_logic;               -- IKBD clock (2.005 MHz)
+
+---------------------------------------------------------------------------------------------
+-- On-Screen-Menu (OSM) items: must match the positions of the items in config.vhd
+---------------------------------------------------------------------------------------------
+
+constant C_MENU_ST            : natural := 11;
+constant C_MENU_STE           : natural := 12;
+constant C_MENU_MSTE          : natural := 13;
+constant C_MENU_STEROIDS      : natural := 14;
+constant C_MENU_MEM_512K      : natural := 20;
+constant C_MENU_MEM_1M        : natural := 21;
+constant C_MENU_MEM_2M        : natural := 22;
+constant C_MENU_MEM_4M        : natural := 23;
+constant C_MENU_MEM_8M        : natural := 24;
+constant C_MENU_MEM_14M       : natural := 25;
+constant C_MENU_BLITTER       : natural := 31;
+constant C_MENU_MONO          : natural := 32;
+constant C_MENU_VIKING        : natural := 33;
+constant C_MENU_STEREO        : natural := 34;
+constant C_MENU_WPROT         : natural := 35;
+constant C_MENU_JOYSWAP       : natural := 41;
+constant C_MENU_STEPADS       : natural := 42;
+constant C_MENU_MOUSE1351     : natural := 43;
+constant C_MENU_PMOD          : natural := 44;
+constant C_MENU_HDMI_16_9_50  : natural := 51;
+constant C_MENU_HDMI_16_9_60  : natural := 52;
+constant C_MENU_HDMI_4_3_50   : natural := 53;
+constant C_MENU_HDMI_5_4_50   : natural := 54;
+constant C_MENU_HDMI_640_60   : natural := 55;
+constant C_MENU_HDMI_720_5994 : natural := 56;
+constant C_MENU_SVGA_800_60   : natural := 57;
+constant C_MENU_CRT_EMULATION : natural := 60;
+constant C_MENU_HDMI_ZOOM     : natural := 61;
+constant C_MENU_IMPROVE_AUDIO : natural := 62;
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
 ---------------------------------------------------------------------------------------------
 
+signal main_st_mem            : std_logic_vector(2 downto 0);
+signal main_st_ste            : std_logic;
+signal main_st_mste           : std_logic;
+
+signal main_dio_addr          : std_logic_vector(23 downto 1);
+signal main_dio_data          : std_logic_vector(15 downto 0);
+signal main_dio_strobe        : std_logic;
+signal main_dio_strobe_ack    : std_logic;
+signal main_tos192k           : std_logic;
+signal main_cart_loaded       : std_logic;
+signal main_cart_loading      : std_logic;
+
+signal main_img_mounted       : std_logic_vector(C_VDNUM - 1 downto 0);
+signal main_img_readonly      : std_logic;
+signal main_img_size          : std_logic_vector(31 downto 0);
+signal main_sd_lba            : std_logic_vector(32 * C_VDNUM - 1 downto 0);
+signal main_sd_rd             : std_logic_vector(C_VDNUM - 1 downto 0);
+signal main_sd_wr             : std_logic_vector(C_VDNUM - 1 downto 0);
+signal main_sd_ack            : std_logic_vector(C_VDNUM - 1 downto 0);
+signal main_sd_buff_addr      : std_logic_vector(7 downto 0);
+signal main_sd_buff_dout      : std_logic_vector(15 downto 0);
+signal main_sd_buff_din       : std_logic_vector(16 * C_VDNUM - 1 downto 0);
+signal main_sd_buff_wr        : std_logic;
+signal main_floppy_led        : std_logic;
+signal main_hd_led            : std_logic;
+signal main_cache_dirty       : std_logic_vector(C_VDNUM - 1 downto 0);
+signal main_video_31khz       : std_logic;
+
+-- PMOD
+signal main_pmod_in           : std_logic_vector(15 downto 0);
+signal main_pmod_out          : std_logic_vector(15 downto 0);
+signal main_pmod_oe           : std_logic_vector(15 downto 0);
+signal pmod_pins              : std_logic_vector(15 downto 0);
+
 ---------------------------------------------------------------------------------------------
 -- qnice_clk
 ---------------------------------------------------------------------------------------------
 
----------------------------------------------------------------------------------------------
--- Democore & example stuff: Delete before starting to port your own core
----------------------------------------------------------------------------------------------
+signal qnice_video_31khz      : std_logic;
 
--- Democore menu items
-constant C_MENU_HDMI_16_9_50   : natural := 12;
-constant C_MENU_HDMI_16_9_60   : natural := 13;
-constant C_MENU_HDMI_4_3_50    : natural := 14;
-constant C_MENU_HDMI_5_4_50    : natural := 15;
-constant C_MENU_HDMI_640_60    : natural := 16;
-constant C_MENU_HDMI_720_5994  : natural := 17;
-constant C_MENU_SVGA_800_60    : natural := 18;
-constant C_MENU_CRT_EMULATION  : natural := 30;
-constant C_MENU_HDMI_ZOOM      : natural := 31;
-constant C_MENU_IMPROVE_AUDIO  : natural := 32;
+-- TOS and cartridge loader
+signal qnice_tos_ce           : std_logic;
+signal qnice_cart_ce          : std_logic;
+signal qnice_tos_we           : std_logic;
+signal qnice_tos_wait         : std_logic;
+signal qnice_cart_data        : std_logic_vector(15 downto 0);
 
--- QNICE clock domain
-signal qnice_demo_vd_data_o   : std_logic_vector(15 downto 0);
-signal qnice_demo_vd_ce       : std_logic;
-signal qnice_demo_vd_we       : std_logic;
+-- Virtual drives
+signal qnice_vd_data_o        : std_logic_vector(15 downto 0);
+signal qnice_vd_ce            : std_logic;
+signal qnice_vd_we            : std_logic;
+signal qnice_vd_wait          : std_logic;
+signal qnice_vd_wait_cnt      : natural range 0 to 31;
+signal qnice_sd_lba           : vd_vec_array(C_VDNUM - 1 downto 0)(31 downto 0);
+signal qnice_sd_rd            : vd_std_array(C_VDNUM - 1 downto 0);
+signal qnice_sd_wr            : vd_std_array(C_VDNUM - 1 downto 0);
+signal qnice_sd_ack           : vd_std_array(C_VDNUM - 1 downto 0);
+signal qnice_sd_buff_addr     : std_logic_vector(13 downto 0);
+signal qnice_sd_buff_dout     : std_logic_vector(7 downto 0);
+signal qnice_sd_buff_din      : vd_vec_array(C_VDNUM - 1 downto 0)(7 downto 0);
+signal qnice_sd_buff_wr       : std_logic;
+signal qnice_sd_buff_wr_acc   : std_logic;
+
+-- QNICE needs to wait this amount of QNICE clock cycles when reading a byte from the
+-- FDC's sector buffer (see fdc_bridge.vhd)
+constant C_VD_DIN_WAIT        : natural := 24;
+
+-- Disk image buffers in HyperRAM (word addresses)
+constant C_VD0_BASE           : unsigned(31 downto 0) := shift_left(resize(unsigned(C_HMAP_VD0), 32), 12);
+constant C_VD1_BASE           : unsigned(31 downto 0) := shift_left(resize(unsigned(C_HMAP_VD1), 32), 12);
+signal qnice_buf_cs           : std_logic;
+signal qnice_buf_address      : std_logic_vector(31 downto 0);
+signal qnice_buf_writedata    : std_logic_vector(15 downto 0);
+signal qnice_buf_byteenable   : std_logic_vector(1 downto 0);
+signal qnice_buf_readdata     : std_logic_vector(15 downto 0);
+signal qnice_buf_wait         : std_logic;
+
+signal qnice_avm_write        : std_logic;
+signal qnice_avm_read         : std_logic;
+signal qnice_avm_address      : std_logic_vector(31 downto 0);
+signal qnice_avm_writedata    : std_logic_vector(15 downto 0);
+signal qnice_avm_byteenable   : std_logic_vector(1 downto 0);
+signal qnice_avm_burstcount   : std_logic_vector(7 downto 0);
+signal qnice_avm_readdata     : std_logic_vector(15 downto 0);
+signal qnice_avm_readdatavalid: std_logic;
+signal qnice_avm_waitrequest  : std_logic;
 
 begin
-
-   hr_core_write_o      <= '0';
-   hr_core_read_o       <= '0';
-   hr_core_address_o    <= (others => '0');
-   hr_core_writedata_o  <= (others => '0');
-   hr_core_byteenable_o <= (others => '0');
-   hr_core_burstcount_o <= (others => '0');
 
    -- Tristate all expansion port drivers that we can directly control
    -- @TODO: As soon as we support modules that can act as busmaster, we need to become more flexible here
@@ -271,7 +385,7 @@ begin
    cart_addr_oe_o       <= '0';
    cart_data_oe_o       <= '0';
 
-   -- Due to a bug in the R5/R6 boards, the cartridge port needs to be enabled for joystick port 2 to work 
+   -- Due to a bug in the R5/R6 boards, the cartridge port needs to be enabled for joystick port 2 to work
    cart_en_o            <= '1';
 
    cart_reset_oe_o      <= '0';
@@ -310,14 +424,25 @@ begin
    main_joy_2_right_n_o <= '1';
    main_joy_2_fire_n_o  <= '1';
 
+   -- CBM-488/IEC serial port: not used
+   iec_reset_n_o        <= '1';
+   iec_atn_n_o          <= '1';
+   iec_clk_en_o         <= '0';
+   iec_clk_n_o          <= '1';
+   iec_data_en_o        <= '0';
+   iec_data_n_o         <= '1';
+   iec_srq_en_o         <= '0';
+   iec_srq_n_o          <= '1';
 
    -- MMCME2_ADV clock generators:
-   --   @TODO YOURCORE:       54 MHz
+   --   Atari ST: 32.083 MHz (system), 96.25 MHz (SDRAM), 2.005 MHz (IKBD)
    clk_gen : entity work.clk
       port map (
          sys_clk_i         => clk_i,           -- expects 100 MHz
-         main_clk_o        => main_clk,        -- CORE's 54 MHz clock
-         main_rst_o        => main_rst         -- CORE's reset, synchronized
+         main_clk_o        => main_clk,        -- CORE's 32.083 MHz clock
+         main_rst_o        => main_rst,        -- CORE's reset, synchronized
+         sdram_clk_o       => sdram_clk,
+         ikbd_clk_o        => ikbd_clk
       ); -- clk_gen
 
    main_clk_o  <= main_clk;
@@ -334,6 +459,25 @@ begin
    main_power_led_o     <= '1';
    main_power_led_col_o <= x"0000FF" when main_reset_m2m_i else x"00FF00";
 
+   -- Drive led: green while the ST accesses a floppy drive, red for the hard disks,
+   -- yellow while the write cache of a floppy is dirty
+   main_drive_led_o     <= main_floppy_led or main_hd_led or (or main_cache_dirty);
+   main_drive_led_col_o <= x"FFFF00" when (or main_cache_dirty) = '1' else
+                           x"FF0000" when main_hd_led = '1' else
+                           x"00FF00";
+
+   -- Machine type
+   main_st_ste  <= main_osm_control_i(C_MENU_STE) or main_osm_control_i(C_MENU_STEROIDS);
+   main_st_mste <= main_osm_control_i(C_MENU_MSTE) or main_osm_control_i(C_MENU_STEROIDS);
+
+   -- Memory size
+   main_st_mem  <= "000" when main_osm_control_i(C_MENU_MEM_512K) = '1' else
+                   "010" when main_osm_control_i(C_MENU_MEM_2M)   = '1' else
+                   "011" when main_osm_control_i(C_MENU_MEM_4M)   = '1' else
+                   "100" when main_osm_control_i(C_MENU_MEM_8M)   = '1' else
+                   "101" when main_osm_control_i(C_MENU_MEM_14M)  = '1' else
+                   "001";   -- 1 MB
+
    -- main.vhd contains the actual MiSTer core
    i_main : entity work.main
       generic map (
@@ -341,14 +485,54 @@ begin
       )
       port map (
          clk_main_i           => main_clk,
+         clk_sdram_i          => sdram_clk,
+         clk_ikbd_i           => ikbd_clk,
          reset_soft_i         => main_reset_core_i,
          reset_hard_i         => main_reset_m2m_i,
          pause_i              => main_pause_core_i,
+         init_i               => main_rst,
 
          clk_main_speed_i     => CORE_CLK_SPEED,
 
+         -- Atari ST configuration
+         st_mem_i             => main_st_mem,
+         st_ste_i             => main_st_ste,
+         st_mste_i            => main_st_mste,
+         st_blitter_i         => main_osm_control_i(C_MENU_BLITTER),
+         st_mono_i            => main_osm_control_i(C_MENU_MONO),
+         st_psg_stereo_i      => main_osm_control_i(C_MENU_STEREO),
+         st_fdc_wp_i          => (others => main_osm_control_i(C_MENU_WPROT)),
+         st_joy_swap_i        => main_osm_control_i(C_MENU_JOYSWAP),
+         st_viking_i          => main_osm_control_i(C_MENU_VIKING),
+         st_ste_pads_i        => main_osm_control_i(C_MENU_STEPADS),
+         st_mouse1351_i       => main_osm_control_i(C_MENU_MOUSE1351),
+         st_pmod_i            => main_osm_control_i(C_MENU_PMOD),
+
+         -- TOS loader
+         dio_addr_i           => main_dio_addr,
+         dio_data_i           => main_dio_data,
+         dio_strobe_i         => main_dio_strobe,
+         dio_strobe_ack_o     => main_dio_strobe_ack,
+         tos192k_i            => main_tos192k,
+         cart_loaded_i        => main_cart_loaded,
+         cart_loading_i       => main_cart_loading,
+
+         -- Floppy drives
+         img_mounted_i        => main_img_mounted,
+         img_readonly_i       => main_img_readonly,
+         img_size_i           => main_img_size,
+         sd_lba_o             => main_sd_lba,
+         sd_rd_o              => main_sd_rd,
+         sd_wr_o              => main_sd_wr,
+         sd_ack_i             => main_sd_ack,
+         sd_buff_addr_i       => main_sd_buff_addr,
+         sd_buff_dout_i       => main_sd_buff_dout,
+         sd_buff_din_o        => main_sd_buff_din,
+         sd_buff_wr_i         => main_sd_buff_wr,
+         floppy_led_o         => main_floppy_led,
+         hd_led_o             => main_hd_led,
+
          -- Video output
-         -- This is PAL 720x576 @ 50 Hz (pixel clock 27 MHz), but synchronized to main_clk (54 MHz).
          video_ce_o           => video_ce_o,
          video_ce_ovl_o       => video_ce_ovl_o,
          video_red_o          => video_red_o,
@@ -358,6 +542,7 @@ begin
          video_hs_o           => video_hs_o,
          video_hblank_o       => video_hblank_o,
          video_vblank_o       => video_vblank_o,
+         video_31khz_o        => main_video_31khz,
 
          -- audio output (pcm format, signed values)
          audio_left_o         => main_audio_left_o,
@@ -368,7 +553,7 @@ begin
          kb_key_pressed_n_i   => main_kb_key_pressed_n_i,
 
          -- MEGA65 joysticks and paddles/mouse/potentiometers
-         joy_1_up_n_i         => main_joy_1_up_n_i ,
+         joy_1_up_n_i         => main_joy_1_up_n_i,
          joy_1_down_n_i       => main_joy_1_down_n_i,
          joy_1_left_n_i       => main_joy_1_left_n_i,
          joy_1_right_n_i      => main_joy_1_right_n_i,
@@ -383,7 +568,25 @@ begin
          pot1_x_i             => main_pot1_x_i,
          pot1_y_i             => main_pot1_y_i,
          pot2_x_i             => main_pot2_x_i,
-         pot2_y_i             => main_pot2_y_i
+         pot2_y_i             => main_pot2_y_i,
+
+         -- PMOD
+         pmod_in_i            => main_pmod_in,
+         pmod_out_o           => main_pmod_out,
+         pmod_oe_o            => main_pmod_oe,
+
+         -- SDRAM
+         sdram_clk_o          => sdram_clk_o,
+         sdram_cke_o          => sdram_cke_o,
+         sdram_ras_n_o        => sdram_ras_n_o,
+         sdram_cas_n_o        => sdram_cas_n_o,
+         sdram_we_n_o         => sdram_we_n_o,
+         sdram_cs_n_o         => sdram_cs_n_o,
+         sdram_ba_o           => sdram_ba_o,
+         sdram_a_o            => sdram_a_o,
+         sdram_dqml_o         => sdram_dqml_o,
+         sdram_dqmh_o         => sdram_dqmh_o,
+         sdram_dq_io          => sdram_dq_io
       ); -- i_main
 
    ---------------------------------------------------------------------------------------------
@@ -393,10 +596,6 @@ begin
    -- Due to a discussion on the MEGA65 discord (https://discord.com/channels/719326990221574164/794775503818588200/1039457688020586507)
    -- we decided to choose a naming convention for the PAL modes that might be more intuitive for the end users than it is
    -- for the programmers: "4:3" means "meant to be run on a 4:3 monitor", "5:4 on a 5:4 monitor".
-   -- The technical reality is though, that in our "5:4" mode we are actually doing a 4/3 aspect ratio adjustment
-   -- while in the 4:3 mode we are outputting a 5:4 image. This is kind of odd, but it seemed that our 4/3 aspect ratio
-   -- adjusted image looks best on a 5:4 monitor and the other way round.
-   -- Not sure if this will stay forever or if we will come up with a better naming convention.
    qnice_video_mode_o <= C_VIDEO_SVGA_800_60   when qnice_osm_control_i(C_MENU_SVGA_800_60)    = '1' else
                          C_VIDEO_HDMI_720_5994 when qnice_osm_control_i(C_MENU_HDMI_720_5994)  = '1' else
                          C_VIDEO_HDMI_640_60   when qnice_osm_control_i(C_MENU_HDMI_640_60)    = '1' else
@@ -405,14 +604,30 @@ begin
                          C_VIDEO_HDMI_16_9_60  when qnice_osm_control_i(C_MENU_HDMI_16_9_60)   = '1' else
                          C_VIDEO_HDMI_16_9_50;
 
+   -- The ST's color modes are 15 kHz modes and need the scandoubler for VGA, while the
+   -- monochrome mode (71 Hz) and the (downscaled) Viking mode are already 31 kHz modes.
+   i_cdc_mono : xpm_cdc_single
+      generic map (
+         DEST_SYNC_FF   => 2,
+         INIT_SYNC_FF   => 0,
+         SIM_ASSERT_CHK => 0,
+         SRC_INPUT_REG  => 1
+      )
+      port map (
+         src_clk  => main_clk,
+         src_in   => main_video_31khz,
+         dest_clk => qnice_clk_i,
+         dest_out => qnice_video_31khz
+      ); -- i_cdc_mono
+
    -- Use On-Screen-Menu selections to configure several audio and video settings
    -- Video and audio mode control
    qnice_dvi_o                <= '0';                                         -- 0=HDMI (with sound), 1=DVI (no sound)
-   qnice_scandoubler_o        <= '0';                                         -- no scandoubler
+   qnice_scandoubler_o        <= not qnice_video_31khz;
    qnice_audio_mute_o         <= '0';                                         -- audio is not muted
    qnice_audio_filter_o       <= qnice_osm_control_i(C_MENU_IMPROVE_AUDIO);   -- 0 = raw audio, 1 = use filters from globals.vhd
    qnice_zoom_crop_o          <= qnice_osm_control_i(C_MENU_HDMI_ZOOM);       -- 0 = no zoom/crop
-   
+
    -- These two signals are often used as a pair (i.e. both '1'), particularly when
    -- you want to run old analog cathode ray tube monitors or TVs (via SCART)
    -- If you want to provide your users a choice, then a good choice is:
@@ -438,7 +653,7 @@ begin
    -- @TODO: Right now, the M2M framework only supports OFF, so do not touch until the framework is upgraded
    qnice_ascal_triplebuf_o    <= '0';
 
-   -- Flip joystick ports (i.e. the joystick in port 2 is used as joystick 1 and vice versa)
+   -- Joystick ports are swapped via the Atari ST's own menu item (see main.vhd)
    qnice_flip_joyports_o      <= '0';
 
    ---------------------------------------------------------------------------------------------
@@ -451,51 +666,168 @@ begin
       qnice_dev_data_o     <= x"EEEE";
       qnice_dev_wait_o     <= '0';
 
-      -- Demo core specific: Delete before starting to port your core
-      qnice_demo_vd_ce     <= '0';
-      qnice_demo_vd_we     <= '0';
+      qnice_tos_ce         <= '0';
+      qnice_cart_ce        <= '0';
+      qnice_tos_we         <= '0';
+      qnice_vd_ce          <= '0';
+      qnice_vd_we          <= '0';
+      qnice_buf_cs         <= '0';
 
       case qnice_dev_id_i is
 
-         -- Demo core specific stuff: delete before porting your own core
-         when C_DEV_DEMO_VD =>
-            qnice_demo_vd_ce     <= qnice_dev_ce_i;
-            qnice_demo_vd_we     <= qnice_dev_we_i;
-            qnice_dev_data_o     <= qnice_demo_vd_data_o;
+         -- TOS loader (write only)
+         when C_DEV_ST_TOS =>
+            qnice_tos_ce         <= qnice_dev_ce_i;
+            qnice_tos_we         <= qnice_dev_we_i;
+            qnice_dev_wait_o     <= qnice_tos_wait;
 
-         -- @TODO YOUR RAMs or ROMs (e.g. for cartridges) or other devices here
-         -- Device numbers need to be >= 0x0100
+         -- Cartridge loader
+         when C_DEV_ST_CART =>
+            qnice_cart_ce        <= qnice_dev_ce_i;
+            qnice_tos_we         <= qnice_dev_we_i;
+            qnice_dev_data_o     <= qnice_cart_data;
+            qnice_dev_wait_o     <= qnice_tos_wait;
+
+         -- Virtual drives
+         when C_DEV_ST_VD =>
+            qnice_vd_ce          <= qnice_dev_ce_i;
+            qnice_vd_we          <= qnice_dev_we_i;
+            qnice_dev_data_o     <= qnice_vd_data_o;
+            qnice_dev_wait_o     <= qnice_vd_wait;
+
+         -- Disk image buffers in HyperRAM
+         when C_DEV_ST_VD0_BUF | C_DEV_ST_VD1_BUF =>
+            qnice_buf_cs         <= qnice_dev_ce_i;
+            qnice_dev_wait_o     <= qnice_buf_wait;
+            if qnice_dev_addr_i(0) = '0' then
+               qnice_dev_data_o  <= x"00" & qnice_buf_readdata(7 downto 0);
+            else
+               qnice_dev_data_o  <= x"00" & qnice_buf_readdata(15 downto 8);
+            end if;
 
          when others => null;
       end case;
    end process core_specific_devices;
 
-   ---------------------------------------------------------------------------------------------
-   -- Dual Clocks
-   ---------------------------------------------------------------------------------------------
-
-   -- Put your dual-clock devices such as RAMs and ROMs here
-   --
-   -- Use the M2M framework's official RAM/ROM: dualport_2clk_ram
-   -- and make sure that the you configure the port that works with QNICE as a falling edge
-   -- by setting G_FALLING_A or G_FALLING_B (depending on which port you use) to true.
-
    ---------------------------------------------------------------------------------------
-   -- Virtual drive handler
-   --
-   -- Only added for demo-purposes at this place, so that we can demonstrate the
-   -- firmware's ability to browse files and folders. It is very likely, that the
-   -- virtual drive handler needs to be placed somewhere else, for example inside
-   -- main.vhd. We advise to delete this before starting to port a core and re-adding
-   -- it later (and at the right place), if and when needed.
+   -- TOS loader
    ---------------------------------------------------------------------------------------
 
-   -- @TODO:
-   -- a) In case that this is handled in main.vhd, you need to add the appropriate ports to i_main
-   -- b) You might want to change the drive led's color (just like the C64 core does) as long as
-   --    the cache is dirty (i.e. as long as the write process is not finished, yet)
-   main_drive_led_o     <= '0';
-   main_drive_led_col_o <= x"00FF00";  -- 24-bit RGB value for the led
+   i_tos_loader : entity work.tos_loader
+      port map (
+         qnice_clk_i       => qnice_clk_i,
+         qnice_rst_i       => qnice_rst_i,
+         qnice_addr_i      => qnice_dev_addr_i,
+         qnice_data_i      => qnice_dev_data_i,
+         qnice_ce_i        => qnice_tos_ce,
+         qnice_cart_ce_i   => qnice_cart_ce,
+         qnice_we_i        => qnice_tos_we,
+         qnice_wait_o      => qnice_tos_wait,
+         qnice_cart_data_o => qnice_cart_data,
+
+         main_clk_i        => main_clk,
+         main_dio_addr_o   => main_dio_addr,
+         main_dio_data_o   => main_dio_data,
+         main_dio_strobe_o => main_dio_strobe,
+         main_dio_ack_i    => main_dio_strobe_ack,
+         main_tos192k_o    => main_tos192k,
+         main_cart_loaded_o  => main_cart_loaded,
+         main_cart_loading_o => main_cart_loading
+      ); -- i_tos_loader
+
+   ---------------------------------------------------------------------------------------
+   -- Disk image buffers: 2 MB per drive in HyperRAM
+   --
+   -- The firmware stores one byte per QNICE address. Two bytes are stored in one
+   -- 16-bit HyperRAM word (even address = low byte).
+   ---------------------------------------------------------------------------------------
+
+   qnice_buf_address    <= std_logic_vector(C_VD0_BASE + resize(unsigned(qnice_dev_addr_i(20 downto 1)), 32))
+                              when qnice_dev_id_i = C_DEV_ST_VD0_BUF else
+                           std_logic_vector(C_VD1_BASE + resize(unsigned(qnice_dev_addr_i(20 downto 1)), 32));
+   qnice_buf_writedata  <= qnice_dev_data_i(7 downto 0) & qnice_dev_data_i(7 downto 0);
+   qnice_buf_byteenable <= "10" when qnice_dev_addr_i(0) = '1' else "01";
+
+   i_qnice2hyperram : entity work.qnice2hyperram
+      port map (
+         clk_i                 => qnice_clk_i,
+         rst_i                 => qnice_rst_i,
+         s_qnice_wait_o        => qnice_buf_wait,
+         s_qnice_address_i     => qnice_buf_address,
+         s_qnice_cs_i          => qnice_buf_cs,
+         s_qnice_write_i       => qnice_dev_we_i,
+         s_qnice_writedata_i   => qnice_buf_writedata,
+         s_qnice_byteenable_i  => qnice_buf_byteenable,
+         s_qnice_readdata_o    => qnice_buf_readdata,
+         m_avm_write_o         => qnice_avm_write,
+         m_avm_read_o          => qnice_avm_read,
+         m_avm_address_o       => qnice_avm_address,
+         m_avm_writedata_o     => qnice_avm_writedata,
+         m_avm_byteenable_o    => qnice_avm_byteenable,
+         m_avm_burstcount_o    => qnice_avm_burstcount,
+         m_avm_readdata_i      => qnice_avm_readdata,
+         m_avm_readdatavalid_i => qnice_avm_readdatavalid,
+         m_avm_waitrequest_i   => qnice_avm_waitrequest
+      ); -- i_qnice2hyperram
+
+   -- Clock domain crossing: QNICE to HyperRAM
+   i_avm_fifo : entity work.avm_fifo
+      generic map (
+         G_WR_DEPTH     => 16,
+         G_RD_DEPTH     => 16,
+         G_FILL_SIZE    => 1,
+         G_ADDRESS_SIZE => 32,
+         G_DATA_SIZE    => 16
+      )
+      port map (
+         s_clk_i               => qnice_clk_i,
+         s_rst_i               => qnice_rst_i,
+         s_avm_waitrequest_o   => qnice_avm_waitrequest,
+         s_avm_write_i         => qnice_avm_write,
+         s_avm_read_i          => qnice_avm_read,
+         s_avm_address_i       => qnice_avm_address,
+         s_avm_writedata_i     => qnice_avm_writedata,
+         s_avm_byteenable_i    => qnice_avm_byteenable,
+         s_avm_burstcount_i    => qnice_avm_burstcount,
+         s_avm_readdata_o      => qnice_avm_readdata,
+         s_avm_readdatavalid_o => qnice_avm_readdatavalid,
+         m_clk_i               => hr_clk_i,
+         m_rst_i               => hr_rst_i,
+         m_avm_waitrequest_i   => hr_core_waitrequest_i,
+         m_avm_write_o         => hr_core_write_o,
+         m_avm_read_o          => hr_core_read_o,
+         m_avm_address_o       => hr_core_address_o,
+         m_avm_writedata_o     => hr_core_writedata_o,
+         m_avm_byteenable_o    => hr_core_byteenable_o,
+         m_avm_burstcount_o    => hr_core_burstcount_o,
+         m_avm_readdata_i      => hr_core_readdata_i,
+         m_avm_readdatavalid_i => hr_core_readdatavalid_i
+      ); -- i_avm_fifo
+
+   ---------------------------------------------------------------------------------------
+   -- Virtual drive handler: floppy drives A: and B:
+   ---------------------------------------------------------------------------------------
+
+   -- Reading the byte from the FDC's sector buffer (window >= 1, register 0x000B) needs
+   -- wait states because the data comes from the core clock domain (see fdc_bridge.vhd)
+   vd_wait_proc : process(qnice_clk_i)
+   begin
+      if rising_edge(qnice_clk_i) then
+         if qnice_vd_ce = '1' and qnice_dev_we_i = '0' and
+            qnice_dev_addr_i(27 downto 12) /= x"0000" and qnice_dev_addr_i(11 downto 0) = x"00B" then
+            if qnice_vd_wait_cnt /= C_VD_DIN_WAIT then
+               qnice_vd_wait_cnt <= qnice_vd_wait_cnt + 1;
+            end if;
+         else
+            qnice_vd_wait_cnt <= 0;
+         end if;
+      end if;
+   end process vd_wait_proc;
+
+   qnice_vd_wait <= '1' when qnice_vd_ce = '1' and qnice_dev_we_i = '0' and
+                             qnice_dev_addr_i(27 downto 12) /= x"0000" and qnice_dev_addr_i(11 downto 0) = x"00B" and
+                             qnice_vd_wait_cnt /= C_VD_DIN_WAIT
+                    else '0';
 
    i_vdrives : entity work.vdrives
       generic map (
@@ -508,9 +840,9 @@ begin
          reset_core_i      => main_reset_core_i,
 
          -- Core clock domain
-         img_mounted_o     => open,
-         img_readonly_o    => open,
-         img_size_o        => open,
+         img_mounted_o     => main_img_mounted,
+         img_readonly_o    => main_img_readonly,
+         img_size_o        => main_img_size,
          img_type_o        => open,
          drive_mounted_o   => open,
 
@@ -519,29 +851,94 @@ begin
          -- The flushing flags can be used to signal the fact that the caches are currently
          -- flushing to the user, for example using a special color/signal for example
          -- at the drive led
-         cache_dirty_o     => open,
+         cache_dirty_o     => main_cache_dirty,
          cache_flushing_o  => open,
 
          -- QNICE clock domain
-         sd_lba_i          => (others => (others => '0')),
-         sd_blk_cnt_i      => (others => (others => '0')),
-         sd_rd_i           => (others => '0'),
-         sd_wr_i           => (others => '0'),
-         sd_ack_o          => open,
+         sd_lba_i          => qnice_sd_lba,
+         sd_blk_cnt_i      => (others => (others => '0')),   -- always one block of 512 bytes
+         sd_rd_i           => qnice_sd_rd,
+         sd_wr_i           => qnice_sd_wr,
+         sd_ack_o          => qnice_sd_ack,
 
-         sd_buff_addr_o    => open,
-         sd_buff_dout_o    => open,
-         sd_buff_din_i     => (others => (others => '0')),
-         sd_buff_wr_o      => open,
+         sd_buff_addr_o    => qnice_sd_buff_addr,
+         sd_buff_dout_o    => qnice_sd_buff_dout,
+         sd_buff_din_i     => qnice_sd_buff_din,
+         sd_buff_wr_o      => qnice_sd_buff_wr,
 
          -- QNICE interface (MMIO, 4k-segmented)
          -- qnice_addr is 28-bit because we have a 16-bit window selector and a 4k window: 65536*4096 = 268.435.456 = 2^28
          qnice_addr_i      => qnice_dev_addr_i,
          qnice_data_i      => qnice_dev_data_i,
-         qnice_data_o      => qnice_demo_vd_data_o,
-         qnice_ce_i        => qnice_demo_vd_ce,
-         qnice_we_i        => qnice_demo_vd_we
+         qnice_data_o      => qnice_vd_data_o,
+         qnice_ce_i        => qnice_vd_ce,
+         qnice_we_i        => qnice_vd_we
       ); -- i_vdrives
 
-end architecture synthesis;
+   -- Write strobe for the sector buffers: every QNICE write access that writes '1' to the
+   -- sd_buff_wr register (window 0, register 7): see fdc_bridge.vhd
+   qnice_sd_buff_wr_acc <= '1' when qnice_vd_ce = '1' and qnice_dev_we_i = '1' and
+                                    qnice_dev_addr_i(27 downto 12) = x"0000" and qnice_dev_addr_i(11 downto 0) = x"007" and
+                                    qnice_dev_data_i(0) = '1'
+                           else '0';
 
+   i_fdc_bridge : entity work.fdc_bridge
+      generic map (
+         G_VDNUM           => C_VDNUM
+      )
+      port map (
+         qnice_clk_i       => qnice_clk_i,
+         qnice_rst_i       => qnice_rst_i,
+         qnice_sd_lba_o    => qnice_sd_lba,
+         qnice_sd_rd_o     => qnice_sd_rd,
+         qnice_sd_wr_o     => qnice_sd_wr,
+         qnice_sd_ack_i    => qnice_sd_ack,
+         qnice_buff_addr_i => qnice_sd_buff_addr,
+         qnice_buff_dout_i => qnice_sd_buff_dout,
+         qnice_buff_din_o  => qnice_sd_buff_din,
+         qnice_buff_wr_i   => qnice_sd_buff_wr_acc,
+
+         main_clk_i        => main_clk,
+         main_sd_lba_i     => main_sd_lba,
+         main_sd_rd_i      => main_sd_rd,
+         main_sd_wr_i      => main_sd_wr,
+         main_sd_ack_o     => main_sd_ack,
+         main_buff_addr_o  => main_sd_buff_addr,
+         main_buff_dout_o  => main_sd_buff_dout,
+         main_buff_din_i   => main_sd_buff_din,
+         main_buff_wr_o    => main_sd_buff_wr
+      ); -- i_fdc_bridge
+
+   ---------------------------------------------------------------------------------------
+   -- PMOD headers
+   ---------------------------------------------------------------------------------------
+
+   pmod_pins_gen : for i in 0 to 3 generate
+      p1lo_io(i) <= main_pmod_out(i)      when main_pmod_oe(i)      = '1' else 'Z';
+      p1hi_io(i) <= main_pmod_out(i + 4)  when main_pmod_oe(i + 4)  = '1' else 'Z';
+      p2lo_io(i) <= main_pmod_out(i + 8)  when main_pmod_oe(i + 8)  = '1' else 'Z';
+      p2hi_io(i) <= main_pmod_out(i + 12) when main_pmod_oe(i + 12) = '1' else 'Z';
+   end generate pmod_pins_gen;
+
+   pmod_pins <= p2hi_io & p2lo_io & p1hi_io & p1lo_io;
+
+   -- PMOD power (3.3V load switches of the PMOD headers) only when the ST uses them
+   pmod1_en_o <= main_osm_control_i(C_MENU_PMOD);
+   pmod2_en_o <= main_osm_control_i(C_MENU_PMOD);
+
+   i_cdc_pmod : xpm_cdc_array_single
+      generic map (
+         DEST_SYNC_FF   => 2,
+         INIT_SYNC_FF   => 0,
+         SIM_ASSERT_CHK => 0,
+         SRC_INPUT_REG  => 0,
+         WIDTH          => 16
+      )
+      port map (
+         src_clk  => main_clk,
+         src_in   => pmod_pins,
+         dest_clk => main_clk,
+         dest_out => main_pmod_in
+      ); -- i_cdc_pmod
+
+end architecture synthesis;

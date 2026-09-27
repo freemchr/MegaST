@@ -1,0 +1,5 @@
+obj_dir/
+rtl_sim/
+*.ppm
+*.png
+build.log

@@ -1,9 +1,10 @@
 ----------------------------------------------------------------------------------
--- MiSTer2MEGA65 Framework
+-- Atari ST/STe for MEGA65
 --
 -- Global constants
 --
 -- MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
+-- Atari ST port 2026, licensed under GPL v3
 ----------------------------------------------------------------------------------
 
 library IEEE;
@@ -40,8 +41,8 @@ constant QNICE_FIRMWARE           : string  := QNICE_FIRMWARE_M2M;
 -- then add all the clocks speeds here by adding more constants.
 ----------------------------------------------------------------------------------------------------------
 
--- @TODO: Your core's clock speed
-constant CORE_CLK_SPEED       : natural := 54_000_000;   -- @TODO YOURCORE expects 54 MHz
+-- Atari ST system clock: 100 MHz * 9.625 / 30 (see clk.vhd)
+constant CORE_CLK_SPEED       : natural := 32_083_333;
 
 -- System clock speed (crystal that is driving the FPGA) and QNICE clock speed
 -- !!! Do not touch !!!
@@ -56,8 +57,10 @@ constant QNICE_CLK_SPEED      : natural := 50_000_000;   -- a change here has de
 --    VGA_*   size of the core's target output post scandoubler
 --    If in doubt, use twice the values found in this link:
 --    https://mister-devel.github.io/MkDocs_MiSTer/advanced/nativeres/#arcade-core-default-native-resolutions
-constant VGA_DX               : natural := 720;
-constant VGA_DY               : natural := 576;
+--    The Atari ST's color modes are 840 x 566 (PAL, incl. borders, after the M2M scandoubler)
+--    and the monochrome mode is 640 x 400: 640 x 400 is the common denominator for the OSM.
+constant VGA_DX               : natural := 640;
+constant VGA_DY               : natural := 400;
 
 --    FONT_*  size of one OSM character
 constant FONT_FILE            : string  := "../font/Anikki-16x16-m2m.rom";
@@ -75,16 +78,22 @@ constant VRAM_ADDR_WIDTH      : natural := f_log2(CHAR_MEM_SIZE);
 ----------------------------------------------------------------------------------------------------------
 
 constant C_HMAP_M2M           : std_logic_vector(15 downto 0) := x"0000";     -- Reserved for the M2M framework
-constant C_HMAP_DEMO          : std_logic_vector(15 downto 0) := x"0200";     -- Start address reserved for core
+constant C_HMAP_VD0           : std_logic_vector(15 downto 0) := x"0200";     -- Disk image buffer drive A: (2 MB)
+constant C_HMAP_VD1           : std_logic_vector(15 downto 0) := x"0300";     -- Disk image buffer drive B: (2 MB)
 
 ----------------------------------------------------------------------------------------------------------
 -- Virtual Drive Management System
 ----------------------------------------------------------------------------------------------------------
 
--- example virtual drive handler, which is connected to nothing and only here to demo
--- the file- and directory browsing capabilities of the firmware
-constant C_DEV_DEMO_VD        : std_logic_vector(15 downto 0) := x"0101";
-constant C_DEV_DEMO_NOBUFFER  : std_logic_vector(15 downto 0) := x"AAAA";
+-- Atari ST QNICE devices
+constant C_DEV_ST_TOS         : std_logic_vector(15 downto 0) := x"0100";     -- TOS loader (tos_loader.vhd)
+constant C_DEV_ST_VD          : std_logic_vector(15 downto 0) := x"0101";     -- vdrives.vhd
+constant C_DEV_ST_VD0_BUF     : std_logic_vector(15 downto 0) := x"0102";     -- disk image buffer drive A: (HyperRAM)
+constant C_DEV_ST_VD1_BUF     : std_logic_vector(15 downto 0) := x"0103";     -- disk image buffer drive B: (HyperRAM)
+constant C_DEV_ST_CART        : std_logic_vector(15 downto 0) := x"0104";     -- cartridge loader (tos_loader.vhd)
+
+-- Unbuffered virtual drive: the image is accessed directly on the SD card (M2M/rom/shell.asm: VD_NOBUFFER)
+constant C_VD_NOBUFFER        : std_logic_vector(15 downto 0) := x"AAAA";
 
 -- Virtual drive management system (handled by vdrives.vhd and the firmware)
 -- If you are not using virtual drives, make sure that:
@@ -94,11 +103,14 @@ constant C_DEV_DEMO_NOBUFFER  : std_logic_vector(15 downto 0) := x"AAAA";
 -- Otherwise make sure that you wire C_VD_DEVICE in the qnice_ramrom_devices process and that you
 -- have as many appropriately sized RAM buffers for disk images as you have drives
 type vd_buf_array is array(natural range <>) of std_logic_vector;
-constant C_VDNUM              : natural := 3;                                          -- amount of virtual drives; maximum is 15
-constant C_VD_DEVICE          : std_logic_vector(15 downto 0) := C_DEV_DEMO_VD;        -- device number of vdrives.vhd device
-constant C_VD_BUFFER          : vd_buf_array := (  C_DEV_DEMO_NOBUFFER,
-                                                   C_DEV_DEMO_NOBUFFER,
-                                                   C_DEV_DEMO_NOBUFFER,
+-- Drives 0 and 1: floppy drives A: and B: (buffered in HyperRAM)
+-- Drives 2 and 3: ACSI hard disks 0 and 1 (unbuffered: read and written directly on the SD card)
+constant C_VDNUM              : natural := 4;
+constant C_VD_DEVICE          : std_logic_vector(15 downto 0) := C_DEV_ST_VD;          -- device number of vdrives.vhd device
+constant C_VD_BUFFER          : vd_buf_array := (  C_DEV_ST_VD0_BUF,
+                                                   C_DEV_ST_VD1_BUF,
+                                                   C_VD_NOBUFFER,
+                                                   C_VD_NOBUFFER,
                                                    x"EEEE");                           -- Always finish the array using x"EEEE"
 
 ----------------------------------------------------------------------------------------------------------
@@ -129,8 +141,9 @@ constant C_CRTROMTYPE_OPTIONAL   : std_logic_vector(15 downto 0) := x"0004";
 --       else it is a 4k window in HyperRAM or in SDRAM
 -- In case we are loading to a QNICE device, then the control and status register is located at the 4k window 0xFFFF.
 -- @TODO: See @TODO for more details about the control and status register
-constant C_CRTROMS_MAN_NUM       : natural := 0;                                       -- amount of manually loadable ROMs and carts; maximum is 16
-constant C_CRTROMS_MAN           : crtrom_buf_array := ( x"EEEE", x"EEEE",
+-- Atari ST: ROM cartridge (up to 128 kB, raw image or .STC with 4 byte header), see tos_loader.vhd
+constant C_CRTROMS_MAN_NUM       : natural := 1;                                       -- amount of manually loadable ROMs and carts; maximum is 16
+constant C_CRTROMS_MAN           : crtrom_buf_array := ( C_CRTROMTYPE_DEVICE, C_DEV_ST_CART,
                                                          x"EEEE");                     -- Always finish the array using x"EEEE"
 
 -- Automatically loaded ROMs: These ROMs are loaded before the core starts
@@ -152,9 +165,11 @@ constant C_CRTROMS_MAN           : crtrom_buf_array := ( x"EEEE", x"EEEE",
 --               c) Don't forget to finish the C_CRTROMS_AUTO array with x"EEEE"
 
 -- M2M framework constants
-constant C_CRTROMS_AUTO_NUM      : natural := 0;                                       -- Amount of automatically loadable ROMs and carts, maximum is 16
-constant C_CRTROMS_AUTO_NAMES    : string  := "" & ENDSTR;
-constant C_CRTROMS_AUTO          : crtrom_buf_array := ( x"EEEE", x"EEEE", x"EEEE", x"EEEE",
+-- Atari ST: The TOS image is mandatory. It is loaded into the TOS loader device (tos_loader.vhd), which
+-- writes it into the SDRAM. 192k and 256k TOS images are supported (e.g. TOS 1.04, 1.62, 2.06, EmuTOS).
+constant C_CRTROMS_AUTO_NUM      : natural := 1;                                       -- Amount of automatically loadable ROMs and carts, maximum is 16
+constant C_CRTROMS_AUTO_NAMES    : string  := "/atarist/tos.img" & ENDSTR;
+constant C_CRTROMS_AUTO          : crtrom_buf_array := ( C_CRTROMTYPE_DEVICE, C_DEV_ST_TOS, C_CRTROMTYPE_MANDATORY, x"0000",
                                                          x"EEEE");                     -- Always finish the array using x"EEEE"
 
 ----------------------------------------------------------------------------------------------------------

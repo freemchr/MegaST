@@ -725,6 +725,14 @@ _LI_FOPEN_OK    MOVE    R5, R8
                 CMP     0, R6                   ; everything OK?
                 RBRA    _LI_FREAD_RET, !Z       ; no
 
+                ; Unbuffered virtual drives (buffer ID VD_NOBUFFER): the
+                ; image stays on the SD card and is accessed directly
+                CMP     0, R4                   ; disk image mode?
+                RBRA    _LI_BUFFERED, !Z        ; no
+                CMP     VD_NOBUFFER, R0         ; unbuffered drive?
+                RBRA    _LI_FREAD_RET, Z        ; yes: done (R6=0: OK)
+_LI_BUFFERED
+
                 ; For showing a progress bar: Take the remaining size of the
                 ; file, which is filesize minus current read position after
                 ; PREP_LOAD_IMAGE and divide it by the amount of printable
@@ -976,8 +984,19 @@ _HANDLE_IO_3    MOVE    R0, R8
                 CMP     1, R8                   ; cache dirty?
                 RBRA    _HANDLE_IO_NXT3, !Z     ; no: next drive, if any
 
-                ; handle dirty cache and background writing (aka flushing)
+                ; unbuffered drives are written directly: no flushing
+                MOVE    VDRIVES_BUFS, R9
+                ADD     R0, R9
+                CMP     VD_NOBUFFER, @R9
+                RBRA    _HANDLE_IO_FL, !Z
                 MOVE    R0, R8
+                MOVE    VD_CACHE_DIRTY, R9
+                XOR     R10, R10
+                RSUB    VD_DRV_WRITE, 1
+                RBRA    _HANDLE_IO_NXT3, 1
+
+                ; handle dirty cache and background writing (aka flushing)
+_HANDLE_IO_FL   MOVE    R0, R8
                 RSUB    FLUSH_CACHE, 1
 
                 ; next drive, if applicable
@@ -997,6 +1016,15 @@ _HANDLE_IO_RET  SYSCALL(leave, 1)
 HANDLE_DRV_RD   SYSCALL(enter, 1)
 
                 MOVE    R8, R11                 ; R11: virtual drive ID
+
+                ; unbuffered drive?
+                MOVE    VDRIVES_BUFS, R9
+                ADD     R8, R9
+                CMP     VD_NOBUFFER, @R9
+                RBRA    _HDR_BUFFERED, !Z       ; no
+                RSUB    VD_UB_READ, 1           ; yes: read from SD card
+                RBRA    _HDR_UB_RET, 1
+_HDR_BUFFERED
 
                 MOVE    VD_SIZEB, R9            ; virtual drive ID still in R8
                 RSUB    VD_DRV_READ, 1
@@ -1061,7 +1089,7 @@ _HDR_SEND_DONE  MOVE    R11, R8                 ; virtual drive ID
                 XOR     R10, R10
                 RSUB    VD_DRV_WRITE, 1
 
-                SYSCALL(leave, 1)
+_HDR_UB_RET     SYSCALL(leave, 1)
                 RET
 
 ; Handle write request from drive number in R8:
@@ -1077,6 +1105,15 @@ _HDR_SEND_DONE  MOVE    R11, R8                 ; virtual drive ID
 HANDLE_DRV_WR   SYSCALL(enter, 1)
 
                 MOVE    R8, R0                  ; R0: drive number
+
+                ; unbuffered drive?
+                MOVE    VDRIVES_BUFS, R9
+                ADD     R8, R9
+                CMP     VD_NOBUFFER, @R9
+                RBRA    _HDW_BUFFERED, !Z       ; no
+                RSUB    VD_UB_WRITE, 1          ; yes: write to SD card
+                RBRA    _HDW_RET, 1
+_HDW_BUFFERED
 
                 ; target write address in bytes HI/LO
                 MOVE    R0, R8
@@ -1153,6 +1190,169 @@ _HDW_DONE       MOVE    R0, R8
                 RSUB    VD_DRV_WRITE, 1
 
 _HDW_RET        SYSCALL(leave, 1)
+                RET
+
+; ----------------------------------------------------------------------------
+; Unbuffered virtual drives
+;
+; A virtual drive whose RAM buffer ID in globals.vhd (C_VD_BUFFER) is
+; VD_NOBUFFER (0xAAAA) is not loaded into a RAM buffer. Instead, the read and
+; write requests of the core are served directly from/to the image file on the
+; SD card. This is meant for large images such as hard disk images. Writes are
+; written through, i.e. there is no cache that needs to be flushed.
+; ----------------------------------------------------------------------------
+
+; Position the file pointer of the image of drive R8 to the requested block
+; Input:   R8: virtual drive number
+; Output:  R8: file handle
+;          R9: 0=OK, otherwise error code
+VD_UB_SEEK      INCRB
+
+                MOVE    R8, R0                  ; R0: drive number
+                MOVE    VD_BYTES_L, R9          ; R1: position low word
+                RSUB    VD_DRV_READ, 1
+                MOVE    R8, R1
+                MOVE    R0, R8                  ; R2: position high word
+                MOVE    VD_BYTES_H, R9
+                RSUB    VD_DRV_READ, 1
+                MOVE    R8, R2
+                MOVE    HNDL_VD_FILES, R8       ; R8: file handle
+                ADD     R0, R8
+                MOVE    @R8, R8
+
+                ; sequential access: no need to seek (seeking always starts
+                ; at the beginning of the file and is slow for large files)
+                MOVE    R8, R3
+                ADD     FAT32$FDH_ACCESS_LO, R3
+                CMP     @R3, R1
+                RBRA    _VDUBS_SEEK, !Z
+                MOVE    R8, R3
+                ADD     FAT32$FDH_ACCESS_HI, R3
+                CMP     @R3, R2
+                RBRA    _VDUBS_SEEK, !Z
+                XOR     R9, R9
+                RBRA    _VDUBS_RET, 1
+
+_VDUBS_SEEK     MOVE    R10, R3                 ; save R10
+                MOVE    R1, R9                  ; R9: position low word
+                MOVE    R2, R10                 ; R10: position high word
+                SYSCALL(f32_fseek, 1)
+                MOVE    R3, R10
+
+_VDUBS_RET      DECRB
+                RET
+
+; Serve a read request of an unbuffered drive
+; Input:   R8: virtual drive number
+; Output:  none (R8..R12 may be changed)
+VD_UB_READ      INCRB
+
+                MOVE    R8, R0                  ; R0: drive number
+                RSUB    VD_UB_SEEK, 1
+                MOVE    R8, R1                  ; R1: file handle
+                CMP     0, R9                   ; seek OK?
+                RBRA    _VDUBR_1, Z             ; yes
+                MOVE    ERR_FATAL_SEEK, R8      ; no: R9 contains err. no.
+                RBRA    FATAL, 1
+
+_VDUBR_1        MOVE    R0, R8                  ; R2: amount of bytes
+                MOVE    VD_SIZEB, R9
+                RSUB    VD_DRV_READ, 1
+                MOVE    R8, R2
+
+                MOVE    R0, R8                  ; acknowledge sd_rd_i
+                MOVE    VD_ACK, R9
+                MOVE    1, R10
+                RSUB    VD_DRV_WRITE, 1
+
+                XOR     R3, R3                  ; R3: transmitted bytes
+_VDUBR_LOOP     CMP     R3, R2                  ; done?
+                RBRA    _VDUBR_DONE, Z
+
+                MOVE    R1, R8                  ; read next byte from file
+                SYSCALL(f32_fread, 1)
+                CMP     0, R10                  ; EOF or error: send zeros
+                RBRA    _VDUBR_2, Z
+                XOR     R9, R9
+_VDUBR_2        MOVE    R9, R4                  ; R4: byte
+
+                MOVE    VD_B_ADDR, R8           ; write buffer: address
+                MOVE    R3, R9
+                RSUB    VD_CAD_WRITE, 1
+                MOVE    VD_B_DOUT, R8           ; write buffer: data out
+                MOVE    R4, R9
+                RSUB    VD_CAD_WRITE, 1
+                MOVE    VD_B_WREN, R8           ; strobe write enable
+                MOVE    1, R9
+                RSUB    VD_CAD_WRITE, 1
+                XOR     R9, R9
+                RSUB    VD_CAD_WRITE, 1
+
+                ADD     1, R3                   ; next byte
+                RBRA    _VDUBR_LOOP, 1
+
+_VDUBR_DONE     MOVE    R0, R8                  ; unassert ACK
+                MOVE    VD_ACK, R9
+                XOR     R10, R10
+                RSUB    VD_DRV_WRITE, 1
+
+                DECRB
+                RET
+
+; Serve a write request of an unbuffered drive
+; Input:   R8: virtual drive number
+; Output:  none (R8..R12 may be changed)
+VD_UB_WRITE     INCRB
+
+                MOVE    R8, R0                  ; R0: drive number
+                RSUB    VD_UB_SEEK, 1
+                MOVE    R8, R1                  ; R1: file handle
+                CMP     0, R9                   ; seek OK?
+                RBRA    _VDUBW_1, Z             ; yes
+                MOVE    ERR_FATAL_SEEK, R8      ; no: R9 contains err. no.
+                RBRA    FATAL, 1
+
+_VDUBW_1        MOVE    R0, R8                  ; R2: amount of bytes
+                MOVE    VD_SIZEB, R9
+                RSUB    VD_DRV_READ, 1
+                MOVE    R8, R2
+
+                XOR     R3, R3                  ; R3: written bytes
+_VDUBW_LOOP     CMP     R3, R2                  ; done?
+                RBRA    _VDUBW_DONE, Z
+
+                MOVE    VD_B_ADDR, R8           ; read buffer: address
+                MOVE    R3, R9
+                RSUB    VD_CAD_WRITE, 1
+                MOVE    R0, R8                  ; read byte from the drive
+                MOVE    VD_B_DIN, R9
+                RSUB    VD_DRV_READ, 1
+                MOVE    R8, R9                  ; write byte to the file
+                MOVE    R1, R8
+                SYSCALL(f32_fwrite, 1)
+                CMP     0, R9                   ; write successful?
+                RBRA    _VDUBW_2, Z             ; yes
+                MOVE    ERR_FATAL_WRITE, R8     ; no, R9 contains err. no.
+                RBRA    FATAL, 1
+
+_VDUBW_2        ADD     1, R3                   ; next byte
+                RBRA    _VDUBW_LOOP, 1
+
+_VDUBW_DONE     MOVE    R1, R8                  ; write the sector buffer
+                SYSCALL(f32_fflush, 1)
+                CMP     0, R9                   ; successful?
+                RBRA    _VDUBW_3, Z             ; yes
+                MOVE    ERR_FATAL_FLUSH, R8     ; no, R9 contains err. no
+                RBRA    FATAL, 1
+
+_VDUBW_3        MOVE    R0, R8                  ; acknowledge sd_wr_i
+                MOVE    VD_ACK, R9
+                MOVE    1, R10
+                RSUB    VD_DRV_WRITE, 1
+                XOR     R10, R10                ; unassert ACK
+                RSUB    VD_DRV_WRITE, 1
+
+                DECRB
                 RET
 
 ; ----------------------------------------------------------------------------

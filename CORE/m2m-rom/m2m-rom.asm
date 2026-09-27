@@ -1,12 +1,12 @@
 ; ****************************************************************************
-; YOUR-PROJECT-NAME (GITHUB-REPO-SHORTNAME) QNICE ROM
+; Atari ST/STe for MEGA65 (MegaST) QNICE ROM
 ;
 ; Main program that is used to build m2m-rom.rom by make-rom.sh.
-; The ROM is loaded by TODO-ADD-NAME-OF-VHDL-FILE-HERE.
+; The ROM is loaded by the M2M framework (see QNICE_FIRMWARE in globals.vhd).
 ;
 ; The execution starts at the label START_FIRMWARE.
 ;
-; done by YOURNAME in YEAR and licensed under GPL v3
+; done by sy2002 and MJoergen in 2022, Atari ST port 2026, licensed under GPL v3
 ; ****************************************************************************
 
 ; If the define RELEASE is defined, then the ROM will be a self-contained and
@@ -80,7 +80,65 @@ SUBMENU_SUMMARY XOR     R8, R8                  ; R8 = 0 = no custom string
 ;  R10: @TODO: Future release: Context (see CTX_* in sysdef.asm)
 ; Output:
 ;   R8: 0=do not filter file, i.e. show file
-FILTER_FILES    XOR     R8, R8                  ; R8 = 0 = do not filter file
+; Atari ST: only show directories and *.ST (floppy), *.HD, *.IMG (hard disk)
+; and *.STC, *.IMG (cartridge) files
+FILTER_FILES    INCRB
+                MOVE    R8, R0                  ; R0: file name
+                MOVE    R9, R2                  ; R2: remember R9
+                XOR     R8, R8                  ; R8 = 0 = do not filter file
+                CMP     1, R9                   ; directory?
+                RBRA    _FFILES_RET, Z          ; yes: always show
+
+                MOVE    R0, R8                  ; R9 = length of file name
+                SYSCALL(strlen, 1)
+                MOVE    R0, R1
+                ADD     R9, R1                  ; R1 points to zero terminator
+                XOR     R8, R8                  ; R8 = 0 = show
+
+                MOVE    R1, R3                  ; ".ST" or ".HD"
+                SUB     3, R3
+                CMP     0x002E, @R3             ; '.'
+                RBRA    _FFILES_4, !Z
+                ADD     1, R3
+                CMP     0x0053, @R3             ; 'S'
+                RBRA    _FFILES_HD, !Z
+                ADD     1, R3
+                CMP     0x0054, @R3             ; 'T'
+                RBRA    _FFILES_RET, Z          ; .ST: show
+                RBRA    _FFILES_4, 1
+_FFILES_HD      CMP     0x0048, @R3             ; 'H'
+                RBRA    _FFILES_4, !Z
+                ADD     1, R3
+                CMP     0x0044, @R3             ; 'D'
+                RBRA    _FFILES_RET, Z          ; .HD: show
+
+_FFILES_4       MOVE    R1, R3                  ; ".IMG" or ".STC"
+                SUB     4, R3
+                CMP     0x002E, @R3             ; '.'
+                RBRA    _FFILES_FILT, !Z
+                ADD     1, R3
+                CMP     0x0049, @R3             ; 'I'
+                RBRA    _FFILES_STC, !Z
+                ADD     1, R3
+                CMP     0x004D, @R3             ; 'M'
+                RBRA    _FFILES_FILT, !Z
+                ADD     1, R3
+                CMP     0x0047, @R3             ; 'G'
+                RBRA    _FFILES_RET, Z          ; .IMG: show
+                RBRA    _FFILES_FILT, 1
+_FFILES_STC     CMP     0x0053, @R3             ; 'S'
+                RBRA    _FFILES_FILT, !Z
+                ADD     1, R3
+                CMP     0x0054, @R3             ; 'T'
+                RBRA    _FFILES_FILT, !Z
+                ADD     1, R3
+                CMP     0x0043, @R3             ; 'C'
+                RBRA    _FFILES_RET, Z          ; .STC: show
+
+_FFILES_FILT    MOVE    1, R8                   ; R8 = 1 = filter file
+
+_FFILES_RET     MOVE    R2, R9                  ; restore R9
+                DECRB
                 RET
 
 ; PREP_LOAD_IMAGE callback function:
@@ -98,8 +156,38 @@ FILTER_FILES    XOR     R8, R8                  ; R8 = 0 = do not filter file
 ; Output:
 ;   R8: 0=OK, error code otherwise
 ;   R9: image type if R8=0, otherwise 0 or optional ptr to  error msg string
-PREP_LOAD_IMAGE XOR     R8, R8                  ; no errors
+; Atari ST: cartridge images in the .STC format have a 4 byte header in front
+; of the 128 kB ROM image: skip it (file size = 131076 = 0x00020004)
+PREP_LOAD_IMAGE INCRB
+                MOVE    R8, R0                  ; R0: file handle
+                XOR     R4, R4                  ; R4: error code
+
+                MOVE    R9, R1                  ; loading a ROM/cartridge?
+                AND     CTX_MASK_CTX, R1
+                CMP     CTX_LOAD_ROM, R1
+                RBRA    _PLI_RET, !Z            ; no
+
+                MOVE    R0, R1                  ; file size = 0x00020004?
+                ADD     FAT32$FDH_SIZE_HI, R1
+                CMP     0x0002, @R1
+                RBRA    _PLI_RET, !Z
+                MOVE    R0, R1
+                ADD     FAT32$FDH_SIZE_LO, R1
+                CMP     0x0004, @R1
+                RBRA    _PLI_RET, !Z
+
+                MOVE    R10, R2                 ; save R10
+                MOVE    R0, R8                  ; seek to position 4
+                MOVE    4, R9
+                XOR     R10, R10
+                SYSCALL(f32_fseek, 1)
+                MOVE    R9, R4                  ; R4: error code of the seek
+                MOVE    R2, R10
+
+_PLI_RET        MOVE    R0, R8
+                MOVE    R4, R8                  ; R8: 0 = no errors
                 XOR     R9, R9                  ; image type hardcoded to 0
+                DECRB
                 RET
 
 ; ----------------------------------------------------------------------------
