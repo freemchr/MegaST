@@ -25,3 +25,6 @@ M2M/video_filters/*.out
 # Copyrighted TOS images for local testing: never commit
 TOS/
 *.img
+
+# Built core files
+*.cor

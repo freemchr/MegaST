@@ -394,6 +394,7 @@ module bltBusCtrl( input blt_clks Clks, input wantDma, busOe,
 		DMAST_REQ:			next = rdyGranted ? DMAST_ACTIVE1: DMAST_REQ;
 		DMAST_ACTIVE1:		next = wantDma ? DMAST_ACTIVE2 : DMAST_IDLE;
 		DMAST_ACTIVE2:		next = iBRn ? DMAST_ACTIVE1 : DMAST_IDLE;
+		default:			next = DMAST_IDLE;	// MEGA65: avoids a latch in Vivado
 		endcase
 	end
 

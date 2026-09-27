@@ -287,7 +287,8 @@ reg ikbd_reset;
 always @(posedge clk_2) ikbd_reset <= reset | ~cpu_reset_n_o;
 
 // MCU signals
-wire        mhz4, mhz4_en, clk16, clk16_en = ~clk16;
+wire        mhz4, mhz4_en, clk16;
+wire        clk16_en = ~clk16;
 wire        mcu_dtack_n;
 wire        hsync_n, vsync_n;
 wire        rom0_n, rom1_n, rom2_n, rom3_n, rom4_n, rom5_n, rom6_n, romp_n;
@@ -652,7 +653,8 @@ wire  [7:0] mfp_data_out;
 wire        mfp_dtack;
 
 wire        usart_so, usart_rts;
-wire        mfp_int, mfp_iack = ~mfpiack_n;
+wire        mfp_int;
+wire        mfp_iack = ~mfpiack_n;
 assign      mfpint_n = ~mfp_int;
 
 mfp mfp (

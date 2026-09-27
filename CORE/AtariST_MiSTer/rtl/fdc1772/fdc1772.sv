@@ -254,6 +254,13 @@ wire       fdn_sector_hdr[FD_NUM];
 wire       fdn_sector_data[FD_NUM];
 wire       fdn_dclk[FD_NUM];
 
+// MEGA65: these signals are used in the generate loop below. Declared here, because
+// Vivado creates new, undriven implicit nets for identifiers used before their declaration.
+reg [WIDX:0] fdn;
+wire         fd_any;
+reg          step_in, step_out;
+wire         fd_motor;
+
 generate
 	genvar i;
 	
@@ -294,7 +301,6 @@ endgenerate
 // ----------------------------- floppy demux ------------------------------
 // -------------------------------------------------------------------------
 
-reg [WIDX:0] fdn;
 always @(*) begin // MEGA65: sensitivity list added for Vivado
 	integer i;
 	
@@ -302,7 +308,7 @@ always @(*) begin // MEGA65: sensitivity list added for Vivado
 	for(i = FD_NUM-1; i >= 0; i = i - 1) if(!floppy_drive[i]) fdn = i[WIDX:0];
 end
 
-wire       fd_any         = ~&floppy_drive;
+assign     fd_any         = ~&floppy_drive;
 
 wire       fd_index       = fd_any ? fdn_index[fdn]       : 1'b0;
 wire       fd_ready       = fd_any ? fdn_ready[fdn]       : 1'b0;
@@ -334,10 +340,9 @@ localparam MOTOR_IDLE_COUNTER = 4'd10;
 reg [3:0] motor_timeout_index /* verilator public */;
 reg indexD;
 reg busy /* verilator public */;
-reg step_in, step_out;
 reg [3:0] motor_spin_up_sequence /* verilator public */;
 
-wire fd_motor = EXT_MOTOR ? floppy_motor : motor_on;
+assign fd_motor = EXT_MOTOR ? floppy_motor : motor_on;
 
 // consider spin up done either if the motor is not supposed to spin at all or
 // if it's supposed to run and has left the spin up sequence
@@ -1055,26 +1060,61 @@ module fdc1772_dpram #(ADDRWIDTH=9)
 	output     reg  [7:0] q_b
 );
 
-logic [1:0][7:0] ram[0:(1<<(ADDRWIDTH-1))-1];
+// MEGA65: Vivado cannot infer this asymmetric (16 bit / 8 bit) true dual port RAM
+// with two write ports (it becomes multi-driven registers), therefore it is split
+// into two 8 bit true dual port RAMs: ram_lo holds the even bytes, ram_hi the odd ones.
+localparam DEPTH = 1<<(ADDRWIDTH-1);
+reg [7:0] ram_lo[0:DEPTH-1];
+reg [7:0] ram_hi[0:DEPTH-1];
+reg [7:0] q_a_lo, q_a_hi, q_b_lo, q_b_hi;
+reg       b_sel;
+
+wire [ADDRWIDTH-2:0] addr_b_word = address_b[ADDRWIDTH-1:1];
+
+// port A (16 bit)
+always@(posedge clock) begin
+	if(wren_a) begin
+		ram_lo[address_a] <= data_a[7:0];
+		q_a_lo <= data_a[7:0];
+	end
+	else begin
+		q_a_lo <= ram_lo[address_a];
+	end
+end
 
 always@(posedge clock) begin
 	if(wren_a) begin
-		ram[address_a] <= data_a;
-		q_a <= data_a;
+		ram_hi[address_a] <= data_a[15:8];
+		q_a_hi <= data_a[15:8];
 	end
 	else begin
-		q_a <= ram[address_a];
+		q_a_hi <= ram_hi[address_a];
+	end
+end
+
+// port B (8 bit)
+always@(posedge clock) begin
+	if(wren_b & ~address_b[0]) begin
+		ram_lo[addr_b_word] <= data_b;
+		q_b_lo <= data_b;
+	end
+	else begin
+		q_b_lo <= ram_lo[addr_b_word];
 	end
 end
 
 always@(posedge clock) begin
-	if(wren_b) begin
-		ram[address_b[ADDRWIDTH-1:1]][address_b[0]] <= data_b;
-		q_b <= data_b;
+	if(wren_b & address_b[0]) begin
+		ram_hi[addr_b_word] <= data_b;
+		q_b_hi <= data_b;
 	end
 	else begin
-		q_b <= ram[address_b[ADDRWIDTH-1:1]][address_b[0]];
+		q_b_hi <= ram_hi[addr_b_word];
 	end
 end
+
+always@(posedge clock) b_sel <= address_b[0];
+always@(*) q_a = { q_a_hi, q_a_lo };
+always@(*) q_b = b_sel ? q_b_hi : q_b_lo;
 
 endmodule
