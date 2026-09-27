@@ -51,16 +51,6 @@ module tb_top (
     if (dut.dma.acsi.irq & ~acsi_irq_d) acsi_irq_cnt <= acsi_irq_cnt + 1'd1;
     if (dut.dma.acsi_reg_sel & ~acsi_sel_d) acsi_din <= dut.dma.cpu_din[7:0];
   end
-  reg dma_sel_d;
-  always @(posedge clk_32) begin
-    dma_sel_d <= dut.dma.cpu_sel;
-    if (dut.dma.cpu_sel & ~dma_sel_d & dut.dma.cpu_a1 == 1'b0 && !dut.dma.cpu_rw)
-      $display("DMA data write: din=%04x mode=%04x (a1=%b) enable=%b t=%0t", dut.mbus_dout, dut.dma.dma_mode, dut.dma.dma_mode[1], dut.acsi_enable, $time);
-    if (dut.dma.acsi.clk_en && dut.dma.acsi.cpu_req)
-      $display("ACSI latch: rw=%b din=%02x a1=%b enable=%b", dut.dma.acsi.cpu_rw, dut.dma.acsi.cpu_din, dut.dma.acsi.cpu_a1, dut.dma.acsi.enable);
-    if (dut.dma.acsi.irq & ~acsi_irq_d) $display("ACSI irq");
-    if (dut.dma.acsi.busy & ~acsi_busy_d) $display("ACSI busy: cmd %02x %02x %02x %02x %02x %02x", dut.dma.acsi.cmd_parameter[0], dut.dma.acsi.cmd_parameter[1], dut.dma.acsi.cmd_parameter[2], dut.dma.acsi.cmd_parameter[3], dut.dma.acsi.cmd_parameter[4], dut.dma.acsi.cmd_parameter[5]);
-  end
   assign dbg_acsi_irq = acsi_irq_cnt;
   assign dbg_acsi_din = acsi_din;
   assign dbg_dma_mode = dut.dma.dma_mode;
@@ -78,6 +68,16 @@ module tb_top (
   assign dbg_acsi_busy  = acsi_busy_cnt;
   assign dbg_acsi_state = dut.acsi_ctrl.state;
   assign dbg_hd_present = dut.hd_present;
+`ifdef ACSI_TRACE
+  // ACSI trace: commands, IO controller data, DMA RAM accesses and status (build with VFLAGS=-DACSI_TRACE)
+  always @(posedge clk_32) begin
+    if (dut.dma.acsi.busy & ~acsi_busy_d) $display("ACSI busy: cmd %02x %02x %02x %02x %02x %02x", dut.dma.acsi.cmd_parameter[0], dut.dma.acsi.cmd_parameter[1], dut.dma.acsi.cmd_parameter[2], dut.dma.acsi.cmd_parameter[3], dut.dma.acsi.cmd_parameter[4], dut.dma.acsi.cmd_parameter[5]);
+    if (dut.dma.io_data_in_strobe) $display("DIO in %04x wptr %0d rptr %0d", dut.dma.dio_data_in_reg, dut.dma.fifo_wptr, dut.dma.fifo_rptr);
+    if (dut.dma.ram_access_strobe) $display("DMA ram %s %04x scnt %0d", dut.dma.dma_direction_out ? "rd" : "wr", dut.dma.dma_direction_out ? dut.dma.ram_din : dut.dma.ram_dout, dut.dma.dma_scnt);
+    if (dut.dma.io_dma_ack) $display("DIO ack status %02x", dut.dma.dio_dma_status);
+    if (dut.dma.acsi.clk_en && dut.dma.acsi.cpu_req && dut.dma.acsi.cpu_rw) $display("ACSI status read %02x", dut.dma.acsi.dma_status);
+  end
+`endif
   wire        sdram_clk, sdram_cke, sdram_ras_n, sdram_cas_n, sdram_we_n, sdram_cs_n, sdram_dqml, sdram_dqmh;
   wire  [1:0] sdram_ba;
   wire [12:0] sdram_a;

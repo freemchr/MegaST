@@ -140,6 +140,8 @@ assign led = led_r;
 wire [7:0] opcode = cmd[0];
 wire [2:0] device = cmd[1][7:5];
 
+wire [31:0] blocks_m1 = blocks[tgt] - 1'd1;
+
 // response data of the non-sector commands (byte index i)
 function [7:0] resp_byte(input [8:0] i);
 	resp_byte = 8'h00;
@@ -188,7 +190,6 @@ function [7:0] resp_byte(input [8:0] i);
 	endcase
 endfunction
 
-wire [31:0] blocks_m1 = blocks[tgt] - 1'd1;
 wire  [8:0] words_pad = {words[8:3] + (words[2:0] != 0), 3'b000};
 wire [32:0] lba_end   = {1'b0, lba} + length;
 wire        in_range  = lba_end <= {1'b0, blocks[tgt]};
@@ -223,10 +224,11 @@ always @(posedge clk) begin
 		state            <= S_CMD;
 	end
 
-	// read the command bytes 0..9 (the index needs one clock cycle)
+	// read the command bytes 0..9: dio_status_index is a register (always equal to idx
+	// here) and acsi.v returns the selected byte combinationally
 	S_CMD: begin
-		if (idx != 0) cmd[idx - 1'd1] <= dio_status_in;
-		if (idx == 4'd10) begin
+		cmd[idx] <= dio_status_in;
+		if (idx == 4'd9) begin
 			state <= S_DECODE;
 		end else begin
 			idx              <= idx + 1'd1;
@@ -299,11 +301,13 @@ always @(posedge clk) begin
 	// response of a non-sector command: two bytes per word, big endian.
 	// The ST's DMA only writes complete 16 byte blocks from its FIFO to RAM, so the
 	// response is padded with zeros to a multiple of 8 words (resp_byte() is zero there).
+	// dma.v only starts writing a block to RAM when the write pointer is exactly at the
+	// end of that block, so at most 8 words may be in the FIFO (here and in S_RD_PUSH).
 	S_RESP: begin
 		if (word_cnt == words_pad) begin
 			asc[tgt] <= 8'h00;
 			state <= S_ACK;
-		end else if (spacing == 0 && dio_fifo_used < 4'd14) begin
+		end else if (spacing == 0 && dio_fifo_used < 4'd8) begin
 			dio_data_in_reg    <= {resp_byte({word_cnt[7:0], 1'b0}), resp_byte({word_cnt[7:0], 1'b1})};
 			dio_data_in_strobe <= ~dio_data_in_strobe;
 			word_cnt           <= word_cnt + 1'd1;
@@ -353,7 +357,7 @@ always @(posedge clk) begin
 			lba    <= lba + 1'd1;
 			length <= length - 1'd1;
 			state  <= S_RD_REQ;
-		end else if (spacing == 0 && dio_fifo_used < 4'd14) begin
+		end else if (spacing == 0 && dio_fifo_used < 4'd8) begin
 			// sbuf_q holds the word at sbuf_addr (the address is set >= 3 cycles earlier)
 			dio_data_in_reg    <= {sbuf_q[7:0], sbuf_q[15:8]};
 			dio_data_in_strobe <= ~dio_data_in_strobe;

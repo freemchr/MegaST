@@ -4,8 +4,8 @@
 # Needs Verilator 5 (e.g. from the OSS CAD Suite: https://github.com/YosysHQ/oss-cad-suite-build).
 #
 # Usage:
-#    ./build.sh
-#    cd obj_dir && ./simst <tos.img> <frames> [out_prefix] [ste]
+#    ./build.sh                     (VFLAGS=-DACSI_TRACE ./build.sh: trace the ACSI transfers)
+#    cd obj_dir && ./simst <tos.img> <frames> [out_prefix] [ste] [hd.img]
 #
 # Every 10th frame is written as <out_prefix>_NNN.ppm (convert: python3 ../ppm2png.py in.ppm out.png)
 #
@@ -31,7 +31,7 @@ FILES="rtl_sim/verilog/atarist_m65.sv rtl_sim/verilog/sdram_m65.v rtl_sim/verilo
   $R/mfp/mfp.v $R/mfp/mfp_hbit16.v $R/mfp/mfp_srff16.v $R/mfp/mfp_timer.v
   $R/fdc1772/fdc1772.sv $R/fdc1772/floppy.v
   $R/acia.v $R/acsi.v $R/dma.v $R/mste_ctrl.v $R/ym2149.sv $R/ste_joypad.v $R/stBlitter.sv"
-verilator --cc --exe --build -j 8 -O3 --no-assert --top-module tb_top \
+verilator --cc --exe --build -j 8 -O3 --no-assert --top-module tb_top $VFLAGS \
   -Wno-fatal -Wno-lint -Wno-style -Wno-WIDTH -Wno-MULTIDRIVEN -Wno-UNOPTFLAT -Wno-LATCH -Wno-COMBDLY \
   -Wno-INITIALDLY -Wno-TIMESCALEMOD -Wno-MULTITOP -Wno-BLKANDNBLK --timescale 1ns/1ns \
   -I$R/ikbd/hd63701 $FILES sim_stubs.v sdram_model.v tb_top.sv tb.cpp -o simst
