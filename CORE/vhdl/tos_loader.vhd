@@ -93,6 +93,7 @@ architecture synthesis of tos_loader is
    signal qnice_ack     : std_logic;
    signal qnice_delay   : natural range 0 to 3 := 0;
    signal qnice_pending : std_logic;
+   signal qnice_taken   : std_logic := '0';   -- the current write access has been captured
 
 begin
 
@@ -101,9 +102,13 @@ begin
    qnice_data_ce <= qnice_ce_i or (qnice_cart_ce_i and not qnice_is_csr);
    qnice_base    <= C_CART_BASE when qnice_cart_ce_i = '1' else C_TOS_BASE;
 
-   -- A new word can only be accepted when the previous word has been written
+   -- A new word can only be accepted when the previous word has been written.
+   -- The QNICE CPU samples wait at its rising clock edge, while this device captures the
+   -- word at the falling edge before: Once the word of the current write access has been
+   -- captured (qnice_taken), wait must stay low, otherwise the CPU would repeat the access
+   -- forever (each capture makes qnice_pending high again).
    qnice_pending <= '1' when qnice_req /= qnice_ack or qnice_delay /= 0 else '0';
-   qnice_wait_o  <= qnice_data_ce and qnice_we_i and qnice_addr_i(0) and qnice_pending;
+   qnice_wait_o  <= qnice_data_ce and qnice_we_i and qnice_addr_i(0) and qnice_pending and not qnice_taken;
 
    -- Cartridge CSR read access
    cart_read : process(all)
@@ -154,7 +159,8 @@ begin
          if qnice_data_ce = '1' and qnice_we_i = '1' then
             if qnice_addr_i(0) = '0' then
                qnice_hi_byte <= qnice_data_i(7 downto 0);
-            elsif qnice_pending = '0' then
+            elsif qnice_pending = '0' and qnice_taken = '0' then
+               qnice_taken <= '1';
                qnice_data  <= qnice_hi_byte & qnice_data_i(7 downto 0);
                qnice_addr  <= std_logic_vector(qnice_base + unsigned(qnice_addr_i(18 downto 1)));
                qnice_delay <= 3;
@@ -170,7 +176,13 @@ begin
             end if;
          end if;
 
+         -- the write access ends as soon as the CPU continues with the next instruction
+         if qnice_data_ce = '0' or qnice_we_i = '0' then
+            qnice_taken <= '0';
+         end if;
+
          if qnice_rst_i = '1' then
+            qnice_taken       <= '0';
             qnice_req         <= '0';
             qnice_delay       <= 0;
             qnice_tos192k     <= '0';
