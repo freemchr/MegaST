@@ -14,4 +14,5 @@ mkdir -p "$W/xpm"
 ghdl -a --std=08 --work=xpm --workdir="$W/xpm" xpm_stub.vhd
 ghdl -a --std=08 --workdir="$W" -P"$W/xpm" ../../vhdl/tos_loader.vhd tb_tos_loader.vhd
 ghdl -e --std=08 --workdir="$W" -P"$W/xpm" -Wl,-L"$W/lib" -o "$W/tb" tb_tos_loader
-"$W/tb"
+echo "TOS auto-load:";   "$W/tb"
+echo "TOS from the menu:"; "$W/tb" -gMANUAL=true

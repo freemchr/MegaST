@@ -24,6 +24,12 @@
 --    @ *               [ ]                  : ; =             ; ' ISO(<>)
 --    Cursor keys       Cursor keys
 --
+-- Numeric keypad: the MEGA65 has none, so while the MEGA key is held down, these keys are keypad keys:
+--
+--    MEGA + 0..9       Keypad 0..9          MEGA + Return     Keypad Enter
+--    MEGA + + - * /    Keypad + - * /       MEGA + .          Keypad .
+--    MEGA + ( )        Keypad ( )           (MEGA + Shift + 8 / 9, as printed on the MEGA65)
+--
 -- The MEGA65 Help key opens the M2M on-screen-menu and is therefore not mapped.
 --
 -- MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
@@ -214,6 +220,24 @@ constant st_home     : natural := st(12, 2);
 constant st_help     : natural := st(11, 0);
 constant st_delete   : natural := st(11, 2);
 constant st_undo     : natural := st(12, 0);
+constant st_kp_lpar  : natural := st(13, 0);  -- keypad (
+constant st_kp_rpar  : natural := st(13, 1);  -- keypad )
+constant st_kp_slash : natural := st(14, 0);
+constant st_kp_star  : natural := st(14, 1);
+constant st_kp_7     : natural := st(13, 2);
+constant st_kp_8     : natural := st(13, 3);
+constant st_kp_9     : natural := st(14, 2);
+constant st_kp_minus : natural := st(14, 3);
+constant st_kp_4     : natural := st(13, 4);
+constant st_kp_5     : natural := st(13, 5);
+constant st_kp_6     : natural := st(14, 4);
+constant st_kp_plus  : natural := st(14, 5);
+constant st_kp_1     : natural := st(12, 6);
+constant st_kp_2     : natural := st(13, 6);
+constant st_kp_3     : natural := st(14, 6);
+constant st_kp_0     : natural := st(12, 7);
+constant st_kp_dot   : natural := st(13, 7);
+constant st_kp_enter : natural := st(14, 7);
 
 -- Length of the Caps Lock key press that is generated when the (latching) MEGA65 Caps Lock key changes
 constant C_CAPS_PULSE : natural := G_CLK_SPEED / 20;  -- 50 ms
@@ -250,6 +274,7 @@ begin
       variable m        : std_logic_vector(119 downto 0);
       variable shift    : boolean;
       variable fshift   : boolean;
+      variable keypad   : boolean;
 
       -- ST key (col, row) is pressed while the MEGA65 key is pressed
       procedure map_key(m65 : natural; atari : natural) is
@@ -263,6 +288,7 @@ begin
       if rising_edge(clk_main_i) then
          m      := (others => '1');
          shift  := key_pressed_n(m65_left_shift) = '0' or key_pressed_n(m65_right_shift) = '0';
+         keypad := key_pressed_n(m65_mega) = '0';
 
          -- Shift + F1/F3/F5/F7/F9 means F2/F4/F6/F8/F10 (as printed on the MEGA65 keyboard):
          -- in this case the ST does not see the shift key
@@ -279,10 +305,28 @@ begin
          map_key(m65_u, st_u);   map_key(m65_v, st_v);   map_key(m65_w, st_w);   map_key(m65_x, st_x);
          map_key(m65_y, st_y);   map_key(m65_z, st_z);
 
-         -- digits
-         map_key(m65_1, st_1);   map_key(m65_2, st_2);   map_key(m65_3, st_3);   map_key(m65_4, st_4);
-         map_key(m65_5, st_5);   map_key(m65_6, st_6);   map_key(m65_7, st_7);   map_key(m65_8, st_8);
-         map_key(m65_9, st_9);   map_key(m65_0, st_0);
+         -- digits, or the numeric keypad while the MEGA key is held down
+         if keypad then
+            map_key(m65_1, st_kp_1);   map_key(m65_2, st_kp_2);   map_key(m65_3, st_kp_3);
+            map_key(m65_4, st_kp_4);   map_key(m65_5, st_kp_5);   map_key(m65_6, st_kp_6);
+            map_key(m65_7, st_kp_7);   map_key(m65_0, st_kp_0);
+            -- MEGA + Shift + 8 / 9 = ( ) as printed on the MEGA65
+            if shift then
+               map_key(m65_8, st_kp_lpar);   map_key(m65_9, st_kp_rpar);
+            else
+               map_key(m65_8, st_kp_8);      map_key(m65_9, st_kp_9);
+            end if;
+            map_key(m65_plus,     st_kp_plus);
+            map_key(m65_minus,    st_kp_minus);
+            map_key(m65_asterisk, st_kp_star);
+            map_key(m65_slash,    st_kp_slash);
+            map_key(m65_dot,      st_kp_dot);
+            map_key(m65_return,   st_kp_enter);
+         else
+            map_key(m65_1, st_1);   map_key(m65_2, st_2);   map_key(m65_3, st_3);   map_key(m65_4, st_4);
+            map_key(m65_5, st_5);   map_key(m65_6, st_6);   map_key(m65_7, st_7);   map_key(m65_8, st_8);
+            map_key(m65_9, st_9);   map_key(m65_0, st_0);
+         end if;
 
          -- function keys
          if fshift then
@@ -302,7 +346,9 @@ begin
          map_key(m65_f13,        st_help);
 
          -- special keys
-         map_key(m65_return,     st_return);
+         if not keypad then
+            map_key(m65_return,  st_return);
+         end if;
          map_key(m65_space,      st_space);
          map_key(m65_esc,        st_esc);
          map_key(m65_ins_del,    st_bs);
@@ -313,21 +359,23 @@ begin
          map_key(m65_run_stop,   st_undo);
 
          -- symbols (positional mapping)
-         map_key(m65_plus,       st_minus);
-         map_key(m65_minus,      st_equal);
+         if not keypad then
+            map_key(m65_plus,       st_minus);
+            map_key(m65_minus,      st_equal);
+            map_key(m65_asterisk,   st_rbracket);
+            map_key(m65_dot,        st_dot);
+            map_key(m65_slash,      st_slash);
+         end if;
          map_key(m65_gbp,        st_bslash);
          map_key(m65_arrow_left, st_grave);
          map_key(m65_at,         st_lbracket);
-         map_key(m65_asterisk,   st_rbracket);
          map_key(m65_colon,      st_semicol);
          map_key(m65_semicolon,  st_quote);
          map_key(m65_equal,      st_iso);
          map_key(m65_comma,      st_comma);
-         map_key(m65_dot,        st_dot);
-         map_key(m65_slash,      st_slash);
 
-         -- modifiers
-         if not fshift then
+         -- modifiers (MEGA + Shift + 8 / 9 are the keypad keys ( ): the ST does not see the shift key)
+         if not fshift and not (keypad and (key_pressed_n(m65_8) = '0' or key_pressed_n(m65_9) = '0')) then
             map_key(m65_left_shift,  st_lshift);
             map_key(m65_right_shift, st_rshift);
          end if;

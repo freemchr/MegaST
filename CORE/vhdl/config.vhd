@@ -75,7 +75,7 @@ type WHS_RECORD_ARRAY_TYPE is array (0 to WHS_RECORDS - 1) of WHS_RECORD_TYPE;
 -- window contains the amount of pages, so each zero-terminated string can be up to 4095 bytes = 4094 characters long.
 
 constant SCR_WELCOME : string :=
-   "Atari ST/STe for MEGA65 Version 0.1\n" &
+   "Atari ST/STe for MEGA65 Version 0.3\n" &
    "\n" &
    "MiSTer port by Till Harbaum, Gyorgy\n" &
    "Szombathelyi, Jorge Cwik, Alexey\n" &
@@ -92,13 +92,14 @@ constant SCR_WELCOME : string :=
    "  Shift+F1..F9     F2..F10\n" &
    "  F11 / F13        Undo / Help\n" &
    "  Arrow up         Delete\n" &
+   "  MEGA + digits    Numeric keypad\n" &
    "  Inst/Del         Backspace\n" &
    "  Port 1: ST mouse, Port 2: joystick\n" &
    "\n" &
    "  Press Space to continue.\n";
 
 constant HELP_1 : string :=
-   "\n Atari ST/STe for MEGA65 Version 0.1\n\n" &
+   "\n Atari ST/STe for MEGA65 Version 0.3\n\n" &
    " MiSTer port of the MiSTery core\n" &
    " MEGA65 port 2026, GPL v3\n" &
    " Powered by MiSTer2MEGA65\n\n" &
@@ -110,7 +111,7 @@ constant HELP_1 : string :=
    " STe mode needs TOS 1.06 or newer.\n\n" &
    " An Atari ST mouse (or a mouSTer in\n" &
    " Atari mode) goes into port 1.\n\n" &
-   " Cursor right: next page    (1 of 2)\n" &
+   " Cursor right: next page    (1 of 3)\n" &
    " Press Space to close the help screen.";
 
 constant HELP_2 : string :=
@@ -129,11 +130,26 @@ constant HELP_2 : string :=
    " + - Pound       - = \\\n" &
    " @ * Arrow left  [ ] `\n" &
    " : ; =           ; ' <>\n\n" &
-   " Cursor left: previous page (2 of 2)\n" &
+   " Cursor keys: prev./next page (2 of 3)\n" &
+   " Press Space to close the help screen.";
+
+constant HELP_3 : string :=
+   "\n Numeric keypad: hold the MEGA key\n\n" &
+   " MEGA + 0..9         Keypad 0..9\n" &
+   " MEGA + + - * /      Keypad + - * /\n" &
+   " MEGA + .            Keypad .\n" &
+   " MEGA + Return       Keypad Enter\n" &
+   " MEGA + Shift + 8 9  Keypad ( )\n\n" &
+   " TOS: the menu loads another TOS\n" &
+   " image until the next power cycle.\n\n" &
+   " Clock: the ST uses the MEGA65 real\n" &
+   " time clock (Mega ST clock chip).\n" &
+   " Set it in the MEGA65 configuration.\n\n" &
+   " Cursor left: previous page (3 of 3)\n" &
    " Press Space to close the help screen.";
 
 -- Concatenate all your Welcome and Help screens into one large string, so that during synthesis one large string ROM can be build.
-constant WHS_DATA : string := SCR_WELCOME & HELP_1 & HELP_2;
+constant WHS_DATA : string := SCR_WELCOME & HELP_1 & HELP_2 & HELP_3;
 
 -- The WHS array needs the start address of each page. As a best practice: Just define some constants, that you can name for example
 -- just like you named the string constants and then add _START. Use the 'length attribute of VHDL to add up all previous strings
@@ -142,6 +158,7 @@ constant WHS_DATA : string := SCR_WELCOME & HELP_1 & HELP_2;
 constant SCR_WELCOME_START : natural := 0;
 constant HELP_1_START      : natural := SCR_WELCOME'length;
 constant HELP_2_START      : natural := HELP_1_START + HELP_1'length;
+constant HELP_3_START      : natural := HELP_2_START + HELP_2'length;
 
 -- Fill the WHS array with page start addresses and the length of each page.
 -- Make sure that array element 0 is always your Welcome page. If you don't use a welcome page, fill everything with zeros.
@@ -152,9 +169,9 @@ constant WHS : WHS_RECORD_ARRAY_TYPE := (
     page_length   => (SCR_WELCOME'length, 0, 0)),
 
    --- Help pages
-   (page_count    => 2,
-    page_start    => (HELP_1_START,  HELP_2_START,  0),
-    page_length   => (HELP_1'length, HELP_2'length, 0))
+   (page_count    => 3,
+    page_start    => (HELP_1_START,  HELP_2_START,  HELP_3_START),
+    page_length   => (HELP_1'length, HELP_2'length, HELP_3'length))
 );
 
 --------------------------------------------------------------------------------------------------------------------
@@ -308,7 +325,7 @@ constant OPTM_S_SAVING     : string := "<Saving>";          -- the internal writ
 --             Do use a lower case \n. If you forget one of them or if you use upper case, you will run into undefined behavior.
 --          2. Start each line that contains an actual menu item (multi- or single-select) with a Space character,
 --             otherwise you will experience visual glitches.
-constant OPTM_SIZE         : natural := 71;  -- amount of items including empty lines:
+constant OPTM_SIZE         : natural := 72;  -- amount of items including empty lines:
                                              -- needs to be equal to the number of lines in OPTM_ITEMS and amount of items in OPTM_GROUPS
                                              -- IMPORTANT: If SAVE_SETTINGS is true and OPTM_SIZE changes: Make sure to re-generate and
                                              -- and re-distribute the config file. You can make a new one using M2M/tools/make_config.sh
@@ -316,111 +333,113 @@ constant OPTM_SIZE         : natural := 71;  -- amount of items including empty 
 -- Net size of the Options menu on the screen in characters (excluding the frame, which is hardcoded to two characters)
 -- Without submenus: Use OPTM_SIZE as height, otherwise count how large the actually visible main menu is.
 constant OPTM_DX           : natural := 28;
-constant OPTM_DY           : natural := 22;
+constant OPTM_DY           : natural := 23;
 
 constant OPTM_ITEMS        : string :=
    " Atari ST/STe\n"              &   --  0
    "\n"                           &   --  1
-   " Floppy A:%s\n"               &   --  2
-   " Floppy B:%s\n"               &   --  3
-   " Hard disk 0:%s\n"            &   --  4
-   " Hard disk 1:%s\n"            &   --  5
-   " Cartridge:%s\n"              &   --  6
-   "\n"                           &   --  7
-   " Machine: %s\n"               &   --  8
-   " Machine\n"                   &   --  9
-   "\n"                           &   -- 10
-   " Atari ST\n"                  &   -- 11
-   " Atari STe\n"                 &   -- 12
-   " Mega STe (16 MHz)\n"         &   -- 13
-   " STEroids (turbo)\n"          &   -- 14
-   "\n"                           &   -- 15
-   " Back to main menu\n"         &   -- 16
-   " Memory: %s\n"                &   -- 17
-   " Memory\n"                    &   -- 18
-   "\n"                           &   -- 19
-   " 512 KB\n"                    &   -- 20
-   " 1 MB\n"                      &   -- 21
-   " 2 MB\n"                      &   -- 22
-   " 4 MB\n"                      &   -- 23
-   " 8 MB\n"                      &   -- 24
-   " 14 MB\n"                     &   -- 25
-   "\n"                           &   -- 26
-   " Back to main menu\n"         &   -- 27
-   " System settings\n"           &   -- 28
+   " TOS:%s\n"                    &   --  2
+   " Floppy A:%s\n"               &   --  3
+   " Floppy B:%s\n"               &   --  4
+   " Hard disk 0:%s\n"            &   --  5
+   " Hard disk 1:%s\n"            &   --  6
+   " Cartridge:%s\n"              &   --  7
+   "\n"                           &   --  8
+   " Machine: %s\n"               &   --  9
+   " Machine\n"                   &   -- 10
+   "\n"                           &   -- 11
+   " Atari ST\n"                  &   -- 12
+   " Atari STe\n"                 &   -- 13
+   " Mega STe (16 MHz)\n"         &   -- 14
+   " STEroids (turbo)\n"          &   -- 15
+   "\n"                           &   -- 16
+   " Back to main menu\n"         &   -- 17
+   " Memory: %s\n"                &   -- 18
+   " Memory\n"                    &   -- 19
+   "\n"                           &   -- 20
+   " 512 KB\n"                    &   -- 21
+   " 1 MB\n"                      &   -- 22
+   " 2 MB\n"                      &   -- 23
+   " 4 MB\n"                      &   -- 24
+   " 8 MB\n"                      &   -- 25
+   " 14 MB\n"                     &   -- 26
+   "\n"                           &   -- 27
+   " Back to main menu\n"         &   -- 28
    " System settings\n"           &   -- 29
-   "\n"                           &   -- 30
-   " Blitter (ST mode)\n"         &   -- 31
-   " Mono monitor (SM124)\n"      &   -- 32
-   " Mono: 60 Hz, not 71 Hz\n"    &   -- 33
-   " Full borders (overscan)\n"   &   -- 34
-   " Viking 1280x1024 card\n"     &   -- 35
-   " Stereo YM sound\n"           &   -- 36
-   " Write protect floppies\n"    &   -- 37
-   "\n"                           &   -- 38
-   " Back to main menu\n"         &   -- 39
-   " Controllers & ports\n"       &   -- 40
+   " System settings\n"           &   -- 30
+   "\n"                           &   -- 31
+   " Blitter (ST mode)\n"         &   -- 32
+   " Mono monitor (SM124)\n"      &   -- 33
+   " Mono: 60 Hz, not 71 Hz\n"    &   -- 34
+   " Full borders (overscan)\n"   &   -- 35
+   " Viking 1280x1024 card\n"     &   -- 36
+   " Stereo YM sound\n"           &   -- 37
+   " Write protect floppies\n"    &   -- 38
+   "\n"                           &   -- 39
+   " Back to main menu\n"         &   -- 40
    " Controllers & ports\n"       &   -- 41
-   "\n"                           &   -- 42
-   " Swap joystick ports\n"       &   -- 43
-   " STe joypads\n"               &   -- 44
-   " Port 1: 1351 mouse\n"        &   -- 45
-   " PMOD: RS232/MIDI/printer\n"  &   -- 46
-   " Cubase dongle\n"             &   -- 47
-   "\n"                           &   -- 48
-   " Back to main menu\n"         &   -- 49
-   "\n"                           &   -- 50
-   " HDMI: %s\n"                  &   -- 51
-   " HDMI Settings\n"             &   -- 52
-   "\n"                           &   -- 53
-   " 720p 50 Hz 16:9\n"           &   -- 54
-   " 720p 60 Hz 16:9\n"           &   -- 55
-   " 576p 50 Hz 4:3\n"            &   -- 56
-   " 576p 50 Hz 5:4\n"            &   -- 57
-   " 640x480 60 Hz\n"             &   -- 58
-   " 720x480 59.94 Hz\n"          &   -- 59
-   " 800x600 60 Hz\n"             &   -- 60
-   "\n"                           &   -- 61
-   " Back to main menu\n"         &   -- 62
-   " HDMI: CRT emulation\n"       &   -- 63
-   " HDMI: Zoom-in\n"             &   -- 64
-   " Audio improvements\n"        &   -- 65
-   "\n"                           &   -- 66
-   " Reset Atari ST\n"            &   -- 67
-   " About & Help\n"              &   -- 68
-   "\n"                           &   -- 69
-   " Close Menu\n"               ;   -- 70
+   " Controllers & ports\n"       &   -- 42
+   "\n"                           &   -- 43
+   " Swap joystick ports\n"       &   -- 44
+   " STe joypads\n"               &   -- 45
+   " Port 1: 1351 mouse\n"        &   -- 46
+   " PMOD: RS232/MIDI/printer\n"  &   -- 47
+   " Cubase dongle\n"             &   -- 48
+   "\n"                           &   -- 49
+   " Back to main menu\n"         &   -- 50
+   "\n"                           &   -- 51
+   " HDMI: %s\n"                  &   -- 52
+   " HDMI Settings\n"             &   -- 53
+   "\n"                           &   -- 54
+   " 720p 50 Hz 16:9\n"           &   -- 55
+   " 720p 60 Hz 16:9\n"           &   -- 56
+   " 576p 50 Hz 4:3\n"            &   -- 57
+   " 576p 50 Hz 5:4\n"            &   -- 58
+   " 640x480 60 Hz\n"             &   -- 59
+   " 720x480 59.94 Hz\n"          &   -- 60
+   " 800x600 60 Hz\n"             &   -- 61
+   "\n"                           &   -- 62
+   " Back to main menu\n"         &   -- 63
+   " HDMI: CRT emulation\n"       &   -- 64
+   " HDMI: Zoom-in\n"             &   -- 65
+   " Audio improvements\n"        &   -- 66
+   "\n"                           &   -- 67
+   " Reset Atari ST\n"            &   -- 68
+   " About & Help\n"              &   -- 69
+   "\n"                           &   -- 70
+   " Close Menu\n"               ;   -- 71
 
 -- define your own constants here and choose meaningful names
 -- make sure that your first group uses the value 1 (0 means "no menu item", such as text and line),
 -- and be aware that you can only have a maximum of 254 groups (255 means "Close Menu");
 -- also make sure that your group numbers are monotonic increasing (e.g. 1, 2, 3, 4, ...)
 -- single-select items and therefore also drive mount items need to have unique identifiers
-constant OPTM_G_Floppy_A   : integer := 1;
-constant OPTM_G_Floppy_B   : integer := 2;
-constant OPTM_G_HD_0       : integer := 3;
-constant OPTM_G_HD_1       : integer := 4;
-constant OPTM_G_Cart       : integer := 5;
-constant OPTM_G_Machine    : integer := 6;
-constant OPTM_G_Memory     : integer := 7;
-constant OPTM_G_Blitter    : integer := 8;
-constant OPTM_G_Mono       : integer := 9;
-constant OPTM_G_Mono60     : integer := 10;
-constant OPTM_G_Border     : integer := 11;
-constant OPTM_G_Viking     : integer := 12;
-constant OPTM_G_Stereo     : integer := 13;
-constant OPTM_G_WProt      : integer := 14;
-constant OPTM_G_JoySwap    : integer := 15;
-constant OPTM_G_StePads    : integer := 16;
-constant OPTM_G_Mouse1351  : integer := 17;
-constant OPTM_G_PMOD       : integer := 18;
-constant OPTM_G_Cubase     : integer := 19;
-constant OPTM_G_HDMI       : integer := 20;
-constant OPTM_G_CRT        : integer := 21;
-constant OPTM_G_Zoom       : integer := 22;
-constant OPTM_G_Audio      : integer := 23;
-constant OPTM_G_Reset      : integer := 24;
-constant OPTM_G_About      : integer := 25;
+constant OPTM_G_Tos        : integer := 1;
+constant OPTM_G_Floppy_A   : integer := 2;
+constant OPTM_G_Floppy_B   : integer := 3;
+constant OPTM_G_HD_0       : integer := 4;
+constant OPTM_G_HD_1       : integer := 5;
+constant OPTM_G_Cart       : integer := 6;
+constant OPTM_G_Machine    : integer := 7;
+constant OPTM_G_Memory     : integer := 8;
+constant OPTM_G_Blitter    : integer := 9;
+constant OPTM_G_Mono       : integer := 10;
+constant OPTM_G_Mono60     : integer := 11;
+constant OPTM_G_Border     : integer := 12;
+constant OPTM_G_Viking     : integer := 13;
+constant OPTM_G_Stereo     : integer := 14;
+constant OPTM_G_WProt      : integer := 15;
+constant OPTM_G_JoySwap    : integer := 16;
+constant OPTM_G_StePads    : integer := 17;
+constant OPTM_G_Mouse1351  : integer := 18;
+constant OPTM_G_PMOD       : integer := 19;
+constant OPTM_G_Cubase     : integer := 20;
+constant OPTM_G_HDMI       : integer := 21;
+constant OPTM_G_CRT        : integer := 22;
+constant OPTM_G_Zoom       : integer := 23;
+constant OPTM_G_Audio      : integer := 24;
+constant OPTM_G_Reset      : integer := 25;
+constant OPTM_G_About      : integer := 26;
 
 -- !!! DO NOT TOUCH !!!
 type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC- 1;
@@ -429,75 +448,76 @@ type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC-
 constant OPTM_GROUPS       : OPTM_GTYPE := (
                                              OPTM_G_TEXT + OPTM_G_HEADLINE,                            --  0 Atari ST/STe
                                              OPTM_G_LINE,                                              --  1
-                                             OPTM_G_Floppy_A + OPTM_G_MOUNT_DRV + OPTM_G_START,        --  2 Floppy A:%s
-                                             OPTM_G_Floppy_B + OPTM_G_MOUNT_DRV,                       --  3 Floppy B:%s
-                                             OPTM_G_HD_0 + OPTM_G_MOUNT_DRV,                           --  4 Hard disk 0:%s
-                                             OPTM_G_HD_1 + OPTM_G_MOUNT_DRV,                           --  5 Hard disk 1:%s
-                                             OPTM_G_Cart + OPTM_G_LOAD_ROM,                            --  6 Cartridge:%s
-                                             OPTM_G_LINE,                                              --  7
-                                             OPTM_G_SUBMENU,                                           --  8 Machine: %s
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            --  9 Machine
-                                             OPTM_G_LINE,                                              -- 10
-                                             OPTM_G_Machine + OPTM_G_STDSEL,                           -- 11 Atari ST
-                                             OPTM_G_Machine,                                           -- 12 Atari STe
-                                             OPTM_G_Machine,                                           -- 13 Mega STe (16 MHz)
-                                             OPTM_G_Machine,                                           -- 14 STEroids (turbo)
-                                             OPTM_G_LINE,                                              -- 15
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 16 Back to main menu
-                                             OPTM_G_SUBMENU,                                           -- 17 Memory: %s
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 18 Memory
-                                             OPTM_G_LINE,                                              -- 19
-                                             OPTM_G_Memory,                                            -- 20 512 KB
-                                             OPTM_G_Memory + OPTM_G_STDSEL,                            -- 21 1 MB
-                                             OPTM_G_Memory,                                            -- 22 2 MB
-                                             OPTM_G_Memory,                                            -- 23 4 MB
-                                             OPTM_G_Memory,                                            -- 24 8 MB
-                                             OPTM_G_Memory,                                            -- 25 14 MB
-                                             OPTM_G_LINE,                                              -- 26
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 27 Back to main menu
-                                             OPTM_G_SUBMENU,                                           -- 28 System settings
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 29 System settings
-                                             OPTM_G_LINE,                                              -- 30
-                                             OPTM_G_Blitter + OPTM_G_SINGLESEL,                        -- 31 Blitter (ST mode)
-                                             OPTM_G_Mono + OPTM_G_SINGLESEL,                           -- 32 Mono monitor (SM124)
-                                             OPTM_G_Mono60 + OPTM_G_SINGLESEL,                         -- 33 Mono: 60 Hz, not 71 Hz
-                                             OPTM_G_Border + OPTM_G_SINGLESEL,                         -- 34 Full borders (overscan)
-                                             OPTM_G_Viking + OPTM_G_SINGLESEL,                         -- 35 Viking 1280x1024 card
-                                             OPTM_G_Stereo + OPTM_G_SINGLESEL,                         -- 36 Stereo YM sound
-                                             OPTM_G_WProt + OPTM_G_SINGLESEL,                          -- 37 Write protect floppies
-                                             OPTM_G_LINE,                                              -- 38
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 39 Back to main menu
-                                             OPTM_G_SUBMENU,                                           -- 40 Controllers & ports
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 41 Controllers & ports
-                                             OPTM_G_LINE,                                              -- 42
-                                             OPTM_G_JoySwap + OPTM_G_SINGLESEL,                        -- 43 Swap joystick ports
-                                             OPTM_G_StePads + OPTM_G_SINGLESEL,                        -- 44 STe joypads
-                                             OPTM_G_Mouse1351 + OPTM_G_SINGLESEL,                      -- 45 Port 1: 1351 mouse
-                                             OPTM_G_PMOD + OPTM_G_SINGLESEL,                           -- 46 PMOD: RS232/MIDI/printer
-                                             OPTM_G_Cubase + OPTM_G_SINGLESEL,                         -- 47 Cubase dongle
-                                             OPTM_G_LINE,                                              -- 48
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 49 Back to main menu
-                                             OPTM_G_LINE,                                              -- 50
-                                             OPTM_G_SUBMENU,                                           -- 51 HDMI: %s
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 52 HDMI Settings
-                                             OPTM_G_LINE,                                              -- 53
-                                             OPTM_G_HDMI + OPTM_G_STDSEL,                              -- 54 720p 50 Hz 16:9
-                                             OPTM_G_HDMI,                                              -- 55 720p 60 Hz 16:9
-                                             OPTM_G_HDMI,                                              -- 56 576p 50 Hz 4:3
-                                             OPTM_G_HDMI,                                              -- 57 576p 50 Hz 5:4
-                                             OPTM_G_HDMI,                                              -- 58 640x480 60 Hz
-                                             OPTM_G_HDMI,                                              -- 59 720x480 59.94 Hz
-                                             OPTM_G_HDMI,                                              -- 60 800x600 60 Hz
-                                             OPTM_G_LINE,                                              -- 61
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 62 Back to main menu
-                                             OPTM_G_CRT + OPTM_G_SINGLESEL,                            -- 63 HDMI: CRT emulation
-                                             OPTM_G_Zoom + OPTM_G_SINGLESEL,                           -- 64 HDMI: Zoom-in
-                                             OPTM_G_Audio + OPTM_G_SINGLESEL,                          -- 65 Audio improvements
-                                             OPTM_G_LINE,                                              -- 66
-                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 67 Reset Atari ST
-                                             OPTM_G_About + OPTM_G_HELP,                               -- 68 About & Help
-                                             OPTM_G_LINE,                                              -- 69
-                                             OPTM_G_CLOSE                                              -- 70 Close Menu
+                                             OPTM_G_Tos + OPTM_G_LOAD_ROM,                             --  2 TOS:%s
+                                             OPTM_G_Floppy_A + OPTM_G_MOUNT_DRV + OPTM_G_START,        --  3 Floppy A:%s
+                                             OPTM_G_Floppy_B + OPTM_G_MOUNT_DRV,                       --  4 Floppy B:%s
+                                             OPTM_G_HD_0 + OPTM_G_MOUNT_DRV,                           --  5 Hard disk 0:%s
+                                             OPTM_G_HD_1 + OPTM_G_MOUNT_DRV,                           --  6 Hard disk 1:%s
+                                             OPTM_G_Cart + OPTM_G_LOAD_ROM,                            --  7 Cartridge:%s
+                                             OPTM_G_LINE,                                              --  8
+                                             OPTM_G_SUBMENU,                                           --  9 Machine: %s
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 10 Machine
+                                             OPTM_G_LINE,                                              -- 11
+                                             OPTM_G_Machine + OPTM_G_STDSEL,                           -- 12 Atari ST
+                                             OPTM_G_Machine,                                           -- 13 Atari STe
+                                             OPTM_G_Machine,                                           -- 14 Mega STe (16 MHz)
+                                             OPTM_G_Machine,                                           -- 15 STEroids (turbo)
+                                             OPTM_G_LINE,                                              -- 16
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 17 Back to main menu
+                                             OPTM_G_SUBMENU,                                           -- 18 Memory: %s
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 19 Memory
+                                             OPTM_G_LINE,                                              -- 20
+                                             OPTM_G_Memory,                                            -- 21 512 KB
+                                             OPTM_G_Memory + OPTM_G_STDSEL,                            -- 22 1 MB
+                                             OPTM_G_Memory,                                            -- 23 2 MB
+                                             OPTM_G_Memory,                                            -- 24 4 MB
+                                             OPTM_G_Memory,                                            -- 25 8 MB
+                                             OPTM_G_Memory,                                            -- 26 14 MB
+                                             OPTM_G_LINE,                                              -- 27
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 28 Back to main menu
+                                             OPTM_G_SUBMENU,                                           -- 29 System settings
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 30 System settings
+                                             OPTM_G_LINE,                                              -- 31
+                                             OPTM_G_Blitter + OPTM_G_SINGLESEL,                        -- 32 Blitter (ST mode)
+                                             OPTM_G_Mono + OPTM_G_SINGLESEL,                           -- 33 Mono monitor (SM124)
+                                             OPTM_G_Mono60 + OPTM_G_SINGLESEL,                         -- 34 Mono: 60 Hz, not 71 Hz
+                                             OPTM_G_Border + OPTM_G_SINGLESEL,                         -- 35 Full borders (overscan)
+                                             OPTM_G_Viking + OPTM_G_SINGLESEL,                         -- 36 Viking 1280x1024 card
+                                             OPTM_G_Stereo + OPTM_G_SINGLESEL,                         -- 37 Stereo YM sound
+                                             OPTM_G_WProt + OPTM_G_SINGLESEL,                          -- 38 Write protect floppies
+                                             OPTM_G_LINE,                                              -- 39
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 40 Back to main menu
+                                             OPTM_G_SUBMENU,                                           -- 41 Controllers & ports
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 42 Controllers & ports
+                                             OPTM_G_LINE,                                              -- 43
+                                             OPTM_G_JoySwap + OPTM_G_SINGLESEL,                        -- 44 Swap joystick ports
+                                             OPTM_G_StePads + OPTM_G_SINGLESEL,                        -- 45 STe joypads
+                                             OPTM_G_Mouse1351 + OPTM_G_SINGLESEL,                      -- 46 Port 1: 1351 mouse
+                                             OPTM_G_PMOD + OPTM_G_SINGLESEL,                           -- 47 PMOD: RS232/MIDI/printer
+                                             OPTM_G_Cubase + OPTM_G_SINGLESEL,                         -- 48 Cubase dongle
+                                             OPTM_G_LINE,                                              -- 49
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 50 Back to main menu
+                                             OPTM_G_LINE,                                              -- 51
+                                             OPTM_G_SUBMENU,                                           -- 52 HDMI: %s
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 53 HDMI Settings
+                                             OPTM_G_LINE,                                              -- 54
+                                             OPTM_G_HDMI + OPTM_G_STDSEL,                              -- 55 720p 50 Hz 16:9
+                                             OPTM_G_HDMI,                                              -- 56 720p 60 Hz 16:9
+                                             OPTM_G_HDMI,                                              -- 57 576p 50 Hz 4:3
+                                             OPTM_G_HDMI,                                              -- 58 576p 50 Hz 5:4
+                                             OPTM_G_HDMI,                                              -- 59 640x480 60 Hz
+                                             OPTM_G_HDMI,                                              -- 60 720x480 59.94 Hz
+                                             OPTM_G_HDMI,                                              -- 61 800x600 60 Hz
+                                             OPTM_G_LINE,                                              -- 62
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 63 Back to main menu
+                                             OPTM_G_CRT + OPTM_G_SINGLESEL,                            -- 64 HDMI: CRT emulation
+                                             OPTM_G_Zoom + OPTM_G_SINGLESEL,                           -- 65 HDMI: Zoom-in
+                                             OPTM_G_Audio + OPTM_G_SINGLESEL,                          -- 66 Audio improvements
+                                             OPTM_G_LINE,                                              -- 67
+                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 68 Reset Atari ST
+                                             OPTM_G_About + OPTM_G_HELP,                               -- 69 About & Help
+                                             OPTM_G_LINE,                                              -- 70
+                                             OPTM_G_CLOSE                                              -- 71 Close Menu
                                            );
 
 --------------------------------------------------------------------------------------------------------------------

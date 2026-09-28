@@ -49,6 +49,9 @@ entity main is
       st_pmod_i               : in  std_logic;              -- serial port, MIDI and printer port on the PMODs
       st_cubase_i             : in  std_logic;              -- Cubase 2/3 dongle in the cartridge port
 
+      -- MEGA65 real time clock (M2M format), used by the Mega ST RTC (rp5c15_m65.sv)
+      rtc_i                   : in  std_logic_vector(64 downto 0);
+
       -- TOS loader
       dio_addr_i              : in  std_logic_vector(23 downto 1);
       dio_data_i              : in  std_logic_vector(15 downto 0);
@@ -57,6 +60,7 @@ entity main is
       tos192k_i               : in  std_logic;
       cart_loaded_i           : in  std_logic;
       cart_loading_i          : in  std_logic;              -- keep the ST in reset while a cartridge is loaded
+      tos_loading_i           : in  std_logic;              -- keep the ST in reset while a TOS (menu) is loaded
 
       -- Floppy drives (MiSTer "SD" interface of fdc1772.sv)
       -- Floppy drives (0, 1) and hard disks (2, 3): MiSTer "SD" interface of fdc1772.sv and acsi_ctrl.sv
@@ -155,6 +159,7 @@ component atarist_m65 is
       cfg_viking      : in    std_logic;
       cfg_ste_pads    : in    std_logic;
       cfg_cubase      : in    std_logic;
+      rtc             : in    std_logic_vector(64 downto 0);
 
       dio_download    : in    std_logic;
       dio_addr        : in    std_logic_vector(23 downto 1);
@@ -276,7 +281,7 @@ begin
 
    -- long and short press of the reset button mean the same: reset the ST.
    -- The M2M firmware keeps the core in reset while the TOS image is being loaded.
-   reset_core <= reset_soft_i or reset_hard_i or cart_loading_i;
+   reset_core <= reset_soft_i or reset_hard_i or cart_loading_i or tos_loading_i;
 
    port1 <= not (joy_1_fire_n_i & joy_1_right_n_i & joy_1_left_n_i & joy_1_down_n_i & joy_1_up_n_i);
    port2 <= not (joy_2_fire_n_i & joy_2_right_n_i & joy_2_left_n_i & joy_2_down_n_i & joy_2_up_n_i);
@@ -351,6 +356,7 @@ begin
          cfg_viking      => st_viking_i,
          cfg_ste_pads    => st_ste_pads_i,
          cfg_cubase      => st_cubase_i,
+         rtc             => rtc_i,
 
          -- the TOS image is only written while the core is held in reset
          dio_download    => reset_core,

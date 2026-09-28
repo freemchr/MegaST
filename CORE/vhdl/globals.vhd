@@ -91,6 +91,7 @@ constant C_DEV_ST_VD          : std_logic_vector(15 downto 0) := x"0101";     --
 constant C_DEV_ST_VD0_BUF     : std_logic_vector(15 downto 0) := x"0102";     -- disk image buffer drive A: (HyperRAM)
 constant C_DEV_ST_VD1_BUF     : std_logic_vector(15 downto 0) := x"0103";     -- disk image buffer drive B: (HyperRAM)
 constant C_DEV_ST_CART        : std_logic_vector(15 downto 0) := x"0104";     -- cartridge loader (tos_loader.vhd)
+constant C_DEV_ST_TOSMAN      : std_logic_vector(15 downto 0) := x"0105";     -- TOS loader, TOS chosen in the menu (tos_loader.vhd)
 
 -- Unbuffered virtual drive: the image is accessed directly on the SD card (M2M/rom/shell.asm: VD_NOBUFFER)
 constant C_VD_NOBUFFER        : std_logic_vector(15 downto 0) := x"AAAA";
@@ -141,9 +142,11 @@ constant C_CRTROMTYPE_OPTIONAL   : std_logic_vector(15 downto 0) := x"0004";
 --       else it is a 4k window in HyperRAM or in SDRAM
 -- In case we are loading to a QNICE device, then the control and status register is located at the 4k window 0xFFFF.
 -- @TODO: See @TODO for more details about the control and status register
--- Atari ST: ROM cartridge (up to 128 kB, raw image or .STC with 4 byte header), see tos_loader.vhd
-constant C_CRTROMS_MAN_NUM       : natural := 1;                                       -- amount of manually loadable ROMs and carts; maximum is 16
-constant C_CRTROMS_MAN           : crtrom_buf_array := ( C_CRTROMTYPE_DEVICE, C_DEV_ST_CART,
+-- Atari ST: 0 = another TOS image (replaces /atarist/tos.img until the next power cycle),
+--           1 = ROM cartridge (up to 128 kB, raw image or .STC with 4 byte header), see tos_loader.vhd
+constant C_CRTROMS_MAN_NUM       : natural := 2;                                       -- amount of manually loadable ROMs and carts; maximum is 16
+constant C_CRTROMS_MAN           : crtrom_buf_array := ( C_CRTROMTYPE_DEVICE, C_DEV_ST_TOSMAN,
+                                                         C_CRTROMTYPE_DEVICE, C_DEV_ST_CART,
                                                          x"EEEE");                     -- Always finish the array using x"EEEE"
 
 -- Automatically loaded ROMs: These ROMs are loaded before the core starts

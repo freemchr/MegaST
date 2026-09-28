@@ -256,39 +256,39 @@ signal ikbd_clk               : std_logic;               -- IKBD clock (2.005 MH
 -- On-Screen-Menu (OSM) items: must match the positions of the items in config.vhd
 ---------------------------------------------------------------------------------------------
 
-constant C_MENU_ST            : natural := 11;
-constant C_MENU_STE           : natural := 12;
-constant C_MENU_MSTE          : natural := 13;
-constant C_MENU_STEROIDS      : natural := 14;
-constant C_MENU_MEM_512K      : natural := 20;
-constant C_MENU_MEM_1M        : natural := 21;
-constant C_MENU_MEM_2M        : natural := 22;
-constant C_MENU_MEM_4M        : natural := 23;
-constant C_MENU_MEM_8M        : natural := 24;
-constant C_MENU_MEM_14M       : natural := 25;
-constant C_MENU_BLITTER       : natural := 31;
-constant C_MENU_MONO          : natural := 32;
-constant C_MENU_MONO60        : natural := 33;
-constant C_MENU_BORDER        : natural := 34;
-constant C_MENU_VIKING        : natural := 35;
-constant C_MENU_STEREO        : natural := 36;
-constant C_MENU_WPROT         : natural := 37;
-constant C_MENU_JOYSWAP       : natural := 43;
-constant C_MENU_STEPADS       : natural := 44;
-constant C_MENU_MOUSE1351     : natural := 45;
-constant C_MENU_PMOD          : natural := 46;
-constant C_MENU_CUBASE        : natural := 47;
-constant C_MENU_HDMI_16_9_50  : natural := 54;
-constant C_MENU_HDMI_16_9_60  : natural := 55;
-constant C_MENU_HDMI_4_3_50   : natural := 56;
-constant C_MENU_HDMI_5_4_50   : natural := 57;
-constant C_MENU_HDMI_640_60   : natural := 58;
-constant C_MENU_HDMI_720_5994 : natural := 59;
-constant C_MENU_SVGA_800_60   : natural := 60;
-constant C_MENU_CRT_EMULATION : natural := 63;
-constant C_MENU_HDMI_ZOOM     : natural := 64;
-constant C_MENU_IMPROVE_AUDIO : natural := 65;
--- 67 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
+constant C_MENU_ST            : natural := 12;
+constant C_MENU_STE           : natural := 13;
+constant C_MENU_MSTE          : natural := 14;
+constant C_MENU_STEROIDS      : natural := 15;
+constant C_MENU_MEM_512K      : natural := 21;
+constant C_MENU_MEM_1M        : natural := 22;
+constant C_MENU_MEM_2M        : natural := 23;
+constant C_MENU_MEM_4M        : natural := 24;
+constant C_MENU_MEM_8M        : natural := 25;
+constant C_MENU_MEM_14M       : natural := 26;
+constant C_MENU_BLITTER       : natural := 32;
+constant C_MENU_MONO          : natural := 33;
+constant C_MENU_MONO60        : natural := 34;
+constant C_MENU_BORDER        : natural := 35;
+constant C_MENU_VIKING        : natural := 36;
+constant C_MENU_STEREO        : natural := 37;
+constant C_MENU_WPROT         : natural := 38;
+constant C_MENU_JOYSWAP       : natural := 44;
+constant C_MENU_STEPADS       : natural := 45;
+constant C_MENU_MOUSE1351     : natural := 46;
+constant C_MENU_PMOD          : natural := 47;
+constant C_MENU_CUBASE        : natural := 48;
+constant C_MENU_HDMI_16_9_50  : natural := 55;
+constant C_MENU_HDMI_16_9_60  : natural := 56;
+constant C_MENU_HDMI_4_3_50   : natural := 57;
+constant C_MENU_HDMI_5_4_50   : natural := 58;
+constant C_MENU_HDMI_640_60   : natural := 59;
+constant C_MENU_HDMI_720_5994 : natural := 60;
+constant C_MENU_SVGA_800_60   : natural := 61;
+constant C_MENU_CRT_EMULATION : natural := 64;
+constant C_MENU_HDMI_ZOOM     : natural := 65;
+constant C_MENU_IMPROVE_AUDIO : natural := 66;
+-- 68 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
@@ -305,6 +305,7 @@ signal main_dio_strobe_ack    : std_logic;
 signal main_tos192k           : std_logic;
 signal main_cart_loaded       : std_logic;
 signal main_cart_loading      : std_logic;
+signal main_tos_loading       : std_logic;
 
 signal main_img_mounted       : std_logic_vector(C_VDNUM - 1 downto 0);
 signal main_img_readonly      : std_logic;
@@ -337,9 +338,10 @@ signal qnice_video_31khz      : std_logic;
 -- TOS and cartridge loader
 signal qnice_tos_ce           : std_logic;
 signal qnice_cart_ce          : std_logic;
+signal qnice_tosm_ce          : std_logic;
 signal qnice_tos_we           : std_logic;
 signal qnice_tos_wait         : std_logic;
-signal qnice_cart_data        : std_logic_vector(15 downto 0);
+signal qnice_csr_data         : std_logic_vector(15 downto 0);
 
 -- Virtual drives
 signal qnice_vd_data_o        : std_logic_vector(15 downto 0);
@@ -514,6 +516,7 @@ begin
          st_mouse1351_i       => main_osm_control_i(C_MENU_MOUSE1351),
          st_pmod_i            => main_osm_control_i(C_MENU_PMOD),
          st_cubase_i          => main_osm_control_i(C_MENU_CUBASE),
+         rtc_i                => main_rtc_i,
 
          -- TOS loader
          dio_addr_i           => main_dio_addr,
@@ -523,6 +526,7 @@ begin
          tos192k_i            => main_tos192k,
          cart_loaded_i        => main_cart_loaded,
          cart_loading_i       => main_cart_loading,
+         tos_loading_i        => main_tos_loading,
 
          -- Floppy drives
          img_mounted_i        => main_img_mounted,
@@ -675,6 +679,7 @@ begin
 
       qnice_tos_ce         <= '0';
       qnice_cart_ce        <= '0';
+      qnice_tosm_ce        <= '0';
       qnice_tos_we         <= '0';
       qnice_vd_ce          <= '0';
       qnice_vd_we          <= '0';
@@ -692,7 +697,14 @@ begin
          when C_DEV_ST_CART =>
             qnice_cart_ce        <= qnice_dev_ce_i;
             qnice_tos_we         <= qnice_dev_we_i;
-            qnice_dev_data_o     <= qnice_cart_data;
+            qnice_dev_data_o     <= qnice_csr_data;
+            qnice_dev_wait_o     <= qnice_tos_wait;
+
+         -- TOS loader: TOS image chosen in the menu
+         when C_DEV_ST_TOSMAN =>
+            qnice_tosm_ce        <= qnice_dev_ce_i;
+            qnice_tos_we         <= qnice_dev_we_i;
+            qnice_dev_data_o     <= qnice_csr_data;
             qnice_dev_wait_o     <= qnice_tos_wait;
 
          -- Virtual drives
@@ -728,9 +740,10 @@ begin
          qnice_data_i      => qnice_dev_data_i,
          qnice_ce_i        => qnice_tos_ce,
          qnice_cart_ce_i   => qnice_cart_ce,
+         qnice_tosm_ce_i   => qnice_tosm_ce,
          qnice_we_i        => qnice_tos_we,
          qnice_wait_o      => qnice_tos_wait,
-         qnice_cart_data_o => qnice_cart_data,
+         qnice_csr_data_o  => qnice_csr_data,
 
          main_clk_i        => main_clk,
          main_dio_addr_o   => main_dio_addr,
@@ -739,7 +752,8 @@ begin
          main_dio_ack_i    => main_dio_strobe_ack,
          main_tos192k_o    => main_tos192k,
          main_cart_loaded_o  => main_cart_loaded,
-         main_cart_loading_o => main_cart_loading
+         main_cart_loading_o => main_cart_loading,
+         main_tos_loading_o  => main_tos_loading
       ); -- i_tos_loader
 
    ---------------------------------------------------------------------------------------

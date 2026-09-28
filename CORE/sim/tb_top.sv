@@ -51,6 +51,18 @@ module tb_top (
     if (dut.dma.acsi.irq & ~acsi_irq_d) acsi_irq_cnt <= acsi_irq_cnt + 1'd1;
     if (dut.dma.acsi_reg_sel & ~acsi_sel_d) acsi_din <= dut.dma.cpu_din[7:0];
   end
+`ifdef RTC_TRACE
+  // trace the accesses to the Mega ST real time clock
+  reg rtc_sel_d; integer rtc_n = 0;
+  always @(posedge clk_32) begin
+    rtc_sel_d <= dut.rtc_sel;
+    if (dut.rtc_sel & ~rtc_sel_d & rtc_n < 200) begin
+      rtc_n <= rtc_n + 1;
+      if (dut.rw) $display("RTC read  reg %h (bank %0d) = %h", dut.mbus_a[4:1], dut.rp5c15.mode[0], dut.rtc_data_out);
+      else        $display("RTC write reg %h = %h", dut.mbus_a[4:1], dut.mbus_dout[3:0]);
+    end
+  end
+`endif
   assign dbg_acsi_irq = acsi_irq_cnt;
   assign dbg_acsi_din = acsi_din;
   assign dbg_dma_mode = dut.dma.dma_mode;
@@ -87,7 +99,8 @@ module tb_top (
     .clk_32(clk_32), .clk_96(clk_96), .clk_2(clk_2), .init(init), .reset_in(reset_in),
     .cfg_mem(cfg_mem), .cfg_ste(cfg_ste), .cfg_mste(1'b0), .cfg_blitter(1'b0), .cfg_mono(1'b0),
     .cfg_psg_stereo(1'b0), .cfg_narrow_brd(1'b1), .cfg_mde60(1'b0), .cfg_fdc_wp(2'b00),
-    .cfg_viking(cfg_viking), .cfg_ste_pads(1'b0), .cfg_cubase(1'b0), .cart_loaded(cart_loaded),
+    .cfg_viking(cfg_viking), .cfg_ste_pads(1'b0), .cfg_cubase(1'b0),
+    .rtc({1'b0, 8'h40, 8'h01, 8'h26, 8'h09, 8'h28, 8'h14, 8'h35, 8'h07}),  // Mon 2026-09-28 14:35:07 .cart_loaded(cart_loaded),
     .dio_download(dio_download), .dio_addr(dio_addr), .dio_data(dio_data), .dio_strobe(dio_strobe),
     .dio_strobe_ack(dio_strobe_ack), .tos192k_in(tos192k_in),
     .img_mounted(2'b00), .img_readonly(1'b0), .img_size(img_size), .sd_lba(), .sd_rd(), .sd_wr(),

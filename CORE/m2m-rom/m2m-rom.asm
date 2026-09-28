@@ -80,8 +80,8 @@ SUBMENU_SUMMARY XOR     R8, R8                  ; R8 = 0 = no custom string
 ;  R10: @TODO: Future release: Context (see CTX_* in sysdef.asm)
 ; Output:
 ;   R8: 0=do not filter file, i.e. show file
-; Atari ST: only show directories and *.ST (floppy), *.HD, *.IMG (hard disk)
-; and *.STC, *.IMG (cartridge) files
+; Atari ST: only show directories and *.ST (floppy), *.HD, *.IMG (hard disk),
+; *.STC, *.IMG (cartridge) and *.IMG, *.ROM (TOS) files
 FILTER_FILES    INCRB
                 MOVE    R8, R0                  ; R0: file name
                 MOVE    R9, R2                  ; R2: remember R9
@@ -112,7 +112,7 @@ _FFILES_HD      CMP     0x0048, @R3             ; 'H'
                 CMP     0x0044, @R3             ; 'D'
                 RBRA    _FFILES_RET, Z          ; .HD: show
 
-_FFILES_4       MOVE    R1, R3                  ; ".IMG" or ".STC"
+_FFILES_4       MOVE    R1, R3                  ; ".IMG", ".STC" or ".ROM"
                 SUB     4, R3
                 CMP     0x002E, @R3             ; '.'
                 RBRA    _FFILES_FILT, !Z
@@ -126,7 +126,16 @@ _FFILES_4       MOVE    R1, R3                  ; ".IMG" or ".STC"
                 CMP     0x0047, @R3             ; 'G'
                 RBRA    _FFILES_RET, Z          ; .IMG: show
                 RBRA    _FFILES_FILT, 1
-_FFILES_STC     CMP     0x0053, @R3             ; 'S'
+_FFILES_STC     CMP     0x0052, @R3             ; 'R'
+                RBRA    _FFILES_STC1, !Z
+                ADD     1, R3
+                CMP     0x004F, @R3             ; 'O'
+                RBRA    _FFILES_FILT, !Z
+                ADD     1, R3
+                CMP     0x004D, @R3             ; 'M'
+                RBRA    _FFILES_RET, Z          ; .ROM: show
+                RBRA    _FFILES_FILT, 1
+_FFILES_STC1    CMP     0x0053, @R3             ; 'S'
                 RBRA    _FFILES_FILT, !Z
                 ADD     1, R3
                 CMP     0x0054, @R3             ; 'T'
@@ -236,7 +245,7 @@ PREP_START      INCRB
 ; MegaST: "Reset Atari ST" is an action, not a setting: pulse the reset of the core
 ; and remove the selection marker again (like the help menu item).
 OSM_SEL_POST    INCRB
-                CMP     OPTM_G_RESET, R8        ; "Reset Atari ST"?
+                CMP     OPTM_G_RESET, R8        ; "Reset Atari ST" (globals.asm)
                 RBRA    _OSP_RET, !Z
                 CMP     1, R9                   ; selected (not unselected)?
                 RBRA    _OSP_RET, !Z
@@ -310,9 +319,6 @@ CUSTOM_MSG      XOR     R8, R8
 ; ----------------------------------------------------------------------------
 
 ; Add your core specific constants and strings here
-
-; Menu group of "Reset Atari ST": must match OPTM_G_Reset in config.vhd
-OPTM_G_RESET    .EQU    24
 
 ; This needs to be the last thing before the "Variables" sections starts
 END_OF_ROM      .DW 0

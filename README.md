@@ -17,7 +17,8 @@ Features
 * Atari ST, STe, Mega STe (16 MHz) and "STEroids" modes
 * 512 KB, 1 MB, 2 MB, 4 MB, 8 MB and 14 MB of ST RAM
 * Blitter (always on in STe mode, optional in ST mode)
-* All TOS versions: 192k TOS (1.00 - 1.04), 256k TOS (1.06, 1.62, 2.06) and EmuTOS
+* All TOS versions: 192k TOS (1.00 - 1.04), 256k TOS (1.06, 1.62, 2.06) and EmuTOS;
+  `tos.img` is loaded at power on, another TOS image can be loaded from the menu
 * Two floppy drives (`.st` images, read/write)
 * Two ACSI hard disks (`.hd`/`.img` images, read/write, directly on the SD card, any size)
 * ROM cartridges (raw `.img` or `.stc`, up to 128 kB)
@@ -26,7 +27,9 @@ Features
 * Color (low/medium resolution, 50/60 Hz) and monochrome (SM124, 71 Hz or 60 Hz) monitor,
   normal or full borders (overscan)
 * YM2149 and STe DMA sound
-* Real IKBD (HD6301) with the MEGA65 keyboard mapped directly into the ST keyboard matrix
+* Real IKBD (HD6301) with the MEGA65 keyboard mapped directly into the ST keyboard matrix,
+  numeric keypad via the MEGA key
+* Mega ST real time clock (RP5C15), set from the MEGA65's real time clock
 * Atari ST mouse (or a mouSTer in Atari mode) or a Commodore 1351 mouse in MEGA65 joystick
   port 1, joystick in port 2 (can be swapped), STe enhanced joystick ports (fire button only)
 * Cubase 2 and Cubase 3 dongle in the cartridge port
@@ -43,7 +46,7 @@ Requirements
   * your floppy disk images (`.st`), hard disk images (`.hd`, `.img`) and cartridges (`.stc`, `.img`)
   * optionally `stcfg`, an empty settings file, if you want the menu settings to be saved:
     `cd M2M/tools && ./make_config.sh stcfg auto`. The file must have exactly as many bytes as
-    the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 71). When the menu
+    the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 72). When the menu
     changes, a settings file of the old size is ignored: create a new one.
 
 Usage
@@ -69,6 +72,25 @@ Usage
   | `+` `-` `£`          | `-` `=` `\`          |
   | `@` `*` `←`          | `[` `]` `` ` ``      |
   | `:` `;` `=`          | `;` `'` ISO key (`<>`) |
+
+* Numeric keypad: hold the <kbd>MEGA</kbd> key. MEGA + `0`..`9`, `+`, `-`, `*`, `/`, `.` and
+  <kbd>Return</kbd> are the keypad keys, MEGA + Shift + `8` / `9` are the keypad keys `(` and `)`.
+
+TOS
+---
+
+`/atarist/tos.img` is loaded at power on. "TOS" in the menu loads another TOS image (`.img` or
+`.rom`) and restarts the ST with it (cold boot). This choice is not saved: after the next power
+cycle `tos.img` is used again, so rename your favourite TOS image to `tos.img`. STe and Mega STe
+modes need TOS 1.06 or newer (or EmuTOS).
+
+Real time clock
+---------------
+
+The ST has the clock chip of the Mega ST (Ricoh RP5C15 at $FFFC21), which TOS 1.02 and newer and
+EmuTOS use automatically. It shows the time of the MEGA65's real time clock: set the clock in the
+MEGA65 configuration utility. Setting the time on the ST (e.g. in the control panel) does not
+change the MEGA65 clock and is overwritten by it.
 
 Hard disks
 ----------
@@ -111,7 +133,7 @@ allow "Gauntlet" style joystick adapters.
 Not supported (yet)
 -------------------
 
-* MT32-pi, RTC, Ethernec
+* MT32-pi, Ethernec
 * Jaguar pad buttons beyond fire on the STe joystick ports (the MEGA65 joysticks have one button)
 
 How the port works
@@ -126,9 +148,10 @@ How the port works
 | `CORE/vhdl/clk.vhd` | MMCM: 32.083 MHz system, 96.25 MHz SDRAM and 2.005 MHz IKBD clocks (phase aligned) |
 | `CORE/vhdl/main.vhd` | M2M wrapper of the ST machine, joysticks, video/audio formatting |
 | `CORE/vhdl/keyboard.vhd` | MEGA65 keyboard to Atari ST keyboard matrix |
-| `CORE/vhdl/tos_loader.vhd` | QNICE device: receives `tos.img` from the M2M ROM loader and writes it to SDRAM at $E00000 |
+| `CORE/vhdl/tos_loader.vhd` | QNICE devices: receive `tos.img`, a TOS image chosen in the menu and cartridges from the M2M ROM loader and write them to SDRAM |
 | `CORE/verilog/acsi_ctrl.sv` | ACSI "IO controller" in hardware (on MiSTer, the ARM executes the ACSI commands) |
 | `CORE/verilog/viking_scale.sv` | 2:1 downscaler for the Viking card (1280x1024 @ 96 MHz to 640x512 @ 32 MHz) |
+| `CORE/verilog/rp5c15_m65.sv` | Mega ST real time clock (RP5C15), fed by the MEGA65 RTC |
 | `CORE/vhdl/mouse1351.vhd` | Commodore 1351 mouse to the IKBD's PS/2 mouse emulation |
 | `CORE/vhdl/fdc_bridge.vhd` | Connects the M2M virtual drives (8 bit) to the ST's FDC and ACSI controller (16 bit MiSTer "WIDE" interface) |
 | `CORE/vhdl/mega65.vhd` | Glue: clocks, menu settings, TOS loader, floppy buffers in HyperRAM, virtual drives |

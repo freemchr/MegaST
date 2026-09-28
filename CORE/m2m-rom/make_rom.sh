@@ -35,6 +35,8 @@ fi;
 awk '/constant C_VDNUM/ {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); val=a[1]; if (val+0 == 0) val=1; printf("VDRIVES_MAX                 .EQU %s\n", val)}' ../vhdl/globals.vhd >> globals.asm
 awk '/constant C_CRTROMS_MAN_NUM/ {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); val=a[1]; if (val+0 == 0) val=1; printf("CRTROM_MAN_MAX              .EQU %s\n", val)}' ../vhdl/globals.vhd >> globals.asm
 awk '/constant C_CRTROMS_AUTO_NUM/ {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); val=a[1]; if (val+0 == 0) val=1; printf("CRTROM_AUT_MAX              .EQU %s\n", val)}' ../vhdl/globals.vhd >> globals.asm
+# MegaST: menu group of "Reset Atari ST" (OSM_SEL_POST in m2m-rom.asm), taken from ../vhdl/config.vhd
+awk '/constant OPTM_G_Reset / {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); printf("OPTM_G_RESET                .EQU %s\n", a[1])}' ../vhdl/config.vhd >> globals.asm
 
 ##############################################################################
 # M2M framework: Generate shell_fhandles.asm

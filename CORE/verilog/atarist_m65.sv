@@ -57,6 +57,9 @@ module atarist_m65
 	input         cfg_ste_pads,    // STe enhanced joystick ports instead of the ST joystick ports
 	input         cfg_cubase,      // Cubase 2/3 dongle in the cartridge port
 
+	// MEGA65 real time clock (M2M format, see rp5c15_m65.sv)
+	input  [64:0] rtc,
+
 	// TOS loader (clk_32 domain)
 	// dio_download must be high while the TOS image is being written. Each
 	// word is written when dio_strobe toggles, dio_strobe_ack follows
@@ -298,6 +301,8 @@ wire        mfpint_n, mfpcs_n, mfpiack_n;
 wire        sndir, sndcs;
 wire        n6850, fcs_n;
 wire        rtccs_n, rtcrd_n, rtcwr_n;
+wire        rtc_sel;          // MEGA65: Mega ST real time clock, see below
+wire  [3:0] rtc_data_out;
 wire        sint;
 wire [15:0] mcu_dout;
 wire        ras_n = ras0_n & ras1_n;
@@ -337,6 +342,7 @@ assign      cpu_din =
               n6850    ? { mbus_a[2] ? midi_acia_data_out : kbd_acia_data_out, 8'hFF } :
               sndcs    ? { snd_data_out, 8'hFF }:
               mste_ctrl_sel ? {8'hff, mste_ctrl_data_out }:
+              rtc_sel  ? { 12'hfff, rtc_data_out } :
               !button_n ? { 12'hfff, ste_buttons } :
               !(joyrh_n & joyrl_n) ? { joyrh_n ? 8'hff : ste_joy_in[15:8], joyrl_n ? 8'hff : ste_joy_in[7:0] } :
               mcu_dout;
@@ -368,7 +374,7 @@ wire [15:0] mbus_dout = !rdat_n ? shifter_dout :
                         ~rdy_i ? dma_data_out :
                         cpu_dout;
 
-wire        dtack_n = mcu_dtack_n_adj & ~mfp_dtack & ~mste_ctrl_sel & ~vme_sel & blitter_dtack_n;
+wire        dtack_n = mcu_dtack_n_adj & ~mfp_dtack & ~mste_ctrl_sel & ~vme_sel & ~rtc_sel & blitter_dtack_n;
 
 /* ------------------------------------------------------------------------------ */
 /* ------------------------------ GSTMCU + Shifter ------------------------------ */
@@ -1091,6 +1097,24 @@ fdc1772 #(.IMG_TYPE(1)) fdc1772 (
 	.sd_dout        ( sd_buff_dout     ),
 	.sd_din         ( sd_buff_din      ),
 	.sd_dout_strobe ( sd_buff_wr       )
+);
+
+/* ------------------------------------------------------------------------------ */
+/* ------------------------ Mega ST real time clock (MEGA65) --------------------- */
+/* ------------------------------------------------------------------------------ */
+// MEGA65: the RP5C15 of the Mega ST at $FFFC21 - $FFFC3F, fed by the MEGA65's RTC.
+// The GSTMCU does not acknowledge this range (a plain ST gives a bus error there).
+assign rtc_sel = iodevice && !lds_n && (mbus_a[15:5] == {8'hFC, 3'b001});
+
+rp5c15_m65 rp5c15 (
+	.clk  ( clk_32           ),
+	.reset( peripheral_reset ),
+	.sel  ( rtc_sel          ),
+	.rw   ( rw               ),
+	.addr ( mbus_a[4:1]      ),
+	.din  ( mbus_dout[3:0]   ),
+	.dout ( rtc_data_out     ),
+	.rtc  ( rtc              )
 );
 
 /* ------------------------------------------------------------------------------ */
