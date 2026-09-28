@@ -87,7 +87,7 @@ module tb_top (
     .clk_32(clk_32), .clk_96(clk_96), .clk_2(clk_2), .init(init), .reset_in(reset_in),
     .cfg_mem(cfg_mem), .cfg_ste(cfg_ste), .cfg_mste(1'b0), .cfg_blitter(1'b0), .cfg_mono(1'b0),
     .cfg_psg_stereo(1'b0), .cfg_narrow_brd(1'b1), .cfg_mde60(1'b0), .cfg_fdc_wp(2'b00),
-    .cfg_viking(cfg_viking), .cfg_ste_pads(1'b0), .cart_loaded(cart_loaded),
+    .cfg_viking(cfg_viking), .cfg_ste_pads(1'b0), .cfg_cubase(1'b0), .cart_loaded(cart_loaded),
     .dio_download(dio_download), .dio_addr(dio_addr), .dio_data(dio_data), .dio_strobe(dio_strobe),
     .dio_strobe_ack(dio_strobe_ack), .tos192k_in(tos192k_in),
     .img_mounted(2'b00), .img_readonly(1'b0), .img_size(img_size), .sd_lba(), .sd_rd(), .sd_wr(),

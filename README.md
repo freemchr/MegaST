@@ -23,11 +23,13 @@ Features
 * ROM cartridges (raw `.img` or `.stc`, up to 128 kB)
 * Viking/SM194 compatible 1280x1024 monochrome card (shown as 640x512 grey scale)
 * Serial port (RS232), MIDI and parallel (printer) port on the MEGA65's PMOD headers
-* Color (low/medium resolution, 50/60 Hz) and monochrome (SM124, 71 Hz) monitor
+* Color (low/medium resolution, 50/60 Hz) and monochrome (SM124, 71 Hz or 60 Hz) monitor,
+  normal or full borders (overscan)
 * YM2149 and STe DMA sound
 * Real IKBD (HD6301) with the MEGA65 keyboard mapped directly into the ST keyboard matrix
 * Atari ST mouse (or a mouSTer in Atari mode) or a Commodore 1351 mouse in MEGA65 joystick
   port 1, joystick in port 2 (can be swapped), STe enhanced joystick ports (fire button only)
+* Cubase 2 and Cubase 3 dongle in the cartridge port
 * HDMI (720p/576p/480p/600p) and VGA output
 
 Requirements
@@ -39,14 +41,17 @@ Requirements
 * SD card with a folder `/atarist` containing
   * `tos.img`: your TOS image (mandatory)
   * your floppy disk images (`.st`), hard disk images (`.hd`, `.img`) and cartridges (`.stc`, `.img`)
-  * optionally `stcfg`, an empty settings file, if you want the menu settings to be saved
-    (see `M2M/tools/make_config.sh`)
+  * optionally `stcfg`, an empty settings file, if you want the menu settings to be saved:
+    `cd M2M/tools && ./make_config.sh stcfg auto`. The file must have exactly as many bytes as
+    the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 71). When the menu
+    changes, a settings file of the old size is ignored: create a new one.
 
 Usage
 -----
 
 * Press <kbd>Help</kbd> to open the on-screen menu: mount floppy disks, choose the machine
-  type, memory size, video output and more.
+  type, memory size, video output and more. "Reset Atari ST" resets the ST (like the reset
+  button of the MEGA65, the ST RAM is kept).
 * Keyboard mapping (the MEGA65 has a C64 style layout, symbols are mapped by position):
 
   | MEGA65               | Atari ST             |
@@ -106,7 +111,7 @@ allow "Gauntlet" style joystick adapters.
 Not supported (yet)
 -------------------
 
-* MT32-pi, RTC, Cubase dongles, Ethernec
+* MT32-pi, RTC, Ethernec
 * Jaguar pad buttons beyond fire on the STe joystick ports (the MEGA65 joysticks have one button)
 
 How the port works

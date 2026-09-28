@@ -232,8 +232,46 @@ PREP_START      INCRB
 ; Output:
 ;   R8: 0=OK, else pointer to string with error message
 ;   R9: 0=OK, else error code
+;
+; MegaST: "Reset Atari ST" is an action, not a setting: pulse the reset of the core
+; and remove the selection marker again (like the help menu item).
 OSM_SEL_POST    INCRB
-                XOR     R8, R8
+                CMP     OPTM_G_RESET, R8        ; "Reset Atari ST"?
+                RBRA    _OSP_RET, !Z
+                CMP     1, R9                   ; selected (not unselected)?
+                RBRA    _OSP_RET, !Z
+
+                ; Reset the core: atarist_m65.sv stretches the reset itself,
+                ; the pulse only has to cross into the clock domain of the core
+                MOVE    M2M$CSR, R0
+                OR      M2M$CSR_RESET, @R0
+                MOVE    0x0100, R1
+_OSP_WAIT       SUB     1, R1
+                RBRA    _OSP_WAIT, !Z
+                AND     M2M$CSR_UN_RESET, @R0
+
+                ; Find the menu index of the item and unselect it
+                MOVE    OPTM_DATA, R0
+                MOVE    @R0, R0
+                ADD     OPTM_IR_GROUPS, R0
+                MOVE    @R0, R0                 ; R0: menu groups
+                MOVE    OPTM_ICOUNT, R2
+                MOVE    @R2, R2                 ; R2: amount of menu items
+                XOR     R1, R1                  ; R1: menu index
+_OSP_FIND       MOVE    @R0++, R3
+                AND     0x00FF, R3
+                CMP     OPTM_G_RESET, R3
+                RBRA    _OSP_FOUND, Z
+                ADD     1, R1
+                CMP     R1, R2
+                RBRA    _OSP_FIND, !Z
+                RBRA    _OSP_RET, 1             ; not found: leave it selected
+
+_OSP_FOUND      MOVE    R1, R8
+                XOR     R9, R9
+                RSUB    M2M$FORCE_MENU, 1
+
+_OSP_RET        XOR     R8, R8
                 XOR     R9, R9
                 DECRB
                 RET
@@ -272,6 +310,9 @@ CUSTOM_MSG      XOR     R8, R8
 ; ----------------------------------------------------------------------------
 
 ; Add your core specific constants and strings here
+
+; Menu group of "Reset Atari ST": must match OPTM_G_Reset in config.vhd
+OPTM_G_RESET    .EQU    24
 
 ; This needs to be the last thing before the "Variables" sections starts
 END_OF_ROM      .DW 0

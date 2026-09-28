@@ -268,23 +268,27 @@ constant C_MENU_MEM_8M        : natural := 24;
 constant C_MENU_MEM_14M       : natural := 25;
 constant C_MENU_BLITTER       : natural := 31;
 constant C_MENU_MONO          : natural := 32;
-constant C_MENU_VIKING        : natural := 33;
-constant C_MENU_STEREO        : natural := 34;
-constant C_MENU_WPROT         : natural := 35;
-constant C_MENU_JOYSWAP       : natural := 41;
-constant C_MENU_STEPADS       : natural := 42;
-constant C_MENU_MOUSE1351     : natural := 43;
-constant C_MENU_PMOD          : natural := 44;
-constant C_MENU_HDMI_16_9_50  : natural := 51;
-constant C_MENU_HDMI_16_9_60  : natural := 52;
-constant C_MENU_HDMI_4_3_50   : natural := 53;
-constant C_MENU_HDMI_5_4_50   : natural := 54;
-constant C_MENU_HDMI_640_60   : natural := 55;
-constant C_MENU_HDMI_720_5994 : natural := 56;
-constant C_MENU_SVGA_800_60   : natural := 57;
-constant C_MENU_CRT_EMULATION : natural := 60;
-constant C_MENU_HDMI_ZOOM     : natural := 61;
-constant C_MENU_IMPROVE_AUDIO : natural := 62;
+constant C_MENU_MONO60        : natural := 33;
+constant C_MENU_BORDER        : natural := 34;
+constant C_MENU_VIKING        : natural := 35;
+constant C_MENU_STEREO        : natural := 36;
+constant C_MENU_WPROT         : natural := 37;
+constant C_MENU_JOYSWAP       : natural := 43;
+constant C_MENU_STEPADS       : natural := 44;
+constant C_MENU_MOUSE1351     : natural := 45;
+constant C_MENU_PMOD          : natural := 46;
+constant C_MENU_CUBASE        : natural := 47;
+constant C_MENU_HDMI_16_9_50  : natural := 54;
+constant C_MENU_HDMI_16_9_60  : natural := 55;
+constant C_MENU_HDMI_4_3_50   : natural := 56;
+constant C_MENU_HDMI_5_4_50   : natural := 57;
+constant C_MENU_HDMI_640_60   : natural := 58;
+constant C_MENU_HDMI_720_5994 : natural := 59;
+constant C_MENU_SVGA_800_60   : natural := 60;
+constant C_MENU_CRT_EMULATION : natural := 63;
+constant C_MENU_HDMI_ZOOM     : natural := 64;
+constant C_MENU_IMPROVE_AUDIO : natural := 65;
+-- 67 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
@@ -500,6 +504,8 @@ begin
          st_mste_i            => main_st_mste,
          st_blitter_i         => main_osm_control_i(C_MENU_BLITTER),
          st_mono_i            => main_osm_control_i(C_MENU_MONO),
+         st_mono60_i          => main_osm_control_i(C_MENU_MONO60),
+         st_full_border_i     => main_osm_control_i(C_MENU_BORDER),
          st_psg_stereo_i      => main_osm_control_i(C_MENU_STEREO),
          st_fdc_wp_i          => (others => main_osm_control_i(C_MENU_WPROT)),
          st_joy_swap_i        => main_osm_control_i(C_MENU_JOYSWAP),
@@ -507,6 +513,7 @@ begin
          st_ste_pads_i        => main_osm_control_i(C_MENU_STEPADS),
          st_mouse1351_i       => main_osm_control_i(C_MENU_MOUSE1351),
          st_pmod_i            => main_osm_control_i(C_MENU_PMOD),
+         st_cubase_i          => main_osm_control_i(C_MENU_CUBASE),
 
          -- TOS loader
          dio_addr_i           => main_dio_addr,

@@ -308,7 +308,7 @@ constant OPTM_S_SAVING     : string := "<Saving>";          -- the internal writ
 --             Do use a lower case \n. If you forget one of them or if you use upper case, you will run into undefined behavior.
 --          2. Start each line that contains an actual menu item (multi- or single-select) with a Space character,
 --             otherwise you will experience visual glitches.
-constant OPTM_SIZE         : natural := 67;  -- amount of items including empty lines:
+constant OPTM_SIZE         : natural := 71;  -- amount of items including empty lines:
                                              -- needs to be equal to the number of lines in OPTM_ITEMS and amount of items in OPTM_GROUPS
                                              -- IMPORTANT: If SAVE_SETTINGS is true and OPTM_SIZE changes: Make sure to re-generate and
                                              -- and re-distribute the config file. You can make a new one using M2M/tools/make_config.sh
@@ -316,7 +316,7 @@ constant OPTM_SIZE         : natural := 67;  -- amount of items including empty 
 -- Net size of the Options menu on the screen in characters (excluding the frame, which is hardcoded to two characters)
 -- Without submenus: Use OPTM_SIZE as height, otherwise count how large the actually visible main menu is.
 constant OPTM_DX           : natural := 28;
-constant OPTM_DY           : natural := 21;
+constant OPTM_DY           : natural := 22;
 
 constant OPTM_ITEMS        : string :=
    " Atari ST/STe\n"              &   --  0
@@ -352,40 +352,44 @@ constant OPTM_ITEMS        : string :=
    "\n"                           &   -- 30
    " Blitter (ST mode)\n"         &   -- 31
    " Mono monitor (SM124)\n"      &   -- 32
-   " Viking 1280x1024 card\n"     &   -- 33
-   " Stereo YM sound\n"           &   -- 34
-   " Write protect floppies\n"    &   -- 35
-   "\n"                           &   -- 36
-   " Back to main menu\n"         &   -- 37
-   " Controllers & ports\n"       &   -- 38
-   " Controllers & ports\n"       &   -- 39
-   "\n"                           &   -- 40
-   " Swap joystick ports\n"       &   -- 41
-   " STe joypads\n"               &   -- 42
-   " Port 1: 1351 mouse\n"        &   -- 43
-   " PMOD: RS232/MIDI/printer\n"  &   -- 44
-   "\n"                           &   -- 45
-   " Back to main menu\n"         &   -- 46
-   "\n"                           &   -- 47
-   " HDMI: %s\n"                  &   -- 48
-   " HDMI Settings\n"             &   -- 49
+   " Mono: 60 Hz, not 71 Hz\n"    &   -- 33
+   " Full borders (overscan)\n"   &   -- 34
+   " Viking 1280x1024 card\n"     &   -- 35
+   " Stereo YM sound\n"           &   -- 36
+   " Write protect floppies\n"    &   -- 37
+   "\n"                           &   -- 38
+   " Back to main menu\n"         &   -- 39
+   " Controllers & ports\n"       &   -- 40
+   " Controllers & ports\n"       &   -- 41
+   "\n"                           &   -- 42
+   " Swap joystick ports\n"       &   -- 43
+   " STe joypads\n"               &   -- 44
+   " Port 1: 1351 mouse\n"        &   -- 45
+   " PMOD: RS232/MIDI/printer\n"  &   -- 46
+   " Cubase dongle\n"             &   -- 47
+   "\n"                           &   -- 48
+   " Back to main menu\n"         &   -- 49
    "\n"                           &   -- 50
-   " 720p 50 Hz 16:9\n"           &   -- 51
-   " 720p 60 Hz 16:9\n"           &   -- 52
-   " 576p 50 Hz 4:3\n"            &   -- 53
-   " 576p 50 Hz 5:4\n"            &   -- 54
-   " 640x480 60 Hz\n"             &   -- 55
-   " 720x480 59.94 Hz\n"          &   -- 56
-   " 800x600 60 Hz\n"             &   -- 57
-   "\n"                           &   -- 58
-   " Back to main menu\n"         &   -- 59
-   " HDMI: CRT emulation\n"       &   -- 60
-   " HDMI: Zoom-in\n"             &   -- 61
-   " Audio improvements\n"        &   -- 62
-   "\n"                           &   -- 63
-   " About & Help\n"              &   -- 64
-   "\n"                           &   -- 65
-   " Close Menu\n"               ;   -- 66
+   " HDMI: %s\n"                  &   -- 51
+   " HDMI Settings\n"             &   -- 52
+   "\n"                           &   -- 53
+   " 720p 50 Hz 16:9\n"           &   -- 54
+   " 720p 60 Hz 16:9\n"           &   -- 55
+   " 576p 50 Hz 4:3\n"            &   -- 56
+   " 576p 50 Hz 5:4\n"            &   -- 57
+   " 640x480 60 Hz\n"             &   -- 58
+   " 720x480 59.94 Hz\n"          &   -- 59
+   " 800x600 60 Hz\n"             &   -- 60
+   "\n"                           &   -- 61
+   " Back to main menu\n"         &   -- 62
+   " HDMI: CRT emulation\n"       &   -- 63
+   " HDMI: Zoom-in\n"             &   -- 64
+   " Audio improvements\n"        &   -- 65
+   "\n"                           &   -- 66
+   " Reset Atari ST\n"            &   -- 67
+   " About & Help\n"              &   -- 68
+   "\n"                           &   -- 69
+   " Close Menu\n"               ;   -- 70
 
 -- define your own constants here and choose meaningful names
 -- make sure that your first group uses the value 1 (0 means "no menu item", such as text and line),
@@ -401,18 +405,22 @@ constant OPTM_G_Machine    : integer := 6;
 constant OPTM_G_Memory     : integer := 7;
 constant OPTM_G_Blitter    : integer := 8;
 constant OPTM_G_Mono       : integer := 9;
-constant OPTM_G_Viking     : integer := 10;
-constant OPTM_G_Stereo     : integer := 11;
-constant OPTM_G_WProt      : integer := 12;
-constant OPTM_G_JoySwap    : integer := 13;
-constant OPTM_G_StePads    : integer := 14;
-constant OPTM_G_Mouse1351  : integer := 15;
-constant OPTM_G_PMOD       : integer := 16;
-constant OPTM_G_HDMI       : integer := 17;
-constant OPTM_G_CRT        : integer := 18;
-constant OPTM_G_Zoom       : integer := 19;
-constant OPTM_G_Audio      : integer := 20;
-constant OPTM_G_About      : integer := 21;
+constant OPTM_G_Mono60     : integer := 10;
+constant OPTM_G_Border     : integer := 11;
+constant OPTM_G_Viking     : integer := 12;
+constant OPTM_G_Stereo     : integer := 13;
+constant OPTM_G_WProt      : integer := 14;
+constant OPTM_G_JoySwap    : integer := 15;
+constant OPTM_G_StePads    : integer := 16;
+constant OPTM_G_Mouse1351  : integer := 17;
+constant OPTM_G_PMOD       : integer := 18;
+constant OPTM_G_Cubase     : integer := 19;
+constant OPTM_G_HDMI       : integer := 20;
+constant OPTM_G_CRT        : integer := 21;
+constant OPTM_G_Zoom       : integer := 22;
+constant OPTM_G_Audio      : integer := 23;
+constant OPTM_G_Reset      : integer := 24;
+constant OPTM_G_About      : integer := 25;
 
 -- !!! DO NOT TOUCH !!!
 type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC- 1;
@@ -452,40 +460,44 @@ constant OPTM_GROUPS       : OPTM_GTYPE := (
                                              OPTM_G_LINE,                                              -- 30
                                              OPTM_G_Blitter + OPTM_G_SINGLESEL,                        -- 31 Blitter (ST mode)
                                              OPTM_G_Mono + OPTM_G_SINGLESEL,                           -- 32 Mono monitor (SM124)
-                                             OPTM_G_Viking + OPTM_G_SINGLESEL,                         -- 33 Viking 1280x1024 card
-                                             OPTM_G_Stereo + OPTM_G_SINGLESEL,                         -- 34 Stereo YM sound
-                                             OPTM_G_WProt + OPTM_G_SINGLESEL,                          -- 35 Write protect floppies
-                                             OPTM_G_LINE,                                              -- 36
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 37 Back to main menu
-                                             OPTM_G_SUBMENU,                                           -- 38 Controllers & ports
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 39 Controllers & ports
-                                             OPTM_G_LINE,                                              -- 40
-                                             OPTM_G_JoySwap + OPTM_G_SINGLESEL,                        -- 41 Swap joystick ports
-                                             OPTM_G_StePads + OPTM_G_SINGLESEL,                        -- 42 STe joypads
-                                             OPTM_G_Mouse1351 + OPTM_G_SINGLESEL,                      -- 43 Port 1: 1351 mouse
-                                             OPTM_G_PMOD + OPTM_G_SINGLESEL,                           -- 44 PMOD: RS232/MIDI/printer
-                                             OPTM_G_LINE,                                              -- 45
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 46 Back to main menu
-                                             OPTM_G_LINE,                                              -- 47
-                                             OPTM_G_SUBMENU,                                           -- 48 HDMI: %s
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 49 HDMI Settings
+                                             OPTM_G_Mono60 + OPTM_G_SINGLESEL,                         -- 33 Mono: 60 Hz, not 71 Hz
+                                             OPTM_G_Border + OPTM_G_SINGLESEL,                         -- 34 Full borders (overscan)
+                                             OPTM_G_Viking + OPTM_G_SINGLESEL,                         -- 35 Viking 1280x1024 card
+                                             OPTM_G_Stereo + OPTM_G_SINGLESEL,                         -- 36 Stereo YM sound
+                                             OPTM_G_WProt + OPTM_G_SINGLESEL,                          -- 37 Write protect floppies
+                                             OPTM_G_LINE,                                              -- 38
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 39 Back to main menu
+                                             OPTM_G_SUBMENU,                                           -- 40 Controllers & ports
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 41 Controllers & ports
+                                             OPTM_G_LINE,                                              -- 42
+                                             OPTM_G_JoySwap + OPTM_G_SINGLESEL,                        -- 43 Swap joystick ports
+                                             OPTM_G_StePads + OPTM_G_SINGLESEL,                        -- 44 STe joypads
+                                             OPTM_G_Mouse1351 + OPTM_G_SINGLESEL,                      -- 45 Port 1: 1351 mouse
+                                             OPTM_G_PMOD + OPTM_G_SINGLESEL,                           -- 46 PMOD: RS232/MIDI/printer
+                                             OPTM_G_Cubase + OPTM_G_SINGLESEL,                         -- 47 Cubase dongle
+                                             OPTM_G_LINE,                                              -- 48
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 49 Back to main menu
                                              OPTM_G_LINE,                                              -- 50
-                                             OPTM_G_HDMI + OPTM_G_STDSEL,                              -- 51 720p 50 Hz 16:9
-                                             OPTM_G_HDMI,                                              -- 52 720p 60 Hz 16:9
-                                             OPTM_G_HDMI,                                              -- 53 576p 50 Hz 4:3
-                                             OPTM_G_HDMI,                                              -- 54 576p 50 Hz 5:4
-                                             OPTM_G_HDMI,                                              -- 55 640x480 60 Hz
-                                             OPTM_G_HDMI,                                              -- 56 720x480 59.94 Hz
-                                             OPTM_G_HDMI,                                              -- 57 800x600 60 Hz
-                                             OPTM_G_LINE,                                              -- 58
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 59 Back to main menu
-                                             OPTM_G_CRT + OPTM_G_SINGLESEL,                            -- 60 HDMI: CRT emulation
-                                             OPTM_G_Zoom + OPTM_G_SINGLESEL,                           -- 61 HDMI: Zoom-in
-                                             OPTM_G_Audio + OPTM_G_SINGLESEL,                          -- 62 Audio improvements
-                                             OPTM_G_LINE,                                              -- 63
-                                             OPTM_G_About + OPTM_G_HELP,                               -- 64 About & Help
-                                             OPTM_G_LINE,                                              -- 65
-                                             OPTM_G_CLOSE                                              -- 66 Close Menu
+                                             OPTM_G_SUBMENU,                                           -- 51 HDMI: %s
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 52 HDMI Settings
+                                             OPTM_G_LINE,                                              -- 53
+                                             OPTM_G_HDMI + OPTM_G_STDSEL,                              -- 54 720p 50 Hz 16:9
+                                             OPTM_G_HDMI,                                              -- 55 720p 60 Hz 16:9
+                                             OPTM_G_HDMI,                                              -- 56 576p 50 Hz 4:3
+                                             OPTM_G_HDMI,                                              -- 57 576p 50 Hz 5:4
+                                             OPTM_G_HDMI,                                              -- 58 640x480 60 Hz
+                                             OPTM_G_HDMI,                                              -- 59 720x480 59.94 Hz
+                                             OPTM_G_HDMI,                                              -- 60 800x600 60 Hz
+                                             OPTM_G_LINE,                                              -- 61
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 62 Back to main menu
+                                             OPTM_G_CRT + OPTM_G_SINGLESEL,                            -- 63 HDMI: CRT emulation
+                                             OPTM_G_Zoom + OPTM_G_SINGLESEL,                           -- 64 HDMI: Zoom-in
+                                             OPTM_G_Audio + OPTM_G_SINGLESEL,                          -- 65 Audio improvements
+                                             OPTM_G_LINE,                                              -- 66
+                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 67 Reset Atari ST
+                                             OPTM_G_About + OPTM_G_HELP,                               -- 68 About & Help
+                                             OPTM_G_LINE,                                              -- 69
+                                             OPTM_G_CLOSE                                              -- 70 Close Menu
                                            );
 
 --------------------------------------------------------------------------------------------------------------------

@@ -55,6 +55,7 @@ module atarist_m65
 	input   [1:0] cfg_fdc_wp,      // write protect floppy B/A
 	input         cfg_viking,      // Viking/SM194 1280x1024 card
 	input         cfg_ste_pads,    // STe enhanced joystick ports instead of the ST joystick ports
+	input         cfg_cubase,      // Cubase 2/3 dongle in the cartridge port
 
 	// TOS loader (clk_32 domain)
 	// dio_download must be high while the TOS image is being written. Each
@@ -259,7 +260,7 @@ wire       psg_stereo    = cfg_psg_stereo;
 wire       ste           = cfg_ste || cfg_mste;
 wire       mste          = cfg_mste;
 wire       steroids      = cfg_ste && cfg_mste;  // a STE on steroids
-wire       cubase_enable = 1'b0;
+wire       cubase_enable = cfg_cubase;
 wire       viking_en     = cfg_viking;
 wire       narrow_brd    = cfg_narrow_brd;
 wire       mde60         = cfg_mde60;
@@ -1095,8 +1096,38 @@ fdc1772 #(.IMG_TYPE(1)) fdc1772 (
 /* ------------------------------------------------------------------------------ */
 /* ------------------------------- Cubase dongle  ------------------------------- */
 /* ------------------------------------------------------------------------------ */
-// MEGA65: not supported (cubase_enable is always 0)
-wire  [7:0] cubase_dout = 8'hff;
+wire        cubase3_d8;
+wire  [7:0] cubase2_dout;
+wire  [7:0] cubase_dout = cubase_sel ? cubase2_dout : {7'h7f, cubase3_d8};
+reg         cubase_sel; // Cubase3/2 dongle
+reg         cubase_lock;
+
+always @(posedge clk_32) begin
+	if (peripheral_reset) begin
+		cubase_sel <= 0;
+		cubase_lock <= 0;
+	end
+	else if (cubase_enable & !rom3_n & !cubase_lock) begin
+		cubase_sel <= |mbus_a[7:1];
+		cubase_lock <= 1;
+	end
+end
+
+cubase2_dongle cubase2_dongle (
+	.clk        ( clk_32           ),
+	.reset      ( peripheral_reset ),
+	.uds_n      ( uds_n            ),
+	.A          ( mbus_a[8:1]      ),
+	.D          ( cubase2_dout     )
+);
+
+cubase3_dongle cubase3_dongle (
+	.clk        ( clk_32           ),
+	.reset      ( peripheral_reset ),
+	.rom3_n     ( rom3_n           ),
+	.a8         ( mbus_a[8]        ),
+	.d8         ( cubase3_d8       )
+);
 
 /* ------------------------------------------------------------------------------ */
 /* --------------------------- SDRAM bus multiplexer ---------------------------- */

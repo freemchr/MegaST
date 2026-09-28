@@ -20,7 +20,7 @@ cp -r $C/AtariST_MiSTer $C/verilog rtl_sim/
 grep -rl 'ifn\?def VERILATOR' rtl_sim | xargs sed -i 's/`ifdef VERILATOR/`ifdef VERILATOR_UPSTREAM_SIM/; s/`ifndef VERILATOR/`ifndef VERILATOR_UPSTREAM_SIM/'
 R=rtl_sim/AtariST_MiSTer/rtl
 FILES="rtl_sim/verilog/atarist_m65.sv rtl_sim/verilog/sdram_m65.v rtl_sim/verilog/cegen_m65.v
-  rtl_sim/verilog/acsi_ctrl.sv rtl_sim/verilog/viking_scale.sv $R/viking.v
+  rtl_sim/verilog/acsi_ctrl.sv rtl_sim/verilog/viking_scale.sv $R/viking.v $R/cubase2_dongle.v $R/cubase3_dongle.v
   $R/fx68k/fx68k.sv $R/fx68k/fx68kAlu.sv $R/fx68k/uaddrPla.sv
   $R/gstmcu/gstmcu.v $R/gstmcu/gstshifter.v $R/gstmcu/clockgen.v $R/gstmcu/latch.v $R/gstmcu/mcucontrol.v
   $R/gstmcu/register.v $R/gstmcu/shifter_video.v $R/gstmcu/hdegen.v $R/gstmcu/hsyncgen.v $R/gstmcu/modules.v

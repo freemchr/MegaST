@@ -38,6 +38,8 @@ entity main is
       st_mste_i               : in  std_logic;
       st_blitter_i            : in  std_logic;
       st_mono_i               : in  std_logic;
+      st_mono60_i             : in  std_logic;              -- monochrome monitor: 60 Hz instead of 71 Hz
+      st_full_border_i        : in  std_logic;              -- show the full borders (overscan)
       st_psg_stereo_i         : in  std_logic;
       st_fdc_wp_i             : in  std_logic_vector(1 downto 0);
       st_joy_swap_i           : in  std_logic;
@@ -45,6 +47,7 @@ entity main is
       st_ste_pads_i           : in  std_logic;
       st_mouse1351_i          : in  std_logic;              -- MEGA65 port 1: Commodore 1351 mouse
       st_pmod_i               : in  std_logic;              -- serial port, MIDI and printer port on the PMODs
+      st_cubase_i             : in  std_logic;              -- Cubase 2/3 dongle in the cartridge port
 
       -- TOS loader
       dio_addr_i              : in  std_logic_vector(23 downto 1);
@@ -151,6 +154,7 @@ component atarist_m65 is
       cfg_fdc_wp      : in    std_logic_vector(1 downto 0);
       cfg_viking      : in    std_logic;
       cfg_ste_pads    : in    std_logic;
+      cfg_cubase      : in    std_logic;
 
       dio_download    : in    std_logic;
       dio_addr        : in    std_logic_vector(23 downto 1);
@@ -341,11 +345,12 @@ begin
          cfg_blitter     => st_blitter_i,
          cfg_mono        => st_mono_i,
          cfg_psg_stereo  => st_psg_stereo_i,
-         cfg_narrow_brd  => '1',      -- MiSTer default (TOS_CONTROL_BORDER)
-         cfg_mde60       => '0',
+         cfg_narrow_brd  => not st_full_border_i,
+         cfg_mde60       => st_mono60_i,
          cfg_fdc_wp      => st_fdc_wp_i,
          cfg_viking      => st_viking_i,
          cfg_ste_pads    => st_ste_pads_i,
+         cfg_cubase      => st_cubase_i,
 
          -- the TOS image is only written while the core is held in reset
          dio_download    => reset_core,
