@@ -6,10 +6,9 @@ core (the "MiSTery" Atari ST/STe core by Till Harbaum, Gyorgy Szombathelyi, Jorg
 Alexey Melnikov and others) to the [MEGA65](https://mega65.org), using the
 [MiSTer2MEGA65](https://github.com/sy2002/MiSTer2MEGA65) framework.
 
-**Status: work in progress, not yet tested on real hardware.** The design has been
-linted (slang, GHDL) and the Atari ST machine including the SDRAM controller, the TOS
-loader, the ACSI controller and the Viking downscaler has been simulated with Verilator
-(see `CORE/sim`), but it has not been synthesized with Vivado nor run on a MEGA65 yet.
+**Status: work in progress.** The core runs on a MEGA65 R6 and boots TOS to the desktop, but
+many features have not been tested on real hardware yet. See "Tests" below for what has been
+simulated.
 
 Features
 --------
@@ -19,7 +18,8 @@ Features
 * Blitter (always on in STe mode, optional in ST mode)
 * All TOS versions: 192k TOS (1.00 - 1.04), 256k TOS (1.06, 1.62, 2.06) and EmuTOS;
   `tos.img` is loaded at power on, another TOS image can be loaded from the menu
-* Two floppy drives (`.st` images, read/write)
+* Two floppy drives (`.st` images, read/write), can be swapped (boot from B:); blank disk
+  images can be created with `tools/make_st_disk.py`
 * Two ACSI hard disks (`.hd`/`.img` images, read/write, directly on the SD card, any size)
 * ROM cartridges (raw `.img` or `.stc`, up to 128 kB)
 * Viking/SM194 compatible 1280x1024 monochrome card (shown as 640x512 grey scale)
@@ -33,7 +33,8 @@ Features
 * Atari ST mouse (or a mouSTer in Atari mode) or a Commodore 1351 mouse in MEGA65 joystick
   port 1, joystick in port 2 (can be swapped), STe enhanced joystick ports (fire button only)
 * Cubase 2 and Cubase 3 dongle in the cartridge port
-* HDMI (720p/576p/480p/600p) and VGA output
+* HDMI (720p/576p/480p/600p) and VGA output: 31 kHz (optionally with scanlines) or 15 kHz RGB
+  (optionally with composite sync, e.g. for SCART), zoom-in without the border
 
 Requirements
 ------------
@@ -46,7 +47,7 @@ Requirements
   * your floppy disk images (`.st`), hard disk images (`.hd`, `.img`) and cartridges (`.stc`, `.img`)
   * optionally `stcfg`, an empty settings file, if you want the menu settings to be saved:
     `cd M2M/tools && ./make_config.sh stcfg auto`. The file must have exactly as many bytes as
-    the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 72). When the menu
+    the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 86). When the menu
     changes, a settings file of the old size is ignored: create a new one.
 
 Usage
@@ -101,8 +102,34 @@ partitions automatically; with Atari TOS you need a hard disk driver (AHDI, HDDR
 e.g. on a boot floppy or on the hard disk itself.
 
 The images are **not** loaded into RAM: every sector is read from and written to the SD card
-directly (write-through). Sequential access is fast, random access within large images is
-slower because the FAT32 library seeks from the start of the file.
+directly (write-through). The FAT32 library of the framework can only seek from the start of a
+file, following the cluster chain; the firmware therefore remembers the cluster of every 2 MB of
+an image (for the first 1 GB) and seeks from there or from the current position (see
+`M2M/rom/vd_fastseek.asm`), so random access is fast in large images, too.
+
+Floppy disks
+------------
+
+The floppy disk images (`.st`, 360 kB to 1.44 MB) are loaded into the HyperRAM and written back
+to the SD card when the ST writes to them. "Swap floppy A: and B:" in the system settings
+exchanges the drives, e.g. to boot from the disk in B:.
+
+To create an empty, formatted disk (e.g. a save disk for a game), run
+`python3 tools/make_st_disk.py blank.st` on your computer (options: `--size 360|720|800|1440`,
+`--label NAME`) and copy the image into `/atarist` on the SD card. (The FDC emulation cannot
+format a disk, so formatting a disk image in TOS does not work.)
+
+Video
+-----
+
+* **HDMI:** the image is scaled by `ascal` (4:3, with the border). "Zoom-in (hide border)" shows
+  only the graphics area (320x200, 640x200 or 640x400) and uses the full width of 16:9 modes.
+  The border is black on VGA in this mode.
+* **VGA:** the color modes are 15 kHz modes. By default they are doubled to 31 kHz for VGA
+  monitors ("VGA: 31 kHz"), optionally with scanlines (25%, 50%, 75%). "15 kHz (RGB, SCART)"
+  outputs the original 15 kHz signal for CRTs and TVs, "15 kHz with CSync" puts composite sync on
+  the HSync pin (for MiSTer style VGA-to-SCART cables). The monochrome mode (71 Hz, or 60 Hz) is
+  always a 31 kHz mode.
 
 Viking/SM194 card
 -----------------
@@ -130,10 +157,16 @@ PMOD1 lo matches the Digilent PMOD UART pinout (e.g. a PmodUSBUART or a MAX3232 
 MIDI needs the usual opto-coupler (IN) and driver (OUT) circuit. The parallel port pins also
 allow "Gauntlet" style joystick adapters.
 
+**MT32-pi:** the MT32-pi reads serial MIDI with 3.3V levels on the GPIO UART of the Raspberry Pi
+(`midi_in = gpio` or the default configuration of the MT32-pi with a GPIO MIDI connection), so it
+can be connected without any MIDI circuit: PMOD1 hi[0] (MIDI OUT) to the RXD pin of the Pi (GPIO
+15) and GND to GND. Its sound comes from the audio output of the Pi. (On MiSTer the MT32-pi audio
+is mixed into the core via I2S; this is not supported.)
+
 Not supported (yet)
 -------------------
 
-* MT32-pi, Ethernec
+* Ethernec, MT32-pi audio mixing (MIDI to an MT32-pi works, see above)
 * Jaguar pad buttons beyond fire on the STe joystick ports (the MEGA65 joysticks have one button)
 
 How the port works
@@ -152,6 +185,7 @@ How the port works
 | `CORE/verilog/acsi_ctrl.sv` | ACSI "IO controller" in hardware (on MiSTer, the ARM executes the ACSI commands) |
 | `CORE/verilog/viking_scale.sv` | 2:1 downscaler for the Viking card (1280x1024 @ 96 MHz to 640x512 @ 32 MHz) |
 | `CORE/verilog/rp5c15_m65.sv` | Mega ST real time clock (RP5C15), fed by the MEGA65 RTC |
+| `CORE/vhdl/floppy_swap.vhd` | Swapping the floppy drives A: and B: (the FDC's image geometry is announced again) |
 | `CORE/vhdl/mouse1351.vhd` | Commodore 1351 mouse to the IKBD's PS/2 mouse emulation |
 | `CORE/vhdl/fdc_bridge.vhd` | Connects the M2M virtual drives (8 bit) to the ST's FDC and ACSI controller (16 bit MiSTer "WIDE" interface) |
 | `CORE/vhdl/mega65.vhd` | Glue: clocks, menu settings, TOS loader, floppy buffers in HyperRAM, virtual drives |
@@ -165,10 +199,15 @@ How the port works
   of the FDC through `vdrives.vhd` and `fdc_bridge.vhd`.
 * **Video:** the core outputs its native 15 kHz signal (16 MHz pixel clock enable, 32 MHz in
   the monochrome mode). The M2M scandoubler creates 31 kHz for VGA (switched off in the
-  71 Hz monochrome mode) and `ascal` scales the image for HDMI.
+  71 Hz monochrome mode and in the 15 kHz VGA modes) and `ascal` scales the image for HDMI.
+  For "zoom-in", the core blanks everything but the graphics area (`PIX_ACTIVE` of the
+  shifter, the lines with DE of the previous frame), so `ascal` scales only the graphics.
 * **Framework changes:** `M2M/vhdl/top_mega65-r*.vhd` pass the SDRAM and PMOD pins to the core.
   `M2M/rom/shell.asm` supports "unbuffered" virtual drives (buffer ID `0xAAAA`, `VD_NOBUFFER`)
-  that are read and written directly on the SD card; this is used for the hard disks.
+  that are read and written directly on the SD card; this is used for the hard disks, with
+  the fast seek of `M2M/rom/vd_fastseek.asm`. `M2M/vhdl/av_pipeline/analog_pipeline.vhd` has
+  VGA scanlines (`qnice_scanlines_o` of the core, passed through `framework.vhd` and
+  `av_pipeline.vhd`). The C64 specific `crop.vhd` is not used (`av_pipeline.vhd`).
 
 ### Changes to the MiSTer sources
 
@@ -184,6 +223,21 @@ All changes are marked with `MEGA65` comments:
 * `rtl/dma.v`: output `dio_fifo_used` (DMA FIFO fill level for the ACSI controller)
 * `rtl/ym2149.sv`: output `IOB_dir` (port B direction for the printer port), fixed a typo when
   reading port B in output mode
+* `rtl/gstmcu/gstshifter.v`: output `PIX_ACTIVE` (graphics area, for cropping the border)
+
+Tests
+-----
+
+There is no Vivado simulation; these tests run with the OSS CAD Suite (Verilator, GHDL), gcc and
+python3:
+
+* `CORE/sim/build.sh`: Verilator simulation of the whole Atari ST machine (`atarist_m65.sv`) with
+  an SDRAM model; boots TOS 1.04, 2.06 and EmuTOS, ACSI hard disk, `CROP=1` for zoom-in,
+  `VFLAGS=-DRTC_TRACE` traces the real time clock
+* `CORE/sim/tos_loader/run.sh`, `CORE/sim/keyboard/run.sh`, `CORE/sim/floppy_swap/run.sh`:
+  GHDL tests of the TOS/cartridge loader, the keyboard (numeric keypad) and the floppy swap
+* `CORE/sim/fastseek/run.sh`: the fast seek of the firmware in the QNICE emulator (FAT32 image
+  with fragmented files, compared with the FAT32 library)
 
 Building
 --------

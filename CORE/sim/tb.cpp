@@ -47,6 +47,7 @@ int main(int argc, char** argv) {
 
     top = new Vtb_top;
     top->init = 1; top->reset_in = 1; top->cfg_mem = 1; top->cfg_ste = ste;
+    top->cfg_crop = getenv("CROP") != nullptr;   // CROP=1: only the graphics area is active
     top->dio_download = 1; top->dio_strobe = 0; top->tos192k_in = 0;
     for (int i = 0; i < 4; i++) top->kbd_matrix[i] = 0xffffffff;
     for (int i = 0; i < 100; i++) cycle32();

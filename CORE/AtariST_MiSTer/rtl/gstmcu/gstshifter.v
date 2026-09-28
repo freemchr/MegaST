@@ -47,6 +47,7 @@ module gstshifter (
 	output reg [3:0] G,
 	output reg [3:0] B,
 	output reg       CE_PIX,
+	output           PIX_ACTIVE,   // MEGA65: R, G, B show graphics (not the border), for cropping
 	output reg [1:0] CE_DIV,
 	// DMA SOUND
 	input  SLOAD_N,
@@ -297,6 +298,21 @@ always @(posedge clk32) begin
 		end
 	end
 end
+
+// MEGA65: graphics area for cropping the border: from the first reload of a line (with DE) until
+// the pixels after the last reload have been shifted out (see pix_cntr above: it counts them down),
+// delayed like the colour output. The alignment has been checked in the Verilator simulation
+// (EmuTOS: exactly 320/640 pixels, the first pixel column of the font is visible).
+reg       pix_act;
+reg [3:0] pix_act_d;
+always @(posedge clk32) begin
+	if (pclk_en) begin
+		if (DE && reload) pix_act <= 1'b1;
+		else if (!DE && pix_cntr_en && pix_cntr == 6'h0) pix_act <= 1'b0;
+		pix_act_d <= { pix_act_d[2:0], pix_act };
+	end
+end
+assign PIX_ACTIVE = pix_act_d[3];
 
 assign shifted_color_index[0] = (pixel_offset == 4'd0) ? color_index[0] : (((pix_cntr == 6'hf && DE) || (pix_cntr != 6'h0 && !DE)) ? ste_shifted_0[pixel_offset - 1'd1] : 1'b0);
 assign shifted_color_index[1] = (pixel_offset == 4'd0) ? color_index[1] : (((pix_cntr == 6'hf && DE) || (pix_cntr != 6'h0 && !DE)) ? ste_shifted_1[pixel_offset - 1'd1] : 1'b0);

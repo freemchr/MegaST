@@ -39,6 +39,7 @@ entity analog_pipeline is
       -- Configure the scandoubler : 0=off/1=on
       -- Make sure the signal is in the video_clk clock domain
       video_scandoubler_i     : in  std_logic;
+      video_scanlines_i       : in  std_logic_vector(1 downto 0) := "00";   -- MEGA65 Atari ST: 0 = off, 1..3 = 25/50/75%
 
       -- Composite sync : 0=off/1=on
       video_csync_i           : in  std_logic;
@@ -78,6 +79,10 @@ architecture synthesis of analog_pipeline is
    signal mix_g              : std_logic_vector(7 downto 0);
    signal mix_b              : std_logic_vector(7 downto 0);
    signal mix_vga_de         : std_logic;
+   signal vga_hs_d           : std_logic;
+   signal vga_vs_d           : std_logic;
+   signal scanline_odd       : std_logic := '0';
+   signal scanline_dark      : std_logic;
 
    signal vga_red            : std_logic_vector(7 downto 0);
    signal vga_green          : std_logic_vector(7 downto 0);
@@ -158,12 +163,46 @@ begin
 
    -- The MEGA65 VDAC (ADV7125BCPZ170) does not like non-zero color values outside the visible window.
    -- This is why we explicitly set R, G, B to zero outside of "data enable".
-   vga_data_enable : process(mix_r, mix_g, mix_b, mix_vga_de)
+   -- MEGA65 Atari ST: scanlines for the scandoubled VGA output: every second (doubled) line is
+   -- darker: 1 = 25%, 2 = 50%, 3 = 75%
+   scanline_parity : process(video_clk_i)
+   begin
+      if rising_edge(video_clk_i) then
+         -- the edges are independent of the sync polarity: restart each frame, toggle each line
+         vga_hs_d <= vga_hs;
+         vga_vs_d <= vga_vs;
+         if vga_vs /= vga_vs_d then
+            scanline_odd <= '0';
+         elsif vga_hs = '1' and vga_hs_d = '0' then
+            scanline_odd <= not scanline_odd;
+         end if;
+      end if;
+   end process scanline_parity;
+
+   scanline_dark <= '1' when video_scandoubler_i = '1' and video_scanlines_i /= "00" and scanline_odd = '1' else '0';
+
+   vga_data_enable : process(mix_r, mix_g, mix_b, mix_vga_de, scanline_dark, video_scanlines_i)
+      function scanline(c : std_logic_vector(7 downto 0); level : std_logic_vector(1 downto 0))
+         return std_logic_vector is
+         variable u : unsigned(7 downto 0);
+      begin
+         u := unsigned(c);
+         case level is
+            when "01"   => return std_logic_vector(u - shift_right(u, 2));
+            when "10"   => return std_logic_vector(shift_right(u, 1));
+            when others => return std_logic_vector(shift_right(u, 2));
+         end case;
+      end function scanline;
    begin
       if mix_vga_de = '1' then
          vga_red   <= mix_r;
          vga_green <= mix_g;
          vga_blue  <= mix_b;
+         if scanline_dark = '1' then
+            vga_red   <= scanline(mix_r, video_scanlines_i);
+            vga_green <= scanline(mix_g, video_scanlines_i);
+            vga_blue  <= scanline(mix_b, video_scanlines_i);
+         end if;
       else
          vga_red   <= (others => '0');
          vga_green <= (others => '0');

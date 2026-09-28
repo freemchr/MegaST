@@ -364,7 +364,9 @@ HEAP            .BLOCK 1
 ; it comes to folders with a lot of files
 #else
 
-HEAP_SIZE       .EQU 27648                      ; 29696 - 2048 = 27648
+; MegaST: 2560 words less for the checkpoint tables of the fast seek of the
+; hard disks (VD_UB_CP in shell_vars.asm, 2050 words)
+HEAP_SIZE       .EQU 25088                      ; 29696 - 2048 - 2560 = 25088
 HEAP            .BLOCK 1
 
 ; The monitor variables use 22 words, round to 32 for being safe and subtract

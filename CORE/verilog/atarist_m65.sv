@@ -52,10 +52,11 @@ module atarist_m65
 	input         cfg_psg_stereo,
 	input         cfg_narrow_brd,  // MiSTer's TOS_CONTROL_BORDER (default on)
 	input         cfg_mde60,       // mono 60 Hz mode (0 = 71 Hz)
-	input   [1:0] cfg_fdc_wp,      // write protect floppy B/A
+	input   [1:0] cfg_fdc_wp,      // write protect floppy B/A (menu setting or read-only image)
 	input         cfg_viking,      // Viking/SM194 1280x1024 card
 	input         cfg_ste_pads,    // STe enhanced joystick ports instead of the ST joystick ports
 	input         cfg_cubase,      // Cubase 2/3 dongle in the cartridge port
+	input         cfg_crop,        // blank the border: only the graphics area is active (HDMI zoom-in)
 
 	// MEGA65 real time clock (M2M format, see rp5c15_m65.sv)
 	input  [64:0] rtc,
@@ -167,15 +168,29 @@ wire [11:0] vend[8]   = '{ 261, 311, 437, 0,  252, 293, 522, 0};
 reg       hblank_gen, vblank_gen;
 reg [2:0] mode;
 reg       vsync_n_l, hsync_n_l;
+wire      pix_active;   // MEGA65: the shifter outputs graphics (not the border), see gstshifter.v
+// MEGA65: cropping: the lines with graphics (DE) in the previous frame
+reg [11:0] crop_vfirst, crop_vlast, crop_vfirst_n, crop_vlast_n;
+reg        crop_line_de, crop_frame_de;
+reg        crop_vbl;
 always @(posedge clk_32) begin
 	reg  [11:0] hcnt,vcnt;
 
 	hcnt <= hcnt + 1'd1;
 	hsync_n_l <= hsync_n;
 
+	if (de) crop_line_de <= 1'b1;
+
 	if(~hsync_n_l & hsync_n) begin
 		hcnt <= 0;
 		vcnt <= vcnt + 1'd1;
+		if (crop_line_de) begin
+			if (!crop_frame_de) crop_vfirst_n <= vcnt;
+			crop_vlast_n  <= vcnt;
+			crop_frame_de <= 1'b1;
+		end
+		crop_line_de <= 1'b0;
+		crop_vbl <= (vcnt + 1'd1 < crop_vfirst) || (vcnt + 1'd1 > crop_vlast);
 	end
 
 	if (hsync_n_l & ~hsync_n) begin
@@ -185,6 +200,10 @@ always @(posedge clk_32) begin
 	if(vsync_n_l & ~vsync_n) begin
 		mode <= {mono ? mde60 : narrow_brd, mono, ~mono & pal};
 		vcnt <= 0;
+		crop_vfirst   <= crop_vfirst_n;
+		crop_vlast    <= crop_vlast_n;
+		crop_frame_de <= 1'b0;
+		crop_vbl      <= 1'b1;
 	end
 
 	if(hcnt == hstart[mode]) begin
@@ -221,8 +240,8 @@ always @(posedge clk_32) begin
 		vid_b    <= {b, b};
 		vid_hs   <= ~hsync_n_l;
 		vid_vs   <= ~vsync_n_l;
-		vid_hbl  <= hblank_gen;
-		vid_vbl  <= vblank_gen;
+		vid_hbl  <= hblank_gen | (cfg_crop & ~pix_active);
+		vid_vbl  <= vblank_gen | (cfg_crop & crop_vbl);
 	end
 end
 
@@ -500,6 +519,7 @@ gstshifter gstshifter (
 	.G          ( g ),
 	.B          ( b ),
 	.CE_PIX     ( ce_pix ),
+	.PIX_ACTIVE ( pix_active ),
 	.CE_DIV     ( ce_div ),
 
 	// DMA SOUND
@@ -1086,7 +1106,7 @@ fdc1772 #(.IMG_TYPE(1)) fdc1772 (
 
 	// place any signals that need to be passed up to the top after here.
 	.img_mounted    ( img_mounted      ), // signaling that new image has been mounted
-	.img_wp         ( fdc_wp | {2{img_readonly}} ), // write protect
+	.img_wp         ( fdc_wp           ), // write protect (MEGA65: includes read-only images, per drive)
 	.img_ds         ( 1'b0             ),
 	.img_size       ( img_size         ), // size of image in bytes
 	.sd_lba         ( sd_lba           ),

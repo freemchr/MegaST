@@ -42,6 +42,8 @@ entity main is
       st_full_border_i        : in  std_logic;              -- show the full borders (overscan)
       st_psg_stereo_i         : in  std_logic;
       st_fdc_wp_i             : in  std_logic_vector(1 downto 0);
+      st_fd_swap_i            : in  std_logic;              -- swap floppy drives A: and B:
+      st_crop_i               : in  std_logic;              -- only the graphics area is visible (no border)
       st_joy_swap_i           : in  std_logic;
       st_viking_i             : in  std_logic;
       st_ste_pads_i           : in  std_logic;
@@ -159,6 +161,7 @@ component atarist_m65 is
       cfg_viking      : in    std_logic;
       cfg_ste_pads    : in    std_logic;
       cfg_cubase      : in    std_logic;
+      cfg_crop        : in    std_logic;
       rtc             : in    std_logic_vector(64 downto 0);
 
       dio_download    : in    std_logic;
@@ -239,6 +242,12 @@ component atarist_m65 is
 end component atarist_m65;
 
 signal reset_core     : std_logic;
+
+signal fdc_mounted    : std_logic_vector(1 downto 0);
+signal fdc_img_size   : std_logic_vector(31 downto 0);
+signal fdc_ro         : std_logic_vector(1 downto 0);            -- per FDC drive
+signal fdc_sd_rd      : std_logic_vector(1 downto 0);
+signal fdc_sd_wr      : std_logic_vector(1 downto 0);
 signal st_matrix_n    : std_logic_vector(119 downto 0);
 
 -- joysticks: MEGA65 port 1 is the ST's port 0 (mouse port) and MEGA65 port 2 is the
@@ -352,10 +361,11 @@ begin
          cfg_psg_stereo  => st_psg_stereo_i,
          cfg_narrow_brd  => not st_full_border_i,
          cfg_mde60       => st_mono60_i,
-         cfg_fdc_wp      => st_fdc_wp_i,
+         cfg_fdc_wp      => st_fdc_wp_i or fdc_ro,
          cfg_viking      => st_viking_i,
          cfg_ste_pads    => st_ste_pads_i,
          cfg_cubase      => st_cubase_i,
+         cfg_crop        => st_crop_i,
          rtc             => rtc_i,
 
          -- the TOS image is only written while the core is held in reset
@@ -367,12 +377,12 @@ begin
          tos192k_in      => tos192k_i,
          cart_loaded     => cart_loaded_i,
 
-         img_mounted     => img_mounted_i(1 downto 0),
+         img_mounted     => fdc_mounted,
          img_readonly    => img_readonly_i,
-         img_size        => img_size_i,
+         img_size        => fdc_img_size,
          sd_lba          => sd_lba_o(31 downto 0),
-         sd_rd           => sd_rd_o(1 downto 0),
-         sd_wr           => sd_wr_o(1 downto 0),
+         sd_rd           => fdc_sd_rd,
+         sd_wr           => fdc_sd_wr,
          sd_ack          => sd_ack_i(0) or sd_ack_i(1),
          sd_buff_addr    => sd_buff_addr_i,
          sd_buff_dout    => sd_buff_dout_i,
@@ -434,6 +444,23 @@ begin
          sdram_dqmh      => sdram_dqmh_o,
          sdram_dq        => sdram_dq_io
       ); -- i_atarist
+
+   -- Floppy drives A: and B: can be swapped in the menu (e.g. to boot from B:)
+   i_floppy_swap : entity work.floppy_swap
+      port map (
+         clk_i            => clk_main_i,
+         swap_i           => st_fd_swap_i,
+         vd_mounted_i     => img_mounted_i(1 downto 0),
+         vd_readonly_i    => img_readonly_i,
+         vd_size_i        => img_size_i,
+         vd_sd_rd_o       => sd_rd_o(1 downto 0),
+         vd_sd_wr_o       => sd_wr_o(1 downto 0),
+         fdc_mounted_o    => fdc_mounted,
+         fdc_size_o       => fdc_img_size,
+         fdc_readonly_o   => fdc_ro,
+         fdc_sd_rd_i      => fdc_sd_rd,
+         fdc_sd_wr_i      => fdc_sd_wr
+      ); -- i_floppy_swap
 
    -- both hard disks share one LBA (only one request is active at a time)
    sd_lba_o(95 downto 64)    <= hd_lba;

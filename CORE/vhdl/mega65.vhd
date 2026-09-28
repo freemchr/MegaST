@@ -38,6 +38,7 @@ port (
    qnice_video_mode_o      : out video_mode_type;        -- Defined in video_modes_pkg.vhd
    qnice_osm_cfg_scaling_o : out std_logic_vector(8 downto 0);
    qnice_scandoubler_o     : out std_logic;              -- 0 = no scandoubler, 1 = scandoubler
+   qnice_scanlines_o       : out std_logic_vector(1 downto 0);   -- VGA scanlines: 0 = off, 1..3 = 25/50/75%
    qnice_audio_mute_o      : out std_logic;
    qnice_audio_filter_o    : out std_logic;
    qnice_zoom_crop_o       : out std_logic;
@@ -256,39 +257,45 @@ signal ikbd_clk               : std_logic;               -- IKBD clock (2.005 MH
 -- On-Screen-Menu (OSM) items: must match the positions of the items in config.vhd
 ---------------------------------------------------------------------------------------------
 
-constant C_MENU_ST            : natural := 12;
-constant C_MENU_STE           : natural := 13;
-constant C_MENU_MSTE          : natural := 14;
-constant C_MENU_STEROIDS      : natural := 15;
-constant C_MENU_MEM_512K      : natural := 21;
-constant C_MENU_MEM_1M        : natural := 22;
-constant C_MENU_MEM_2M        : natural := 23;
-constant C_MENU_MEM_4M        : natural := 24;
-constant C_MENU_MEM_8M        : natural := 25;
-constant C_MENU_MEM_14M       : natural := 26;
-constant C_MENU_BLITTER       : natural := 32;
-constant C_MENU_MONO          : natural := 33;
-constant C_MENU_MONO60        : natural := 34;
-constant C_MENU_BORDER        : natural := 35;
-constant C_MENU_VIKING        : natural := 36;
-constant C_MENU_STEREO        : natural := 37;
-constant C_MENU_WPROT         : natural := 38;
-constant C_MENU_JOYSWAP       : natural := 44;
-constant C_MENU_STEPADS       : natural := 45;
-constant C_MENU_MOUSE1351     : natural := 46;
-constant C_MENU_PMOD          : natural := 47;
-constant C_MENU_CUBASE        : natural := 48;
-constant C_MENU_HDMI_16_9_50  : natural := 55;
-constant C_MENU_HDMI_16_9_60  : natural := 56;
-constant C_MENU_HDMI_4_3_50   : natural := 57;
-constant C_MENU_HDMI_5_4_50   : natural := 58;
-constant C_MENU_HDMI_640_60   : natural := 59;
-constant C_MENU_HDMI_720_5994 : natural := 60;
-constant C_MENU_SVGA_800_60   : natural := 61;
-constant C_MENU_CRT_EMULATION : natural := 64;
-constant C_MENU_HDMI_ZOOM     : natural := 65;
-constant C_MENU_IMPROVE_AUDIO : natural := 66;
--- 68 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
+constant C_MENU_ST             : natural := 12;
+constant C_MENU_STE            : natural := 13;
+constant C_MENU_MSTE           : natural := 14;
+constant C_MENU_STEROIDS       : natural := 15;
+constant C_MENU_MEM_512K       : natural := 21;
+constant C_MENU_MEM_1M         : natural := 22;
+constant C_MENU_MEM_2M         : natural := 23;
+constant C_MENU_MEM_4M         : natural := 24;
+constant C_MENU_MEM_8M         : natural := 25;
+constant C_MENU_MEM_14M        : natural := 26;
+constant C_MENU_BLITTER        : natural := 32;
+constant C_MENU_MONO           : natural := 33;
+constant C_MENU_MONO60         : natural := 34;
+constant C_MENU_BORDER         : natural := 35;
+constant C_MENU_VIKING         : natural := 36;
+constant C_MENU_STEREO         : natural := 37;
+constant C_MENU_WPROT          : natural := 38;
+constant C_MENU_FDSWAP         : natural := 39;
+constant C_MENU_JOYSWAP        : natural := 45;
+constant C_MENU_STEPADS        : natural := 46;
+constant C_MENU_MOUSE1351      : natural := 47;
+constant C_MENU_PMOD           : natural := 48;
+constant C_MENU_CUBASE         : natural := 49;
+constant C_MENU_HDMI_16_9_50   : natural := 56;
+constant C_MENU_HDMI_16_9_60   : natural := 57;
+constant C_MENU_HDMI_4_3_50    : natural := 58;
+constant C_MENU_HDMI_5_4_50    : natural := 59;
+constant C_MENU_HDMI_640_60    : natural := 60;
+constant C_MENU_HDMI_720_5994  : natural := 61;
+constant C_MENU_SVGA_800_60    : natural := 62;
+constant C_MENU_VGA_15KHZ      : natural := 69;
+constant C_MENU_VGA_CSYNC      : natural := 70;
+constant C_MENU_SCANLINES_25   : natural := 73;
+constant C_MENU_SCANLINES_50   : natural := 74;
+constant C_MENU_SCANLINES_75   : natural := 75;
+constant C_MENU_CRT_EMULATION  : natural := 78;
+constant C_MENU_HDMI_ZOOM      : natural := 79;
+constant C_MENU_IMPROVE_AUDIO  : natural := 80;
+-- 82 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
@@ -306,6 +313,7 @@ signal main_tos192k           : std_logic;
 signal main_cart_loaded       : std_logic;
 signal main_cart_loading      : std_logic;
 signal main_tos_loading       : std_logic;
+signal qnice_vga_15khz        : std_logic;   -- VGA: 15 kHz RGB instead of 31 kHz
 
 signal main_img_mounted       : std_logic_vector(C_VDNUM - 1 downto 0);
 signal main_img_readonly      : std_logic;
@@ -510,6 +518,8 @@ begin
          st_full_border_i     => main_osm_control_i(C_MENU_BORDER),
          st_psg_stereo_i      => main_osm_control_i(C_MENU_STEREO),
          st_fdc_wp_i          => (others => main_osm_control_i(C_MENU_WPROT)),
+         st_fd_swap_i         => main_osm_control_i(C_MENU_FDSWAP),
+         st_crop_i            => main_osm_control_i(C_MENU_HDMI_ZOOM),
          st_joy_swap_i        => main_osm_control_i(C_MENU_JOYSWAP),
          st_viking_i          => main_osm_control_i(C_MENU_VIKING),
          st_ste_pads_i        => main_osm_control_i(C_MENU_STEPADS),
@@ -634,10 +644,17 @@ begin
    -- Use On-Screen-Menu selections to configure several audio and video settings
    -- Video and audio mode control
    qnice_dvi_o                <= '0';                                         -- 0=HDMI (with sound), 1=DVI (no sound)
-   qnice_scandoubler_o        <= not qnice_video_31khz;
+   qnice_vga_15khz            <= qnice_osm_control_i(C_MENU_VGA_15KHZ) or qnice_osm_control_i(C_MENU_VGA_CSYNC);
+
+   -- VGA: 31 kHz (scandoubler for the 15 kHz color modes) or 15 kHz (RGB for CRTs and SCART)
+   qnice_scandoubler_o        <= not qnice_video_31khz and not qnice_vga_15khz;
+   qnice_scanlines_o          <= "01" when qnice_osm_control_i(C_MENU_SCANLINES_25) = '1' else
+                                 "10" when qnice_osm_control_i(C_MENU_SCANLINES_50) = '1' else
+                                 "11" when qnice_osm_control_i(C_MENU_SCANLINES_75) = '1' else
+                                 "00";
    qnice_audio_mute_o         <= '0';                                         -- audio is not muted
    qnice_audio_filter_o       <= qnice_osm_control_i(C_MENU_IMPROVE_AUDIO);   -- 0 = raw audio, 1 = use filters from globals.vhd
-   qnice_zoom_crop_o          <= qnice_osm_control_i(C_MENU_HDMI_ZOOM);       -- 0 = no zoom/crop
+   qnice_zoom_crop_o          <= qnice_osm_control_i(C_MENU_HDMI_ZOOM);       -- 0 = no zoom/crop (the core crops the border)
 
    -- These two signals are often used as a pair (i.e. both '1'), particularly when
    -- you want to run old analog cathode ray tube monitors or TVs (via SCART)
@@ -645,8 +662,8 @@ begin
    --    "Standard VGA":                     qnice_retro15kHz_o=0 and qnice_csync_o=0
    --    "Retro 15 kHz with HSync and VSync" qnice_retro15kHz_o=1 and qnice_csync_o=0
    --    "Retro 15 kHz with CSync"           qnice_retro15kHz_o=1 and qnice_csync_o=1
-   qnice_retro15kHz_o         <= '0';
-   qnice_csync_o              <= '0';
+   qnice_retro15kHz_o         <= qnice_vga_15khz;
+   qnice_csync_o              <= qnice_osm_control_i(C_MENU_VGA_CSYNC);
    qnice_osm_cfg_scaling_o    <= (others => '1');
 
    -- ascal filters that are applied while processing the input

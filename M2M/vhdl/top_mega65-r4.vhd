@@ -390,6 +390,7 @@ architecture synthesis of mega65_r4 is
    signal qnice_dvi              : std_logic;
    signal qnice_video_mode       : video_mode_type;
    signal qnice_scandoubler      : std_logic;
+   signal qnice_scanlines       : std_logic_vector(1 downto 0);
    signal qnice_csync            : std_logic;
    signal qnice_audio_mute       : std_logic;
    signal qnice_audio_filter     : std_logic;
@@ -660,6 +661,7 @@ begin
       qnice_dvi_i             => qnice_dvi,
       qnice_video_mode_i      => qnice_video_mode,
       qnice_scandoubler_i     => qnice_scandoubler,
+      qnice_scanlines_i       => qnice_scanlines,
       qnice_csync_i           => qnice_csync,
       qnice_audio_mute_i      => qnice_audio_mute,
       qnice_audio_filter_i    => qnice_audio_filter,
@@ -722,6 +724,7 @@ begin
          qnice_dvi_o             => qnice_dvi,
          qnice_video_mode_o      => qnice_video_mode,
          qnice_scandoubler_o     => qnice_scandoubler,
+         qnice_scanlines_o       => qnice_scanlines,
          qnice_csync_o           => qnice_csync,
          qnice_audio_mute_o      => qnice_audio_mute,
          qnice_audio_filter_o    => qnice_audio_filter,

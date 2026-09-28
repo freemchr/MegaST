@@ -56,6 +56,7 @@ entity av_pipeline is
       qnice_osm_cfg_enable_i  : in  std_logic;
       qnice_retro15kHz_i      : in  std_logic;
       qnice_scandoubler_i     : in  std_logic;
+      qnice_scanlines_i       : in  std_logic_vector(1 downto 0) := "00";   -- MEGA65 Atari ST: VGA scanlines
       qnice_csync_i           : in  std_logic;
       qnice_zoom_crop_i       : in  std_logic;
       qnice_audio_filter_i    : in  std_logic;
@@ -155,6 +156,7 @@ signal audio_mute             : std_logic;
 ---------------------------------------------------------------------------------------------
 signal video_retro15kHz       : std_logic;
 signal video_scandoubler      : std_logic;
+signal video_scanlines        : std_logic_vector(1 downto 0);
 signal video_csync            : std_logic;
 signal video_zoom_crop        : std_logic;
 
@@ -271,10 +273,11 @@ begin
    -- Clock domain crossing: QNICE to VIDEO
    i_qnice2video: xpm_cdc_array_single
       generic map (
-         WIDTH => 46
+         WIDTH => 48
       )
       port map (
          src_clk                => qnice_clk_i,
+         src_in(47 downto 46)   => qnice_scanlines_i,
          src_in(15 downto 0)    => qnice_osm_cfg_xy_i,
          src_in(31 downto 16)   => qnice_osm_cfg_dxdy_i,
          src_in(32)             => qnice_osm_cfg_enable_i,
@@ -291,7 +294,8 @@ begin
          dest_out(34)           => video_scandoubler,
          dest_out(35)           => video_csync,
          dest_out(36)           => video_zoom_crop,
-         dest_out(45 downto 37) => video_osm_cfg_scaling
+         dest_out(45 downto 37) => video_osm_cfg_scaling,
+         dest_out(47 downto 46) => video_scanlines
       ); -- i_qnice2video
 
    -- Clock domain crossing: QNICE to AUDIO
@@ -416,6 +420,7 @@ begin
 
          -- Configure the scandoubler: 0 =off/1=on
          video_scandoubler_i     => video_scandoubler,
+         video_scanlines_i       => video_scanlines,
 
          -- Configure composite sync: 0 =off/1=on
          video_csync_i           => video_csync,
@@ -514,7 +519,9 @@ begin
          video_vs_i        => video_vs_i,
          video_hblank_i    => video_hblank_i,
          video_vblank_i    => video_vblank_i,
-         video_crop_mode_i => video_zoom_crop,
+         -- MEGA65 Atari ST: the core crops the border itself (crop.vhd is made for the C64 picture);
+         -- zoom-in still means that the HDMI output uses the full width (see digital_pipeline.vhd)
+         video_crop_mode_i => '0',
          video_ce_o        => video_crop_ce,
          video_red_o       => video_crop_red,
          video_green_o     => video_crop_green,

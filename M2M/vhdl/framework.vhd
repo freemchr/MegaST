@@ -186,6 +186,7 @@ port (
    qnice_osm_cfg_scaling_i : in    std_logic_vector(8 downto 0);
    qnice_retro15kHz_i      : in    std_logic;
    qnice_scandoubler_i     : in    std_logic;
+   qnice_scanlines_i       : in    std_logic_vector(1 downto 0) := "00";   -- MEGA65 Atari ST: VGA scanlines
    qnice_csync_i           : in    std_logic;
    qnice_audio_mute_i      : in    std_logic;
    qnice_audio_filter_i    : in    std_logic;
@@ -896,6 +897,7 @@ begin
          qnice_osm_cfg_enable_i  => qnice_osm_cfg_enable,
          qnice_retro15kHz_i      => qnice_retro15kHz_i,
          qnice_scandoubler_i     => qnice_scandoubler_i,
+         qnice_scanlines_i       => qnice_scanlines_i,
          qnice_csync_i           => qnice_csync_i,
          qnice_zoom_crop_i       => qnice_zoom_crop_i,
          qnice_audio_filter_i    => qnice_audio_filter_i,

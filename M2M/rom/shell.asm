@@ -65,6 +65,13 @@ START_SHELL     MOVE    LOG_M2M, R8             ; M2M start message
                 MOVE    CRTROM_AUT_FILE, R8
                 MOVE    0, @R8
 
+                ; MegaST: no checkpoints for the fast seek of unbuffered
+                ; virtual drives, yet (see VD_UB_FSEEK)
+                MOVE    VD_UB_CP, R8
+                MOVE    0xFFFF, @R8
+                ADD     VD_UB_CP_SLOTSZ, R8
+                MOVE    0xFFFF, @R8
+
                 ; initialize file browser persistence variables
                 MOVE    M2M$CSR, R8             ; get active SD card
                 MOVE    @R8, R8
@@ -730,7 +737,10 @@ _LI_FOPEN_OK    MOVE    R5, R8
                 CMP     0, R4                   ; disk image mode?
                 RBRA    _LI_BUFFERED, !Z        ; no
                 CMP     VD_NOBUFFER, R0         ; unbuffered drive?
-                RBRA    _LI_FREAD_RET, Z        ; yes: done (R6=0: OK)
+                RBRA    _LI_BUFFERED, !Z        ; no
+                MOVE    R1, R8                  ; yes: new checkpoints for
+                RSUB    VD_UB_CP_CLAIM, 1       ; the fast seek and done
+                RBRA    _LI_FREAD_RET, 1        ; (R6=0: OK)
 _LI_BUFFERED
 
                 ; For showing a progress bar: Take the remaining size of the
@@ -1234,13 +1244,18 @@ VD_UB_SEEK      INCRB
                 RBRA    _VDUBS_RET, 1
 
 _VDUBS_SEEK     MOVE    R10, R3                 ; save R10
+                MOVE    R11, R4                 ; save R11
                 MOVE    R1, R9                  ; R9: position low word
                 MOVE    R2, R10                 ; R10: position high word
-                SYSCALL(f32_fseek, 1)
+                MOVE    R0, R11                 ; R11: drive number
+                RSUB    VD_UB_FSEEK, 1
                 MOVE    R3, R10
+                MOVE    R4, R11
 
 _VDUBS_RET      DECRB
                 RET
+
+#include "vd_fastseek.asm"
 
 ; Serve a read request of an unbuffered drive
 ; Input:   R8: virtual drive number
