@@ -80,8 +80,8 @@ SUBMENU_SUMMARY XOR     R8, R8                  ; R8 = 0 = no custom string
 ;  R10: @TODO: Future release: Context (see CTX_* in sysdef.asm)
 ; Output:
 ;   R8: 0=do not filter file, i.e. show file
-; Atari ST: only show directories and *.ST (floppy), *.HD, *.IMG (hard disk),
-; *.STC, *.IMG (cartridge) and *.IMG, *.ROM (TOS) files
+; Atari ST: only show directories and *.ST (floppy), *.HD, *.IMG, *.VHD (hard
+; disk, e.g. from MiSTer), *.STC, *.IMG (cartridge) and *.IMG, *.ROM (TOS) files
 FILTER_FILES    INCRB
                 MOVE    R8, R0                  ; R0: file name
                 MOVE    R9, R2                  ; R2: remember R9
@@ -112,7 +112,7 @@ _FFILES_HD      CMP     0x0048, @R3             ; 'H'
                 CMP     0x0044, @R3             ; 'D'
                 RBRA    _FFILES_RET, Z          ; .HD: show
 
-_FFILES_4       MOVE    R1, R3                  ; ".IMG", ".STC" or ".ROM"
+_FFILES_4       MOVE    R1, R3                  ; ".IMG", ".STC", ".ROM", ".VHD"
                 SUB     4, R3
                 CMP     0x002E, @R3             ; '.'
                 RBRA    _FFILES_FILT, !Z
@@ -136,13 +136,22 @@ _FFILES_STC     CMP     0x0052, @R3             ; 'R'
                 RBRA    _FFILES_RET, Z          ; .ROM: show
                 RBRA    _FFILES_FILT, 1
 _FFILES_STC1    CMP     0x0053, @R3             ; 'S'
-                RBRA    _FFILES_FILT, !Z
+                RBRA    _FFILES_VHD, !Z
                 ADD     1, R3
                 CMP     0x0054, @R3             ; 'T'
                 RBRA    _FFILES_FILT, !Z
                 ADD     1, R3
                 CMP     0x0043, @R3             ; 'C'
                 RBRA    _FFILES_RET, Z          ; .STC: show
+                RBRA    _FFILES_FILT, 1
+_FFILES_VHD     CMP     0x0056, @R3             ; 'V'
+                RBRA    _FFILES_FILT, !Z
+                ADD     1, R3
+                CMP     0x0048, @R3             ; 'H'
+                RBRA    _FFILES_FILT, !Z
+                ADD     1, R3
+                CMP     0x0044, @R3             ; 'D'
+                RBRA    _FFILES_RET, Z          ; .VHD: show
 
 _FFILES_FILT    MOVE    1, R8                   ; R8 = 1 = filter file
 
@@ -365,7 +374,7 @@ HEAP            .BLOCK 1
 #else
 
 ; MegaST: 2560 words less for the checkpoint tables of the fast seek of the
-; hard disks (VD_UB_CP in shell_vars.asm, 2050 words)
+; hard disks (VD_UB_CP in shell_vars.asm, 2052 words)
 HEAP_SIZE       .EQU 25088                      ; 29696 - 2048 - 2560 = 25088
 HEAP            .BLOCK 1
 

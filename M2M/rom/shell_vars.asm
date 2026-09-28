@@ -160,9 +160,9 @@ VDRIVES_FLUSH_H .BLOCK  VDRIVES_MAX
 ; MegaST: checkpoint tables for the fast seek of unbuffered virtual drives
 ; (see VD_UB_FSEEK in shell.asm)
 VD_UB_CP_SLOTS  .EQU    2
-VD_UB_CP_ENTRIES .EQU   512                     ; every 2 MB: up to 1 GB
-VD_UB_CP_SLOTSZ .EQU    1025                    ; owner + 2 words per entry
-VD_UB_CP        .BLOCK  2050
+VD_UB_CP_ENTRIES .EQU   512                     ; (vd_fastseek.asm needs 512)
+VD_UB_CP_SLOTSZ .EQU    1026                    ; owner, shift, 2 words per entry
+VD_UB_CP        .BLOCK  2052
 VDRIVES_FLUSH_L .BLOCK  VDRIVES_MAX
 VDRIVES_ITERSIZ .BLOCK  VDRIVES_MAX
 VDRIVES_FL_4K   .BLOCK  VDRIVES_MAX

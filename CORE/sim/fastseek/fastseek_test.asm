@@ -10,6 +10,8 @@
 ; through FH_FAST and reads it back through FH_REF.
 ;
 ; REF_ONLY defined: FH_FAST also uses f32_fseek (to compare the speed)
+; VD_UB_CP_SHIFT=3: checkpoints at least every 8 sectors: for the 6 MB file
+; the shift has to become 5 (the 512 checkpoints cover 8 MB)
 ;
 ; Atari ST port 2026, licensed under GPL v3
 ; ****************************************************************************
@@ -40,6 +42,7 @@ START_FIRMWARE  MOVE    STR_START, R8
                 ADD     VD_UB_CP_SLOTSZ, R8
                 MOVE    0xFFFF, @R8
                 MOVE    2, R8                   ; like shell.asm after a mount
+                MOVE    FH_FAST, R9
                 RSUB    VD_UB_CP_CLAIM, 1
 
                 MOVE    RND_LO_S, R8            ; seeds (RND_HI_S follows)
@@ -183,7 +186,7 @@ _NEXT           SUB     1, R7
 
                 ; count the recorded checkpoints
                 MOVE    VD_UB_CP, R0
-                ADD     1, R0
+                ADD     2, R0
                 MOVE    VD_UB_CP_ENTRIES, R1
                 XOR     R2, R2
 _CNT_1          MOVE    @R0++, R3
@@ -195,6 +198,12 @@ _CNT_2          SUB     1, R1
                 MOVE    STR_OK, R8
                 SYSCALL(puts, 1)
                 MOVE    R2, R8
+                SYSCALL(puthex, 1)
+                MOVE    STR_SHIFT, R8
+                SYSCALL(puts, 1)
+                MOVE    VD_UB_CP, R8
+                ADD     1, R8
+                MOVE    @R8, R8
                 SYSCALL(puthex, 1)
                 SYSCALL(crlf, 1)
                 HALT
@@ -300,6 +309,7 @@ ERR_END         SYSCALL(puts, 1)
 
 STR_START       .ASCII_W "Fast seek test: HD0.IMG, 6 MB, fragmented"
 STR_OK          .ASCII_W "OK: all positions read and written correctly, checkpoints: "
+STR_SHIFT       .ASCII_W ", shift: "
 STR_MOUNT       .ASCII_W "FAIL: mount"
 STR_OPEN        .ASCII_W "FAIL: open"
 STR_SEEK        .ASCII_W "FAIL: seek error"
@@ -322,8 +332,8 @@ FNAME           .ASCII_W "HD0.IMG"
 
 VD_UB_CP_SLOTS  .EQU    2                       ; like shell_vars.asm
 VD_UB_CP_ENTRIES .EQU   512
-VD_UB_CP_SLOTSZ .EQU    1025
-VD_UB_CP        .BLOCK  2050
+VD_UB_CP_SLOTSZ .EQU    1026
+VD_UB_CP        .BLOCK  2052
 
 DEVH            .BLOCK  FAT32$DEV_STRUCT_SIZE
 FH_FAST         .BLOCK  FAT32$FDH_STRUCT_SIZE

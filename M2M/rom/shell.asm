@@ -739,7 +739,8 @@ _LI_FOPEN_OK    MOVE    R5, R8
                 CMP     VD_NOBUFFER, R0         ; unbuffered drive?
                 RBRA    _LI_BUFFERED, !Z        ; no
                 MOVE    R1, R8                  ; yes: new checkpoints for
-                RSUB    VD_UB_CP_CLAIM, 1       ; the fast seek and done
+                MOVE    R5, R9                  ; the fast seek and done
+                RSUB    VD_UB_CP_CLAIM, 1
                 RBRA    _LI_FREAD_RET, 1        ; (R6=0: OK)
 _LI_BUFFERED
 

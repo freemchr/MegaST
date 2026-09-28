@@ -14,19 +14,27 @@
 ; follows the cluster chain sector by sector, i.e. it reads the FAT at every
 ; cluster boundary: seeking far into a large image takes seconds. The fast
 ; seek starts at the current position of the file (if the target is behind
-; it) or at a checkpoint: the cluster of every 2 MB of the file (4096
-; sectors), which is recorded whenever a seek passes it. Everything else
-; works like FAT32$FILE_SEEK. The image files never change their size, so
-; the cluster chain and the checkpoints stay valid while a file is mounted.
+; it) or at a checkpoint: the cluster of every 2^shift sectors of the file,
+; which is recorded whenever a seek passes it. The shift is chosen when the
+; image is mounted: VD_UB_CP_SHIFT (12: 2 MB) or more, so that the 512
+; checkpoints cover the whole image (up to 4 GB: 8 MB). Everything else works
+; like FAT32$FILE_SEEK. The image files never change their size, so the
+; cluster chain and the checkpoints stay valid while a file is mounted.
 ;
 ; There are VD_UB_CP_SLOTS tables: word 0 = drive number that owns the table
-; (0xFFFF = none), then VD_UB_CP_ENTRIES times cluster lo, cluster hi
-; (cluster 0 = no checkpoint, yet; the first data cluster of FAT32 is 2).
+; (0xFFFF = none), word 1 = shift, then VD_UB_CP_ENTRIES (512) times cluster
+; lo, cluster hi (cluster 0 = no checkpoint, yet; the first data cluster of
+; FAT32 is 2).
 ; ----------------------------------------------------------------------------
 
-; Claim the checkpoint table for the drive in R8 (called after a mount):
-; reuse the table of this drive or a free one, otherwise take the first one,
-; then delete all checkpoints
+#ifndef VD_UB_CP_SHIFT
+#define VD_UB_CP_SHIFT 12
+#endif
+
+; Claim the checkpoint table for the drive in R8 (called after a mount, R9:
+; file handle of the image): reuse the table of this drive or a free one,
+; otherwise take the first one, then choose the shift and delete all
+; checkpoints
 VD_UB_CP_CLAIM  INCRB
                 MOVE    VD_UB_CP, R0            ; R0: table of this drive?
                 MOVE    VD_UB_CP_SLOTS, R1
@@ -45,6 +53,24 @@ _VDUBCC_2       CMP     0xFFFF, @R0
                 MOVE    VD_UB_CP, R0            ; take the first table
 
 _VDUBCC_CLR     MOVE    R8, @R0++               ; owner
+
+                ; shift: the 512 checkpoints have to cover the file:
+                ; file size < 512 * 512 * 2^shift = 2^(18 + shift), i.e.
+                ; (file size high word >> (shift + 2)) = 0
+                MOVE    R9, R2
+                ADD     FAT32$FDH_SIZE_HI, R2
+                MOVE    @R2, R2                 ; R2: file size high word
+                MOVE    VD_UB_CP_SHIFT, R1      ; R1: shift
+_VDUBCC_S       MOVE    R1, R3
+                ADD     2, R3
+                MOVE    R2, R4
+                AND     0xFFFB, SR              ; clear C (SHR fills with C)
+                SHR     R3, R4
+                RBRA    _VDUBCC_S2, Z
+                ADD     1, R1
+                RBRA    _VDUBCC_S, 1
+_VDUBCC_S2      MOVE    R1, @R0++               ; shift
+
                 MOVE    VD_UB_CP_ENTRIES, R1
 _VDUBCC_3       MOVE    0, @R0++                ; no checkpoint
                 MOVE    0, @R0++
@@ -77,7 +103,7 @@ _VDUBF_T1       CMP     @R3, R11
                 RBRA    _VDUBF_T1, !Z
                 SYSCALL(f32_fseek, 1)           ; no table: standard seek
                 RBRA    _VDUBF_RET, 1
-_VDUBF_T2       ADD     1, R3                   ; R3: first checkpoint
+_VDUBF_T2       ADD     2, R3                   ; R3: first checkpoint
 
                 ; target behind the end of the file?
                 MOVE    R0, R4
@@ -140,20 +166,14 @@ _VDUBF_1        MOVE    R0, R8
                 SHR     9, R7
 
                 ; R10|R9: sector of the best checkpoint <= target sector:
-                ; checkpoint k = target sector / 4096, k < VD_UB_CP_ENTRIES,
+                ; checkpoint k = target sector >> shift, k < VD_UB_CP_ENTRIES,
                 ; go back to the next valid one, k = 0: start of the file
-                MOVE    R5, R8                  ; R8: k = R5|R4 >> 12
-                AND     0xFFFD, SR              ; clear X (SHL fills with X)
-                SHL     4, R8
-                MOVE    R4, R9
-                AND     0xFFFB, SR              ; clear C (SHR fills with C)
-                SHR     12, R9
-                OR      R9, R8
-                CMP     0x0000, R5              ; beyond 64k * 4096 sectors?
-                RBRA    _VDUBF_2A, !Z           ; yes: use the last one
+                MOVE    R4, R8                  ; R8: k = R5|R4 >> shift
+                MOVE    R5, R9
+                RSUB    _VDUBF_K, 1
                 CMP     VD_UB_CP_ENTRIES, R8
                 RBRA    _VDUBF_2B, N            ; k < entries: OK
-_VDUBF_2A       MOVE    VD_UB_CP_ENTRIES, R8
+                MOVE    VD_UB_CP_ENTRIES, R8
                 SUB     1, R8
 _VDUBF_2B       CMP     0, R8                   ; k = 0: start of the file
                 RBRA    _VDUBF_2D, Z
@@ -166,12 +186,7 @@ _VDUBF_2B       CMP     0, R8                   ; k = 0: start of the file
                 RBRA    _VDUBF_2D, !Z
                 SUB     1, R8                   ; no: previous one
                 RBRA    _VDUBF_2B, 1
-_VDUBF_2D       MOVE    R8, R9                  ; R10|R9 = k * 4096
-                AND     0xFFFD, SR              ; clear X (SHL fills with X)
-                SHL     12, R9
-                MOVE    R8, R10
-                AND     0xFFFB, SR              ; clear C (SHR fills with C)
-                SHR     4, R10
+_VDUBF_2D       RSUB    _VDUBF_KSEC, 1          ; R10|R9 = k << shift
 
                 ; start at the current sector if it is between the
                 ; checkpoint and the target (R10|R9 <= R7|R6 <= R5|R4)
@@ -236,22 +251,21 @@ _VDUBF_5        MOVE    R0, R8
                 ADD     1, R6                   ; current sector + 1
                 ADDC    0, R7
 
-                MOVE    R6, R8                  ; checkpoint (every 4096)?
-                AND     0x0FFF, R8
+                MOVE    R3, R8                  ; checkpoint (every 2^shift)?
+                MOVE    @--R8, R8               ; R8: shift
+                MOVE    1, R9
+                AND     0xFFFD, SR              ; clear X (SHL fills with X)
+                SHL     R8, R9
+                SUB     1, R9                   ; R9: 2^shift - 1
+                AND     R6, R9
                 RBRA    _VDUBF_4, !Z
                 MOVE    R0, R8                  ; sector 0 of the cluster?
                 ADD     FAT32$FDH_SECTOR, R8
                 CMP     0, @R8
                 RBRA    _VDUBF_4, !Z
-                MOVE    R7, R8                  ; R8: k = R7|R6 >> 12
-                AND     0xFFFD, SR              ; clear X (SHL fills with X)
-                SHL     4, R8
-                MOVE    R6, R9
-                AND     0xFFFB, SR              ; clear C (SHR fills with C)
-                SHR     12, R9
-                OR      R9, R8
-                CMP     0x1000, R7              ; far beyond the table?
-                RBRA    _VDUBF_4, !N
+                MOVE    R6, R8                  ; R8: k = R7|R6 >> shift
+                MOVE    R7, R9
+                RSUB    _VDUBF_K, 1
                 CMP     VD_UB_CP_ENTRIES, R8
                 RBRA    _VDUBF_4, !N            ; k >= entries: no room
                 ADD     R8, R8
@@ -299,4 +313,31 @@ _VDUBF_6        MOVE    R0, R8
 
 _VDUBF_RET      MOVE    R0, R8
                 DECRB
+                RET
+
+; k = sector R9|R8 >> shift (R3 of VD_UB_FSEEK: first checkpoint, the shift
+; is the word in front of it); output: R8, R9, R11 and R12 are changed
+; (k < 512, so the bits of the high word that are shifted out are 0)
+_VDUBF_K        MOVE    R3, R11
+                MOVE    @--R11, R11             ; R11: shift
+                AND     0xFFFB, SR              ; clear C (SHR fills with C)
+                SHR     R11, R8                 ; low word >> shift
+                MOVE    16, R12
+                SUB     R11, R12                ; R12: 16 - shift
+                AND     0xFFFD, SR              ; clear X (SHL fills with X)
+                SHL     R12, R9                 ; high word << (16 - shift)
+                OR      R9, R8
+                RET
+
+; sector R10|R9 = k (R8) << shift (see _VDUBF_K); R11, R12 are changed
+_VDUBF_KSEC     MOVE    R3, R11
+                MOVE    @--R11, R11             ; R11: shift
+                MOVE    R8, R9
+                AND     0xFFFD, SR              ; clear X (SHL fills with X)
+                SHL     R11, R9                 ; low word: k << shift
+                MOVE    16, R12
+                SUB     R11, R12                ; R12: 16 - shift
+                MOVE    R8, R10
+                AND     0xFFFB, SR              ; clear C (SHR fills with C)
+                SHR     R12, R10                ; high word: k >> (16 - shift)
                 RET

@@ -97,15 +97,17 @@ Hard disks
 ----------
 
 The hard disks are ACSI targets 0 and 1. The images are raw disk images (as used by Hatari,
-MiSTer and MiST), e.g. with a DOS (MBR) or Atari (AHDI) partition table. EmuTOS finds the
+MiSTer and MiST; `.hd`, `.img` or `.vhd` like on MiSTer, but not a Microsoft "dynamic" VHD),
+e.g. with a DOS (MBR) or Atari (AHDI) partition table. Images can be almost 4 GB large (the
+limit of FAT32); disks larger than 1 GB need a driver with ICD commands (EmuTOS, HDDRIVER). EmuTOS finds the
 partitions automatically; with Atari TOS you need a hard disk driver (AHDI, HDDRIVER, ...),
 e.g. on a boot floppy or on the hard disk itself.
 
 The images are **not** loaded into RAM: every sector is read from and written to the SD card
 directly (write-through). The FAT32 library of the framework can only seek from the start of a
 file, following the cluster chain; the firmware therefore remembers the cluster of every 2 MB of
-an image (for the first 1 GB) and seeks from there or from the current position (see
-`M2M/rom/vd_fastseek.asm`), so random access is fast in large images, too.
+an image (4 MB for images larger than 1 GB, 8 MB above 2 GB) and seeks from there or from the
+current position (see `M2M/rom/vd_fastseek.asm`), so random access is fast in large images, too.
 
 Floppy disks
 ------------
