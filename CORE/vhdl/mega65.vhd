@@ -357,6 +357,7 @@ signal qnice_vd_ce            : std_logic;
 signal qnice_vd_we            : std_logic;
 signal qnice_vd_wait          : std_logic;
 signal qnice_vd_wait_cnt      : natural range 0 to 31;
+signal main_vd_reset          : std_logic;
 signal qnice_sd_lba           : vd_vec_array(C_VDNUM - 1 downto 0)(31 downto 0);
 signal qnice_sd_rd            : vd_std_array(C_VDNUM - 1 downto 0);
 signal qnice_sd_wr            : vd_std_array(C_VDNUM - 1 downto 0);
@@ -867,6 +868,24 @@ begin
                              qnice_vd_wait_cnt /= C_VD_DIN_WAIT
                     else '0';
 
+   -- The virtual drives are only reset together with the framework (power-on, long press of
+   -- the reset button), not by a reset of the Atari ST (menu item "Reset Atari ST", short press):
+   -- like on MiSTer (and a real ST), the disks stay in their drives. The M2M firmware treats
+   -- a reset of vdrives.vhd as "all drives unmounted", while the FDC and acsi_ctrl.sv would
+   -- continue to use the images.
+   i_cdc_vd_reset : xpm_cdc_sync_rst
+      generic map (
+         DEST_SYNC_FF   => 2,
+         INIT           => 1,
+         INIT_SYNC_FF   => 0,
+         SIM_ASSERT_CHK => 0
+      )
+      port map (
+         src_rst  => qnice_rst_i,
+         dest_clk => main_clk,
+         dest_rst => main_vd_reset
+      ); -- i_cdc_vd_reset
+
    i_vdrives : entity work.vdrives
       generic map (
          VDNUM       => C_VDNUM
@@ -875,7 +894,7 @@ begin
       (
          clk_qnice_i       => qnice_clk_i,
          clk_core_i        => main_clk,
-         reset_core_i      => main_reset_core_i,
+         reset_core_i      => main_vd_reset,
 
          -- Core clock domain
          img_mounted_o     => main_img_mounted,

@@ -85,7 +85,17 @@ int main(int argc, char** argv) {
     std::vector<uint8_t> img(W * H * 3, 0);
     int old_vs = 0, old_hs = 0, old_as = 1;
     uint32_t last_a = 0; uint64_t n_bus = 0;
+    // RESET_AT=n: reset the ST at frame n like the "Reset Atari ST" menu item
+    // (main.vhd: reset_core also drives dio_download)
+    int reset_at = getenv("RESET_AT") ? atoi(getenv("RESET_AT")) : -1;
     while (frame < frames) {
+        if (frame == reset_at && top->video_vs && !old_vs) {
+            printf("reset at frame %d\n", frame);
+            top->reset_in = 1; top->dio_download = 1;
+            for (int i = 0; i < 64; i++) cycle32();
+            top->reset_in = 0; top->dio_download = 0;
+            reset_at = -1;
+        }
         tick();
         if ((ticks % 6) != 1) continue;   // right after the rising edge of clk_32
 
