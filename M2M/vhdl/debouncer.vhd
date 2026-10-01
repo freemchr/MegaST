@@ -90,46 +90,47 @@ begin
    end process;
    
    -- debouncer settings for the joysticks:
-   -- 5ms for any joystick direction
-   -- 1ms for the fire button
+   -- MegaST: no debouncing (stable_time 0: just the two synchronizer flip-flops). Mice in the
+   -- joystick ports (Atari ST, Amiga) send quadrature steps that are much shorter than 1 ms,
+   -- especially wireless ones, and the ST software does not need debounced joysticks.
         
    do_dbnce_joy1_up : entity work.debounce
-      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 1)
+      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 0)
       port map (clk => clk, reset_n => reset_n, button => joy_1_up_n, result => j1_u);
 
    do_dbnce_joy1_down : entity work.debounce
-      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 1)
+      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 0)
       port map (clk => clk, reset_n => reset_n, button => joy_1_down_n, result => j1_d);
 
    do_dbnce_joy1_left : entity work.debounce
-      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 1)
+      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 0)
       port map (clk => clk, reset_n => reset_n, button => joy_1_left_n, result => j1_l);
 
    do_dbnce_joy1_right : entity work.debounce
-      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 1)
+      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 0)
       port map (clk => clk, reset_n => reset_n, button => joy_1_right_n, result => j1_r);
 
    do_dbnce_joy1_fire : entity work.debounce
-      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 1)
+      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 0)
       port map (clk => clk, reset_n => reset_n, button => joy_1_fire_n, result => j1_f);
       
    do_dbnce_joy2_up : entity work.debounce
-      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 1)
+      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 0)
       port map (clk => clk, reset_n => reset_n, button => joy_2_up_n, result => j2_u);
 
    do_dbnce_joy2_down : entity work.debounce
-      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 1)
+      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 0)
       port map (clk => clk, reset_n => reset_n, button => joy_2_down_n, result => j2_d);
 
    do_dbnce_joy2_left : entity work.debounce
-      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 1)
+      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 0)
       port map (clk => clk, reset_n => reset_n, button => joy_2_left_n, result => j2_l);
 
    do_dbnce_joy2_right : entity work.debounce
-      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 1)
+      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 0)
       port map (clk => clk, reset_n => reset_n, button => joy_2_right_n, result => j2_r);
 
    do_dbnce_joy2_fire : entity work.debounce
-      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 1)
+      generic map(initial => '1', clk_freq => CLK_FREQ, stable_time => 0)
       port map (clk => clk, reset_n => reset_n, button => joy_2_fire_n, result => j2_f);      
 end beh;

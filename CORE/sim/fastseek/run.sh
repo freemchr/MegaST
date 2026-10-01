@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Test of the fast seek for unbuffered virtual drives (M2M/rom/vd_fastseek.asm) in the QNICE emulator:
-# a FAT32 SD card image with fragmented files (make_fat32.py), random reads and writes that are
-# compared with the f32_fseek of the FAT32 library. Runs with 1 and 8 sectors per cluster, with the
+# a FAT32 SD card image with fragmented or contiguous files (make_fat32.py), random reads and writes that are
+# compared with the f32_fseek of the FAT32 library. Runs with 1, 8 and 64 sectors per cluster, with the
 # default checkpoint spacing (2 MB) and with a small one (the spacing grows with the file size), and
 # with f32_fseek only to compare the speed (executed QNICE instructions).
 #
@@ -23,8 +23,9 @@ done
 # Both variants seek FH_REF with f32_fseek; the difference of the executed instructions is the
 # difference between the fast seek and f32_fseek for FH_FAST.
 rc=0
-for spc in 1 8; do
-    python3 make_fat32.py "$W/sd.img" $spc 6291456
+for layout in "1 frag" "8 frag" "8 contig" "64 contig"; do
+    set -- $layout; spc=$1
+    python3 make_fat32.py "$W/sd.img" $spc 6291456 $2
     for v in fast small ref; do
         out=$("$W/qnice" -a "$W/sd.img" "$W/$v.out" < /dev/null 2>&1 | tr -d '\r')
         res=$(echo "$out" | grep -E "^(OK|FAIL)" || echo "FAIL: no result")

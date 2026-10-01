@@ -45,6 +45,9 @@ START_FIRMWARE  MOVE    STR_START, R8
                 MOVE    FH_FAST, R9
                 RSUB    VD_UB_CP_CLAIM, 1
 
+#ifdef CLAIM_ONLY
+                RBRA    _RESULT, 1              ; large sparse image: claim only
+#endif
                 MOVE    RND_LO_S, R8            ; seeds (RND_HI_S follows)
                 MOVE    0xACE1, @R8++
                 MOVE    0x1234, @R8
@@ -185,8 +188,8 @@ _NEXT           SUB     1, R7
                 RBRA    _LOOP, !Z
 
                 ; count the recorded checkpoints
-                MOVE    VD_UB_CP, R0
-                ADD     2, R0
+_RESULT         MOVE    VD_UB_CP, R0
+                ADD     3, R0
                 MOVE    VD_UB_CP_ENTRIES, R1
                 XOR     R2, R2
 _CNT_1          MOVE    @R0++, R3
@@ -200,6 +203,12 @@ _CNT_2          SUB     1, R1
                 MOVE    R2, R8
                 SYSCALL(puthex, 1)
                 MOVE    STR_SHIFT, R8
+                SYSCALL(puts, 1)
+                MOVE    VD_UB_CP, R8
+                ADD     2, R8
+                MOVE    @R8, R8
+                SYSCALL(puthex, 1)
+                MOVE    STR_CONTIG, R8
                 SYSCALL(puts, 1)
                 MOVE    VD_UB_CP, R8
                 ADD     1, R8
@@ -307,9 +316,10 @@ ERR_END         SYSCALL(puts, 1)
                 SYSCALL(crlf, 1)
                 HALT
 
-STR_START       .ASCII_W "Fast seek test: HD0.IMG, 6 MB, fragmented"
+STR_START       .ASCII_W "Fast seek test: HD0.IMG, 6 MB"
 STR_OK          .ASCII_W "OK: all positions read and written correctly, checkpoints: "
 STR_SHIFT       .ASCII_W ", shift: "
+STR_CONTIG      .ASCII_W ", contiguous: "
 STR_MOUNT       .ASCII_W "FAIL: mount"
 STR_OPEN        .ASCII_W "FAIL: open"
 STR_SEEK        .ASCII_W "FAIL: seek error"
@@ -332,8 +342,9 @@ FNAME           .ASCII_W "HD0.IMG"
 
 VD_UB_CP_SLOTS  .EQU    2                       ; like shell_vars.asm
 VD_UB_CP_ENTRIES .EQU   512
-VD_UB_CP_SLOTSZ .EQU    1026
-VD_UB_CP        .BLOCK  2052
+VD_UB_CP_SLOTSZ .EQU    1027
+VD_UB_CP        .BLOCK  2054
+VD_UB_NOFDH     .BLOCK  FAT32$FDH_STRUCT_SIZE
 
 DEVH            .BLOCK  FAT32$DEV_STRUCT_SIZE
 FH_FAST         .BLOCK  FAT32$FDH_STRUCT_SIZE

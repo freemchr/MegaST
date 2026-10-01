@@ -16,6 +16,9 @@ use ieee.numeric_std.all;
 use work.env1_globals.all;
 use work.qnice_tools.all;
 
+library unisim;                                 -- MegaST: JTAG probe (BSCANE2)
+use unisim.vcomponents.all;
+
 entity QNICE is
 generic (
    G_FIRMWARE        : string;                           -- .rom file that baked into the core as firmware
@@ -131,6 +134,12 @@ signal cpu_data_dir              : std_logic;
 signal cpu_data_valid            : std_logic;
 signal cpu_wait_for_data         : std_logic;
 signal cpu_halt                  : std_logic;
+
+-- MegaST: JTAG probe of the CPU bus (USER1 data register, 64 bits, see below)
+signal jp_snap                   : std_logic_vector(63 downto 0);
+signal jp_cnt                    : unsigned(23 downto 0) := (others => '0');
+signal jp_sr                     : std_logic_vector(63 downto 0);
+signal jp_capture, jp_sel, jp_shift, jp_tck, jp_tdi : std_logic;
 
 -- QNICE standard reset control
 signal reset_ctl                 : std_logic;
@@ -646,6 +655,49 @@ begin
          end if;
       end if;
    end process;
+
+   -- MegaST: JTAG probe for debugging hangs of the firmware without a logic analyser.
+   -- JTAG instruction USER1 (0x02), then a 64 bit data register scan (LSB first) returns a snapshot:
+   -- 15..0: CPU address, 31..16: CPU data in, 32: data dir, 33: data valid, 34: wait for data (MMIO),
+   -- 35: ramrom wait, 36: halt, 37: reset, 63..40: free running counter of the CPU clock (clock alive?).
+   -- The snapshot crosses into the TCK domain without synchronisation: sample several times.
+   jp_snapshot : process (clk50_i)
+   begin
+      if rising_edge(clk50_i) then
+         jp_cnt  <= jp_cnt + 1;
+         jp_snap <= std_logic_vector(jp_cnt) & "00" & reset_ctl & cpu_halt & ramrom_wait_i &
+                    cpu_wait_for_data & cpu_data_valid & cpu_data_dir & cpu_data_in & cpu_addr;
+      end if;
+   end process jp_snapshot;
+
+   jp_bscan : BSCANE2
+      generic map (
+         JTAG_CHAIN => 1
+      )
+      port map (
+         CAPTURE => jp_capture,
+         DRCK    => open,
+         RESET   => open,
+         RUNTEST => open,
+         SEL     => jp_sel,
+         SHIFT   => jp_shift,
+         TCK     => jp_tck,
+         TDI     => jp_tdi,
+         TMS     => open,
+         UPDATE  => open,
+         TDO     => jp_sr(0)
+      );
+
+   jp_shiftreg : process (jp_tck)
+   begin
+      if rising_edge(jp_tck) then
+         if jp_sel = '1' and jp_capture = '1' then
+            jp_sr <= jp_snap;
+         elsif jp_sel = '1' and jp_shift = '1' then
+            jp_sr <= jp_tdi & jp_sr(63 downto 1);
+         end if;
+      end if;
+   end process jp_shiftreg;
 
 end architecture beh;
 

@@ -38,6 +38,19 @@ int main(int argc, char** argv) {
         printf("hard disk image: %zu bytes\n", hd.size());
     }
 
+    // FLOPPY=<.st image>: drive A, mounted at the start or at frame FLOPPY_AT (while TOS runs)
+    const char* fd_name = getenv("FLOPPY");
+    int fd_at = getenv("FLOPPY_AT") ? atoi(getenv("FLOPPY_AT")) : -1;
+    std::vector<uint8_t> fd;
+    if (fd_name) {
+        FILE* h = fopen(fd_name, "rb");
+        if (!h) { perror("floppy"); return 1; }
+        fseek(h, 0, SEEK_END); fd.resize(ftell(h)); fseek(h, 0, SEEK_SET);
+        if (fread(fd.data(), 1, fd.size(), h) != fd.size()) return 1;
+        fclose(h);
+        printf("floppy image: %zu bytes\n", fd.size());
+    }
+
     FILE* f = fopen(tos_name, "rb");
     if (!f) { perror("tos"); return 1; }
     std::vector<uint8_t> tos(1024 * 1024);
@@ -69,6 +82,11 @@ int main(int argc, char** argv) {
     }
     printf("TOS loaded at tick %llu\n", (unsigned long long)ticks);
     for (int i = 0; i < 100; i++) cycle32();
+    if (fd_name && fd_at < 0) {
+        top->img_size = fd.size();
+        top->fd_img_mounted = 1; cycle32(); cycle32();
+        top->fd_img_mounted = 0;
+    }
     // mount the hard disk image (ACSI target 0), like vdrives.vhd does
     if (hd_name) {
         top->img_size = hd.size();
@@ -78,6 +96,7 @@ int main(int argc, char** argv) {
     top->dio_download = 0;
     top->reset_in = 0;
     int hd_state = 0, hd_idx = 0, hd_wait = 0; uint32_t hd_lba = 0; uint64_t hd_reads = 0, hd_writes = 0;
+    int fd_state = 0, fd_idx = 0, fd_wait = 0; uint32_t fd_lba = 0; uint64_t fd_reads = 0;
 
     // Run and dump frames
     int frame = 0, x = 0, y = 0, maxx = 0, maxy = 0;
@@ -88,8 +107,15 @@ int main(int argc, char** argv) {
     // RESET_AT=n: reset the ST at frame n like the "Reset Atari ST" menu item
     // (main.vhd: reset_core also drives dio_download)
     int reset_at = getenv("RESET_AT") ? atoi(getenv("RESET_AT")) : -1;
+    // MOUSE_AT=n: from frame n on, move an ST mouse in the mouse port to the right (quadrature on
+    // XA = pin 2 = bit 1, XB = pin 1 = bit 0, one step every 2 ms); MOUSE_AMIGA=1: Amiga mouse wiring
+    // (H = pin 2 = bit 1, HQ = pin 4 = bit 3)
+    int mouse_at = getenv("MOUSE_AT") ? atoi(getenv("MOUSE_AT")) : -1;
+    bool mouse_amiga = getenv("MOUSE_AMIGA") != nullptr;
+    int mouse_phase = 0; uint64_t mouse_next = 0;
+    top->joy_mouse = 0;
     while (frame < frames) {
-        if (frame == reset_at && top->video_vs && !old_vs) {
+        if (frame == reset_at) {
             printf("reset at frame %d\n", frame);
             top->reset_in = 1; top->dio_download = 1;
             for (int i = 0; i < 64; i++) cycle32();
@@ -98,6 +124,41 @@ int main(int argc, char** argv) {
         }
         tick();
         if ((ticks % 6) != 1) continue;   // right after the rising edge of clk_32
+
+        if (mouse_at >= 0 && frame >= mouse_at && ticks >= mouse_next) {
+            static const int q[4][2] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};   // (A, B) quadrature
+            int a = q[mouse_phase][0], b = q[mouse_phase][1];
+            top->joy_mouse = mouse_amiga ? ((a << 1) | (b << 3)) : ((a << 1) | b);
+            mouse_phase = (mouse_phase + 1) & 3;
+            mouse_next = ticks + 6 * 64000;   // 2 ms at 32 MHz
+        }
+
+        // floppy A: mount while running (FLOPPY_AT), serve reads like the M2M firmware
+        if (fd_name && frame == fd_at && fd_state == 0) {
+            printf("floppy mounted at frame %d\n", frame);
+            top->img_size = fd.size();
+            top->fd_img_mounted = 1; cycle32(); cycle32();
+            top->fd_img_mounted = 0;
+            fd_at = -1;
+        }
+        if (fd_name) {
+            if (fd_wait) fd_wait--;
+            else switch (fd_state) {
+            case 0:
+                if (top->fd_sd_rd & 1) { fd_lba = top->fd_sd_lba; top->fd_sd_ack = 1; fd_idx = 0; fd_state = 1; fd_reads++;
+                                         printf("floppy read sector %u (frame %d)\n", fd_lba, frame); }
+                break;
+            case 1: {
+                size_t o = (size_t)fd_lba * 512 + fd_idx * 2;
+                uint8_t b0 = o < fd.size() ? fd[o] : 0, b1 = o + 1 < fd.size() ? fd[o + 1] : 0;
+                top->sd_buff_addr = fd_idx; top->sd_buff_dout = b0 | (b1 << 8); top->sd_buff_wr = 1;
+                fd_state = 2; fd_wait = 2; break; }
+            case 2:
+                top->sd_buff_wr = 0; fd_wait = 8;
+                if (++fd_idx == 256) { top->fd_sd_ack = 0; fd_state = 0; fd_wait = 20; } else fd_state = 1;
+                break;
+            }
+        }
 
         // hard disk: emulate the M2M firmware (slowly, one byte per 16 cycles like QNICE)
         if (hd_name) {

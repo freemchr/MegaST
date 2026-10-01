@@ -686,13 +686,17 @@ ROSM_SAVE       SYSCALL(enter, 1)
                 RSUB    VD_ACTIVE, 1            ; any vdrives at all?
                 RBRA    _ROSMS_1, !C            ; no, so no danger of corruptn
                 MOVE    R8, R0                  ; R0: amount of vdrives
-                XOR     R8, R8                  ; vdrive id
-_ROSMS_0        MOVE    VD_CACHE_DIRTY, R9
+                XOR     R1, R1                  ; R1: vdrive id
+                ; MegaST: the vdrive id must not be kept in R8: VD_DRV_READ
+                ; returns the dirty flag in R8, so with more than one vdrive
+                ; the loop never ended (the id was always "flag + 1" = 1)
+_ROSMS_0        MOVE    R1, R8                  ; R8: vdrive id
+                MOVE    VD_CACHE_DIRTY, R9
                 RSUB    VD_DRV_READ, 1          ; get dirty flag for curr. drv
                 CMP     0, R8                   ; dirty?
                 RBRA    _ROSMS_NOWR, !Z         ; yes: do not save
-                ADD     1, R8                   ; no: check next vdrive
-                CMP     R0, R8                  ; done?
+                ADD     1, R1                   ; no: check next vdrive
+                CMP     R0, R1                  ; done?
                 RBRA    _ROSMS_0, !Z            ; no: next iteration
                 RBRA    _ROSMS_1, 1             ; yes: detect changes & save
 

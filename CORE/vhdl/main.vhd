@@ -48,6 +48,7 @@ entity main is
       st_viking_i             : in  std_logic;
       st_ste_pads_i           : in  std_logic;
       st_mouse1351_i          : in  std_logic;              -- MEGA65 port 1: Commodore 1351 mouse
+      st_amigamouse_i         : in  std_logic;              -- ST mouse port: Amiga mouse (pins 1 and 4 swapped)
       st_pmod_i               : in  std_logic;              -- serial port, MIDI and printer port on the PMODs
       st_cubase_i             : in  std_logic;              -- Cubase 2/3 dongle in the cartridge port
 
@@ -279,6 +280,13 @@ signal audio_l        : std_logic_vector(15 downto 0);
 signal hd_lba         : std_logic_vector(31 downto 0);
 signal hd_buff_din    : std_logic_vector(15 downto 0);
 
+-- Amiga mouse in the ST's mouse port: the Amiga has V, H, VQ, HQ on pins 1-4, the ST XB, XA, YA, YB,
+-- i.e. pins 1 (up) and 4 (right) are swapped
+function amiga(p : std_logic_vector(4 downto 0)) return std_logic_vector is
+begin
+   return p(4) & p(0) & p(2) & p(1) & p(3);
+end function amiga;
+
 -- MEGA65 joystick port (fire, right, left, down, up) to STe joypad bits (fire, up, down, left, right)
 function ste_bits(p : std_logic_vector(4 downto 0)) return std_logic_vector is
 begin
@@ -297,8 +305,10 @@ begin
 
    -- In the 1351 mouse mode, MEGA65 port 1 is used as mouse (via the IKBD's PS/2 mouse emulation),
    -- so the ST's mouse port does not see the raw port 1 signals.
-   joy_mouse <= (others => '0') when st_mouse1351_i = '1' else
-                '0' & port2     when st_joy_swap_i = '1' else
+   joy_mouse <= (others => '0')         when st_mouse1351_i = '1' else
+                '0' & amiga(port2) when st_joy_swap_i = '1' and st_amigamouse_i = '1' else
+                '0' & port2        when st_joy_swap_i = '1' else
+                '0' & amiga(port1) when st_amigamouse_i = '1' else
                 '0' & port1;
    joy_stick <= port2           when st_mouse1351_i = '1' else
                 port1           when st_joy_swap_i = '1' else

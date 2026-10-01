@@ -20,6 +20,9 @@ use work.vdrives_pkg.all;
 library xpm;
 use xpm.vcomponents.all;
 
+library unisim;                                 -- JTAG probe of the joystick ports (BSCANE2)
+use unisim.vcomponents.all;
+
 entity MEGA65_Core is
 generic (
    G_BOARD : string                                         -- Which platform are we running on.
@@ -244,6 +247,15 @@ end entity MEGA65_Core;
 
 architecture synthesis of MEGA65_Core is
 
+-- JTAG probe of the joystick ports (USER2 data register, 96 bits, see below)
+type jp_cnt_t is array (0 to 4) of unsigned(7 downto 0);
+signal jp_cnt       : jp_cnt_t := (others => (others => '0'));
+signal jp_old       : std_logic_vector(4 downto 0) := (others => '1');
+signal jp_free      : unsigned(23 downto 0) := (others => '0');
+signal jp_snap      : std_logic_vector(95 downto 0);
+signal jp_sr        : std_logic_vector(95 downto 0);
+signal jp_capture, jp_sel, jp_shift, jp_tck, jp_tdi : std_logic;
+
 ---------------------------------------------------------------------------------------------
 -- Clocks and active high reset signals for each clock domain
 ---------------------------------------------------------------------------------------------
@@ -278,23 +290,24 @@ constant C_MENU_FDSWAP         : natural := 39;
 constant C_MENU_JOYSWAP        : natural := 45;
 constant C_MENU_STEPADS        : natural := 46;
 constant C_MENU_MOUSE1351      : natural := 47;
-constant C_MENU_PMOD           : natural := 48;
-constant C_MENU_CUBASE         : natural := 49;
-constant C_MENU_HDMI_16_9_50   : natural := 56;
-constant C_MENU_HDMI_16_9_60   : natural := 57;
-constant C_MENU_HDMI_4_3_50    : natural := 58;
-constant C_MENU_HDMI_5_4_50    : natural := 59;
-constant C_MENU_HDMI_640_60    : natural := 60;
-constant C_MENU_HDMI_720_5994  : natural := 61;
-constant C_MENU_SVGA_800_60    : natural := 62;
-constant C_MENU_VGA_15KHZ      : natural := 69;
-constant C_MENU_VGA_CSYNC      : natural := 70;
-constant C_MENU_SCANLINES_25   : natural := 73;
-constant C_MENU_SCANLINES_50   : natural := 74;
-constant C_MENU_SCANLINES_75   : natural := 75;
-constant C_MENU_CRT_EMULATION  : natural := 78;
-constant C_MENU_HDMI_ZOOM      : natural := 79;
-constant C_MENU_IMPROVE_AUDIO  : natural := 80;
+constant C_MENU_AMIGAMOUSE     : natural := 48;
+constant C_MENU_PMOD           : natural := 49;
+constant C_MENU_CUBASE         : natural := 50;
+constant C_MENU_HDMI_16_9_50   : natural := 57;
+constant C_MENU_HDMI_16_9_60   : natural := 58;
+constant C_MENU_HDMI_4_3_50    : natural := 59;
+constant C_MENU_HDMI_5_4_50    : natural := 60;
+constant C_MENU_HDMI_640_60    : natural := 61;
+constant C_MENU_HDMI_720_5994  : natural := 62;
+constant C_MENU_SVGA_800_60    : natural := 63;
+constant C_MENU_VGA_15KHZ      : natural := 70;
+constant C_MENU_VGA_CSYNC      : natural := 71;
+constant C_MENU_SCANLINES_25   : natural := 74;
+constant C_MENU_SCANLINES_50   : natural := 75;
+constant C_MENU_SCANLINES_75   : natural := 76;
+constant C_MENU_CRT_EMULATION  : natural := 79;
+constant C_MENU_HDMI_ZOOM      : natural := 80;
+constant C_MENU_IMPROVE_AUDIO  : natural := 81;
 -- 82 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
 
 ---------------------------------------------------------------------------------------------
@@ -525,6 +538,7 @@ begin
          st_viking_i          => main_osm_control_i(C_MENU_VIKING),
          st_ste_pads_i        => main_osm_control_i(C_MENU_STEPADS),
          st_mouse1351_i       => main_osm_control_i(C_MENU_MOUSE1351),
+         st_amigamouse_i      => main_osm_control_i(C_MENU_AMIGAMOUSE),
          st_pmod_i            => main_osm_control_i(C_MENU_PMOD),
          st_cubase_i          => main_osm_control_i(C_MENU_CUBASE),
          rtc_i                => main_rtc_i,
@@ -997,5 +1011,61 @@ begin
          dest_clk => main_clk,
          dest_out => main_pmod_in
       ); -- i_cdc_pmod
+
+   -- JTAG probe of the joystick ports for debugging mice: JTAG instruction USER2 (0x03), then a 96 bit
+   -- data register scan (LSB first) returns: 4..0: port 1 (fire, right, left, down, up; low active),
+   -- 9..5: port 2, 12..10: menu Amiga mouse, 1351 mouse, swap ports, 23..16: pot 1 x, 31..24: pot 1 y,
+   -- 71..32: edges of port 1 up, down, left, right, fire (8 bits each), 95..72: free running counter.
+   jp_sample : process (main_clk)
+      variable j1 : std_logic_vector(4 downto 0);
+   begin
+      if rising_edge(main_clk) then
+         j1 := main_joy_1_fire_n_i & main_joy_1_right_n_i & main_joy_1_left_n_i & main_joy_1_down_n_i & main_joy_1_up_n_i;
+         jp_old  <= j1;
+         jp_free <= jp_free + 1;
+         for i in 0 to 4 loop
+            if j1(i) /= jp_old(i) then
+               jp_cnt(i) <= jp_cnt(i) + 1;
+            end if;
+         end loop;
+         jp_snap <= std_logic_vector(jp_free) &
+                    std_logic_vector(jp_cnt(4)) & std_logic_vector(jp_cnt(3)) & std_logic_vector(jp_cnt(2)) &
+                    std_logic_vector(jp_cnt(1)) & std_logic_vector(jp_cnt(0)) &
+                    main_pot1_y_i & main_pot1_x_i & "000" &
+                    main_osm_control_i(C_MENU_JOYSWAP) & main_osm_control_i(C_MENU_MOUSE1351) &
+                    main_osm_control_i(C_MENU_AMIGAMOUSE) &
+                    main_joy_2_fire_n_i & main_joy_2_right_n_i & main_joy_2_left_n_i & main_joy_2_down_n_i &
+                    main_joy_2_up_n_i & j1;
+      end if;
+   end process jp_sample;
+
+   jp_bscan : BSCANE2
+      generic map (
+         JTAG_CHAIN => 2
+      )
+      port map (
+         CAPTURE => jp_capture,
+         DRCK    => open,
+         RESET   => open,
+         RUNTEST => open,
+         SEL     => jp_sel,
+         SHIFT   => jp_shift,
+         TCK     => jp_tck,
+         TDI     => jp_tdi,
+         TMS     => open,
+         UPDATE  => open,
+         TDO     => jp_sr(0)
+      );
+
+   jp_shiftreg : process (jp_tck)
+   begin
+      if rising_edge(jp_tck) then
+         if jp_sel = '1' and jp_capture = '1' then
+            jp_sr <= jp_snap;
+         elsif jp_sel = '1' and jp_shift = '1' then
+            jp_sr <= jp_tdi & jp_sr(95 downto 1);
+         end if;
+      end if;
+   end process jp_shiftreg;
 
 end architecture synthesis;

@@ -5,7 +5,9 @@ two files, HD0.IMG and HD1.IMG, whose cluster chains are interleaved and shuffle
 on a well used SD card, with backward jumps). Every byte of a file is (position * 7 + position / 512
 + file number) & 0xFF.
 
-Usage: make_fat32.py <image> <sectors per cluster> <file size in bytes>
+With "contig" as 4th argument, HD0.IMG is contiguous (HD1.IMG stays fragmented).
+
+Usage: make_fat32.py <image> <sectors per cluster> <file size in bytes> [contig]
 """
 
 import random
@@ -22,6 +24,7 @@ def content(pos, fileno):
 
 def main():
     out, spc, fsize = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
+    contig = len(sys.argv) > 4 and sys.argv[4] == "contig"
     random.seed(1234)
     csize = spc * SECTOR
     nclus_file = (fsize + csize - 1) // csize
@@ -29,7 +32,10 @@ def main():
     reserved = 32
     fat_sectors = (4 * (data_clusters + 2) + SECTOR - 1) // SECTOR
     part_sectors = reserved + 2 * fat_sectors + data_clusters * spc
-    img = bytearray((PART_START + part_sectors) * SECTOR)
+    total = (PART_START + part_sectors) * SECTOR
+    sparse = len(sys.argv) > 5
+    meta = (PART_START + reserved + 2 * fat_sectors) * SECTOR + 2 * csize   # up to the root dir
+    img = bytearray(meta if sparse else total)
 
     # MBR: one FAT32 (LBA) partition
     mbr = bytearray(SECTOR)
@@ -60,6 +66,9 @@ def main():
 
     # fragmented allocation: chunks of 1..7 clusters, alternately for both files, chunk order shuffled
     free = list(range(3, data_clusters + 2))
+    if contig:
+        first = free[:nclus_file]
+        free = free[nclus_file:]
     chunks = []
     i = 0
     while i < len(free):
@@ -76,6 +85,9 @@ def main():
         f ^= 1
         if len(chains[0]) >= nclus_file and len(chains[1]) >= nclus_file:
             break
+    if contig:
+        chains[1] = (chains[0] + chains[1])[:nclus_file]
+        chains[0] = first
     assert len(chains[0]) == nclus_file and len(chains[1]) == nclus_file
     for chain in chains:
         for a, nxt in zip(chain, chain[1:]):
@@ -102,8 +114,8 @@ def main():
         struct.pack_into("<HI", e, 26, chain[0] & 0xFFFF, fsize)
         img[root + 32 * fileno:root + 32 * fileno + 32] = e
 
-    # file contents
-    for fileno, chain in enumerate(chains):
+    # file contents (not for "sparse": only the FAT matters, see run.sh)
+    for fileno, chain in enumerate(chains if not sparse else []):
         for n, c in enumerate(chain):
             o = clus_off(c)
             for k in range(csize):
@@ -112,7 +124,11 @@ def main():
                     img[o + k] = content(pos, fileno)
 
     with open(out, "wb") as fh:
-        fh.write(img)
+        if sparse:                                      # only the metadata, the rest is a hole
+            fh.truncate(total)
+            fh.write(img)
+        else:
+            fh.write(img)
     backward = sum(1 for a, b2 in zip(chains[0], chains[0][1:]) if b2 < a)
     print("%s: %d sectors/cluster, 2 files of %d bytes, %d clusters each, %d backward jumps in HD0.IMG"
           % (out, spc, fsize, nclus_file, backward))

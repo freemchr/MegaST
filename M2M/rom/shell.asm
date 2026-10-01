@@ -738,7 +738,13 @@ _LI_FOPEN_OK    MOVE    R5, R8
                 RBRA    _LI_BUFFERED, !Z        ; no
                 CMP     VD_NOBUFFER, R0         ; unbuffered drive?
                 RBRA    _LI_BUFFERED, !Z        ; no
-                MOVE    R1, R8                  ; yes: new checkpoints for
+                MOVE    STR_VD_SCAN, R8         ; yes: the scan of the FAT
+                MOVE    2, R9                   ; takes a while for large
+                MOVE    SCR$OSM_M_DY, R10       ; images: say so where the
+                MOVE    @R10, R10               ; progress bar of buffered
+                SUB     1, R10                  ; images would be
+                RSUB    SCR$PRINTSTRXY, 1
+                MOVE    R1, R8                  ; new checkpoints for
                 MOVE    R5, R9                  ; the fast seek and done
                 RSUB    VD_UB_CP_CLAIM, 1
                 RBRA    _LI_FREAD_RET, 1        ; (R6=0: OK)

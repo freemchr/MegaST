@@ -161,8 +161,9 @@ VDRIVES_FLUSH_H .BLOCK  VDRIVES_MAX
 ; (see VD_UB_FSEEK in shell.asm)
 VD_UB_CP_SLOTS  .EQU    2
 VD_UB_CP_ENTRIES .EQU   512                     ; (vd_fastseek.asm needs 512)
-VD_UB_CP_SLOTSZ .EQU    1026                    ; owner, shift, 2 words per entry
-VD_UB_CP        .BLOCK  2052
+VD_UB_CP_SLOTSZ .EQU    1027                    ; owner, contiguous, shift, 2 words per entry
+VD_UB_CP        .BLOCK  2054
+VD_UB_NOFDH     .BLOCK  FAT32$FDH_STRUCT_SIZE   ; dummy owner of the sector buf.
 VDRIVES_FLUSH_L .BLOCK  VDRIVES_MAX
 VDRIVES_ITERSIZ .BLOCK  VDRIVES_MAX
 VDRIVES_FL_4K   .BLOCK  VDRIVES_MAX
