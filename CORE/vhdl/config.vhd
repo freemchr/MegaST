@@ -325,7 +325,7 @@ constant OPTM_S_SAVING     : string := "<Saving>";          -- the internal writ
 --             Do use a lower case \n. If you forget one of them or if you use upper case, you will run into undefined behavior.
 --          2. Start each line that contains an actual menu item (multi- or single-select) with a Space character,
 --             otherwise you will experience visual glitches.
-constant OPTM_SIZE         : natural := 93;  -- amount of items including empty lines:
+constant OPTM_SIZE         : natural := 92;  -- amount of items including empty lines:
                                              -- needs to be equal to the number of lines in OPTM_ITEMS and amount of items in OPTM_GROUPS
                                              -- IMPORTANT: If SAVE_SETTINGS is true and OPTM_SIZE changes: Make sure to re-generate and
                                              -- and re-distribute the config file. You can make a new one using M2M/tools/make_config.sh
@@ -333,7 +333,7 @@ constant OPTM_SIZE         : natural := 93;  -- amount of items including empty 
 -- Net size of the Options menu on the screen in characters (excluding the frame, which is hardcoded to two characters)
 -- Without submenus: Use OPTM_SIZE as height, otherwise count how large the actually visible main menu is.
 constant OPTM_DX           : natural := 28;
-constant OPTM_DY           : natural := 24;
+constant OPTM_DY           : natural := 23;
 
 constant OPTM_ITEMS        : string :=
    " Atari ST/STe\n"              &   --  0
@@ -395,40 +395,39 @@ constant OPTM_ITEMS        : string :=
    " Cubase dongle\n"             &   -- 56
    "\n"                           &   -- 57
    " Back to main menu\n"         &   -- 58
-   "\n"                           &   -- 59
-   " HDMI: %s\n"                  &   -- 60
-   " HDMI Settings\n"             &   -- 61
-   "\n"                           &   -- 62
-   " 720p 50 Hz 16:9\n"           &   -- 63
-   " 720p 60 Hz 16:9\n"           &   -- 64
-   " 576p 50 Hz 4:3\n"            &   -- 65
-   " 576p 50 Hz 5:4\n"            &   -- 66
-   " 640x480 60 Hz\n"             &   -- 67
-   " 720x480 59.94 Hz\n"          &   -- 68
-   " 800x600 60 Hz\n"             &   -- 69
-   "\n"                           &   -- 70
-   " Back to main menu\n"         &   -- 71
-   " VGA: %s\n"                   &   -- 72
-   " VGA Settings\n"              &   -- 73
-   "\n"                           &   -- 74
-   " 31 kHz (standard)\n"         &   -- 75
-   " 15 kHz (RGB, SCART)\n"       &   -- 76
-   " 15 kHz with CSync\n"         &   -- 77
-   "\n"                           &   -- 78
-   " No scanlines\n"              &   -- 79
-   " Scanlines 25%\n"             &   -- 80
-   " Scanlines 50%\n"             &   -- 81
-   " Scanlines 75%\n"             &   -- 82
-   "\n"                           &   -- 83
-   " Back to main menu\n"         &   -- 84
-   " HDMI: CRT emulation\n"       &   -- 85
-   " Zoom-in (hide border)\n"     &   -- 86
-   " Audio improvements\n"        &   -- 87
-   "\n"                           &   -- 88
-   " Reset Atari ST\n"            &   -- 89
-   " About & Help\n"              &   -- 90
-   "\n"                           &   -- 91
-   " Close Menu\n"                ;   -- 92
+   " HDMI: %s\n"                  &   -- 59
+   " HDMI Settings\n"             &   -- 60
+   "\n"                           &   -- 61
+   " 720p 50 Hz 16:9\n"           &   -- 62
+   " 720p 60 Hz 16:9\n"           &   -- 63
+   " 576p 50 Hz 4:3\n"            &   -- 64
+   " 576p 50 Hz 5:4\n"            &   -- 65
+   " 640x480 60 Hz\n"             &   -- 66
+   " 720x480 59.94 Hz\n"          &   -- 67
+   " 800x600 60 Hz\n"             &   -- 68
+   "\n"                           &   -- 69
+   " Back to main menu\n"         &   -- 70
+   " VGA: %s\n"                   &   -- 71
+   " VGA Settings\n"              &   -- 72
+   "\n"                           &   -- 73
+   " 31 kHz (standard)\n"         &   -- 74
+   " 15 kHz (RGB, SCART)\n"       &   -- 75
+   " 15 kHz with CSync\n"         &   -- 76
+   "\n"                           &   -- 77
+   " No scanlines\n"              &   -- 78
+   " Scanlines 25%\n"             &   -- 79
+   " Scanlines 50%\n"             &   -- 80
+   " Scanlines 75%\n"             &   -- 81
+   "\n"                           &   -- 82
+   " Back to main menu\n"         &   -- 83
+   " HDMI: CRT emulation\n"       &   -- 84
+   " Zoom-in (hide border)\n"     &   -- 85
+   " Audio improvements\n"        &   -- 86
+   "\n"                           &   -- 87
+   " Reset Atari ST\n"            &   -- 88
+   " About & Help\n"              &   -- 89
+   "\n"                           &   -- 90
+   " Close Menu\n"                ;   -- 91
 
 -- define your own constants here and choose meaningful names
 -- make sure that your first group uses the value 1 (0 means "no menu item", such as text and line),
@@ -529,40 +528,39 @@ constant OPTM_GROUPS       : OPTM_GTYPE := (
                                              OPTM_G_Cubase + OPTM_G_SINGLESEL,                         -- 56 Cubase dongle
                                              OPTM_G_LINE,                                              -- 57
                                              OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 58 Back to main menu
-                                             OPTM_G_LINE,                                              -- 59
-                                             OPTM_G_SUBMENU,                                           -- 60 HDMI: %s
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 61 HDMI Settings
-                                             OPTM_G_LINE,                                              -- 62
-                                             OPTM_G_HDMI + OPTM_G_STDSEL,                              -- 63 720p 50 Hz 16:9
-                                             OPTM_G_HDMI,                                              -- 64 720p 60 Hz 16:9
-                                             OPTM_G_HDMI,                                              -- 65 576p 50 Hz 4:3
-                                             OPTM_G_HDMI,                                              -- 66 576p 50 Hz 5:4
-                                             OPTM_G_HDMI,                                              -- 67 640x480 60 Hz
-                                             OPTM_G_HDMI,                                              -- 68 720x480 59.94 Hz
-                                             OPTM_G_HDMI,                                              -- 69 800x600 60 Hz
-                                             OPTM_G_LINE,                                              -- 70
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 71 Back to main menu
-                                             OPTM_G_SUBMENU,                                           -- 72 VGA: %s
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 73 VGA Settings
-                                             OPTM_G_LINE,                                              -- 74
-                                             OPTM_G_VGA + OPTM_G_STDSEL,                               -- 75 31 kHz (standard)
-                                             OPTM_G_VGA,                                               -- 76 15 kHz (RGB, SCART)
-                                             OPTM_G_VGA,                                               -- 77 15 kHz with CSync
-                                             OPTM_G_LINE,                                              -- 78
-                                             OPTM_G_Scanl + OPTM_G_STDSEL,                             -- 79 No scanlines
-                                             OPTM_G_Scanl,                                             -- 80 Scanlines 25%
-                                             OPTM_G_Scanl,                                             -- 81 Scanlines 50%
-                                             OPTM_G_Scanl,                                             -- 82 Scanlines 75%
-                                             OPTM_G_LINE,                                              -- 83
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 84 Back to main menu
-                                             OPTM_G_CRT + OPTM_G_SINGLESEL,                            -- 85 HDMI: CRT emulation
-                                             OPTM_G_Zoom + OPTM_G_SINGLESEL,                           -- 86 Zoom-in (hide border)
-                                             OPTM_G_Audio + OPTM_G_SINGLESEL,                          -- 87 Audio improvements
-                                             OPTM_G_LINE,                                              -- 88
-                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 89 Reset Atari ST
-                                             OPTM_G_About + OPTM_G_HELP,                               -- 90 About & Help
-                                             OPTM_G_LINE,                                              -- 91
-                                             OPTM_G_CLOSE                                              -- 92 Close Menu
+                                             OPTM_G_SUBMENU,                                           -- 59 HDMI: %s
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 60 HDMI Settings
+                                             OPTM_G_LINE,                                              -- 61
+                                             OPTM_G_HDMI + OPTM_G_STDSEL,                              -- 62 720p 50 Hz 16:9
+                                             OPTM_G_HDMI,                                              -- 63 720p 60 Hz 16:9
+                                             OPTM_G_HDMI,                                              -- 64 576p 50 Hz 4:3
+                                             OPTM_G_HDMI,                                              -- 65 576p 50 Hz 5:4
+                                             OPTM_G_HDMI,                                              -- 66 640x480 60 Hz
+                                             OPTM_G_HDMI,                                              -- 67 720x480 59.94 Hz
+                                             OPTM_G_HDMI,                                              -- 68 800x600 60 Hz
+                                             OPTM_G_LINE,                                              -- 69
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 70 Back to main menu
+                                             OPTM_G_SUBMENU,                                           -- 71 VGA: %s
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 72 VGA Settings
+                                             OPTM_G_LINE,                                              -- 73
+                                             OPTM_G_VGA + OPTM_G_STDSEL,                               -- 74 31 kHz (standard)
+                                             OPTM_G_VGA,                                               -- 75 15 kHz (RGB, SCART)
+                                             OPTM_G_VGA,                                               -- 76 15 kHz with CSync
+                                             OPTM_G_LINE,                                              -- 77
+                                             OPTM_G_Scanl + OPTM_G_STDSEL,                             -- 78 No scanlines
+                                             OPTM_G_Scanl,                                             -- 79 Scanlines 25%
+                                             OPTM_G_Scanl,                                             -- 80 Scanlines 50%
+                                             OPTM_G_Scanl,                                             -- 81 Scanlines 75%
+                                             OPTM_G_LINE,                                              -- 82
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 83 Back to main menu
+                                             OPTM_G_CRT + OPTM_G_SINGLESEL,                            -- 84 HDMI: CRT emulation
+                                             OPTM_G_Zoom + OPTM_G_SINGLESEL,                           -- 85 Zoom-in (hide border)
+                                             OPTM_G_Audio + OPTM_G_SINGLESEL,                          -- 86 Audio improvements
+                                             OPTM_G_LINE,                                              -- 87
+                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 88 Reset Atari ST
+                                             OPTM_G_About + OPTM_G_HELP,                               -- 89 About & Help
+                                             OPTM_G_LINE,                                              -- 90
+                                             OPTM_G_CLOSE                                              -- 91 Close Menu
                                            );
 
 --------------------------------------------------------------------------------------------------------------------

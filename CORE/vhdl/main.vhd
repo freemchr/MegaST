@@ -266,6 +266,9 @@ signal ps2_1351       : std_logic_vector(24 downto 0);
 signal ps2_quad       : std_logic_vector(24 downto 0);
 signal quad_on        : std_logic;
 signal mouse_port     : std_logic_vector(4 downto 0);
+signal port1_db       : std_logic_vector(4 downto 0);
+signal port2_db       : std_logic_vector(4 downto 0);
+signal mouse_port_db  : std_logic_vector(4 downto 0);
 signal mouse_rmb      : std_logic;
 signal mouse_pot_x    : std_logic_vector(7 downto 0);
 signal mouse_pot_y    : std_logic_vector(7 downto 0);
@@ -323,13 +326,28 @@ begin
    -- emulation, so the ST's mouse port does not see their raw signals.
    quad_on   <= st_amigamouse_i and not st_mouse1351_i;
    joy_mouse <= (others => '0') when st_mouse1351_i = '1' or quad_on = '1' else
-                '0' & mouse_port;
-   joy_stick <= port1 when st_joy_swap_i = '1' else port2;
+                '0' & mouse_port_db;
+   joy_stick <= port1_db when st_joy_swap_i = '1' else port2_db;
+
+   -- Joystick switches bounce (see joy_lockout.vhd): 5 ms lock-out for a port used as joystick,
+   -- 0.5 ms for the raw mouse port (Atari mouse or a second joystick): short enough for the
+   -- quadrature steps of a mouse, which the IKBD can not follow faster anyway
+   i_port1_db : entity work.joy_lockout
+      generic map (G_CLK_SPEED => CORE_CLK_SPEED, G_LOCK_US => 5000)
+      port map (clk_i => clk_main_i, joy_i => port1, joy_o => port1_db);
+
+   i_port2_db : entity work.joy_lockout
+      generic map (G_CLK_SPEED => CORE_CLK_SPEED, G_LOCK_US => 5000)
+      port map (clk_i => clk_main_i, joy_i => port2, joy_o => port2_db);
+
+   i_mouse_port_db : entity work.joy_lockout
+      generic map (G_CLK_SPEED => CORE_CLK_SPEED, G_LOCK_US => 500)
+      port map (clk_i => clk_main_i, joy_i => mouse_port, joy_o => mouse_port_db);
 
    -- STe joypads (see ste_joypad.v): bit 0 = right, 1 = left, 2 = down, 3 = up, 4 = A (fire).
    -- Joypad A (the first one) is MEGA65 port 2, just like the ST's joystick port.
-   ste_pad0 <= (20 downto 5 => '0') & ste_bits(port1) when st_joy_swap_i = '1' else (20 downto 5 => '0') & ste_bits(port2);
-   ste_pad1 <= (20 downto 5 => '0') & ste_bits(port2) when st_joy_swap_i = '1' else (20 downto 5 => '0') & ste_bits(port1);
+   ste_pad0 <= (20 downto 5 => '0') & ste_bits(port1_db) when st_joy_swap_i = '1' else (20 downto 5 => '0') & ste_bits(port2_db);
+   ste_pad1 <= (20 downto 5 => '0') & ste_bits(port2_db) when st_joy_swap_i = '1' else (20 downto 5 => '0') & ste_bits(port1_db);
 
    i_mouse1351 : entity work.mouse1351
       generic map (
