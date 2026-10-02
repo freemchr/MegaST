@@ -44,11 +44,11 @@ entity main is
       st_fdc_wp_i             : in  std_logic_vector(1 downto 0);
       st_fd_swap_i            : in  std_logic;              -- swap floppy drives A: and B:
       st_crop_i               : in  std_logic;              -- only the graphics area is visible (no border)
-      st_joy_swap_i           : in  std_logic;
+      st_joy_swap_i           : in  std_logic;              -- mouse in MEGA65 port 2, joystick in port 1
       st_viking_i             : in  std_logic;
       st_ste_pads_i           : in  std_logic;
-      st_mouse1351_i          : in  std_logic;              -- MEGA65 port 1: Commodore 1351 mouse
-      st_amigamouse_i         : in  std_logic;              -- ST mouse port: Amiga mouse (pins 1 and 4 swapped)
+      st_mouse1351_i          : in  std_logic;              -- mouse type: Commodore 1351
+      st_amigamouse_i         : in  std_logic;              -- mouse type: Amiga
       st_pmod_i               : in  std_logic;              -- serial port, MIDI and printer port on the PMODs
       st_cubase_i             : in  std_logic;              -- Cubase 2/3 dongle in the cartridge port
 
@@ -262,6 +262,13 @@ signal joy_stick      : std_logic_vector(4 downto 0);
 signal ste_pad0       : std_logic_vector(20 downto 0);
 signal ste_pad1       : std_logic_vector(20 downto 0);
 signal ps2_mouse      : std_logic_vector(24 downto 0);
+signal ps2_1351       : std_logic_vector(24 downto 0);
+signal ps2_quad       : std_logic_vector(24 downto 0);
+signal quad_on        : std_logic;
+signal mouse_port     : std_logic_vector(4 downto 0);
+signal mouse_rmb      : std_logic;
+signal mouse_pot_x    : std_logic_vector(7 downto 0);
+signal mouse_pot_y    : std_logic_vector(7 downto 0);
 
 signal uart_rxd       : std_logic;
 signal uart_txd       : std_logic;
@@ -303,16 +310,21 @@ begin
    port1 <= not (joy_1_fire_n_i & joy_1_right_n_i & joy_1_left_n_i & joy_1_down_n_i & joy_1_up_n_i);
    port2 <= not (joy_2_fire_n_i & joy_2_right_n_i & joy_2_left_n_i & joy_2_down_n_i & joy_2_up_n_i);
 
-   -- In the 1351 mouse mode, MEGA65 port 1 is used as mouse (via the IKBD's PS/2 mouse emulation),
-   -- so the ST's mouse port does not see the raw port 1 signals.
-   joy_mouse <= (others => '0')         when st_mouse1351_i = '1' else
-                '0' & amiga(port2) when st_joy_swap_i = '1' and st_amigamouse_i = '1' else
-                '0' & port2        when st_joy_swap_i = '1' else
-                '0' & amiga(port1) when st_amigamouse_i = '1' else
-                '0' & port1;
-   joy_stick <= port2           when st_mouse1351_i = '1' else
-                port1           when st_joy_swap_i = '1' else
-                port2;
+   -- The MEGA65 port that acts as the ST's mouse port (menu "Mouse port"); the other one is the joystick
+   mouse_port <= port2 when st_joy_swap_i = '1' else port1;
+
+   -- Amiga mouse right button: pin 9 (pot x). The framework delivers inverted pot values:
+   -- 255 = released (pulled up), 0 = pressed (pulled to ground)
+   mouse_pot_x <= pot2_x_i when st_joy_swap_i = '1' else pot1_x_i;
+   mouse_pot_y <= pot2_y_i when st_joy_swap_i = '1' else pot1_y_i;
+   mouse_rmb   <= not mouse_pot_x(7);
+
+   -- A 1351 mouse (mouse1351.vhd) and an Amiga mouse (quadmouse.vhd) go through the IKBD's PS/2 mouse
+   -- emulation, so the ST's mouse port does not see their raw signals.
+   quad_on   <= st_amigamouse_i and not st_mouse1351_i;
+   joy_mouse <= (others => '0') when st_mouse1351_i = '1' or quad_on = '1' else
+                '0' & mouse_port;
+   joy_stick <= port1 when st_joy_swap_i = '1' else port2;
 
    -- STe joypads (see ste_joypad.v): bit 0 = right, 1 = left, 2 = down, 3 = up, 4 = A (fire).
    -- Joypad A (the first one) is MEGA65 port 2, just like the ST's joystick port.
@@ -326,12 +338,25 @@ begin
       port map (
          clk_i          => clk_main_i,
          enable_i       => st_mouse1351_i,
-         pot_x_n_i      => pot1_x_i,
-         pot_y_n_i      => pot1_y_i,
-         fire_n_i       => joy_1_fire_n_i,
-         up_n_i         => joy_1_up_n_i,
-         ps2_mouse_o    => ps2_mouse
+         pot_x_n_i      => mouse_pot_x,
+         pot_y_n_i      => mouse_pot_y,
+         fire_n_i       => not mouse_port(4),
+         up_n_i         => not mouse_port(0),
+         ps2_mouse_o    => ps2_1351
       ); -- i_mouse1351
+
+   i_quadmouse : entity work.quadmouse
+      generic map (
+         G_CLK_SPEED    => CORE_CLK_SPEED
+      )
+      port map (
+         clk_i          => clk_main_i,
+         enable_i       => quad_on,
+         st_pins_i      => mouse_rmb & amiga(mouse_port),
+         ps2_mouse_o    => ps2_quad
+      ); -- i_quadmouse
+
+   ps2_mouse <= ps2_quad when quad_on = '1' else ps2_1351;
 
    ---------------------------------------------------------------------------------------------
    -- PMOD: serial port, MIDI and parallel port

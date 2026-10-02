@@ -289,6 +289,10 @@ architecture synthesis of mega65_r5 is
    -- QNICE On Screen Menu selections
    signal main_osm_control_m     : std_logic_vector(255 downto 0);
 
+   -- MegaST: the paddle discharge pulses (pins 5 and 9, ~2 kHz) upset optical Amiga mice (pins 1-3
+   -- oscillate), so the pots are only drained while the 1351 mouse (the only pot user) is selected
+   signal fw_paddle_drain        : std_logic;
+
    -- QNICE general purpose register
    signal main_qnice_gp_reg      : std_logic_vector(255 downto 0);
 
@@ -445,6 +449,9 @@ architecture synthesis of mega65_r5 is
    signal qnice_ramrom_wait      : std_logic;
 
 begin
+
+   -- 48 = C_MENU_MOUSE1351 in CORE/vhdl/mega65.vhd
+   paddle_drain_o <= fw_paddle_drain and main_osm_control_m(48);
 
    -- Driver for the audio DAC (AK4432VT).
    i_audio : entity work.audio
@@ -612,7 +619,7 @@ begin
       joy_2_right_n_o         => fb_right_n_o,
       joy_2_fire_n_o          => fb_fire_n_o,
       paddle_i                => paddle_i,
-      paddle_drain_o          => paddle_drain_o,
+      paddle_drain_o          => fw_paddle_drain,
       hr_d_io                 => hr_d_io,
       hr_rwds_io              => hr_rwds_io,
       hr_reset_o              => hr_reset_o,
