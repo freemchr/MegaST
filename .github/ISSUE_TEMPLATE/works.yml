@@ -1,0 +1,15 @@
+name: It works!
+description: Tell us about a game, program or device that works (this helps a lot too)
+labels: [works]
+body:
+  - type: input
+    id: what
+    attributes:
+      label: Game, program or device
+    validations:
+      required: true
+  - type: input
+    id: setup
+    attributes:
+      label: Core version, board, TOS and machine settings
+      placeholder: "0.4.6, R6, TOS 1.04, ST 1 MB"

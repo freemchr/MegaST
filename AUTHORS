@@ -1,42 +1,40 @@
-YOUR PROJECT NAME for MEGA65 aka GITHUB REPO SHORT NAME
-=======================================================
+MegaST - Atari ST/STe for MEGA65
+================================
 
-done in YEAR by YOUR NAME
+MEGA65 port done in 2026 by Chris Freeman
 
-YOUR WEBSITE
-YOUR GITHUB SITE
+https://github.com/freemchr/MegaST
 
-REPO SHORT NAME is licensed under the terms of GNU/GPL v3, for more information please read the file LICENSE
-Parts of REPO SHORT NAME are licensed under other Free-software licenses as described in the source code
+MegaST is licensed under the terms of GNU/GPL v3, for more information please read the file LICENSE
+Parts of MegaST are licensed under other Free-software licenses as described in the source code
 
-GITHUB REPO SHORT NAME:
------------------------
+MegaST:
+-------
 
-  GITHUB REPO SHORT NAME is a port of MISTER'S REPO SHORT NAME
+  MegaST is a port of MiSTer's AtariST core ("Atari ST/STe for MiSTer")
       done by the MiSTer Development Team
-      Original GitHub Repository: https://github.com/MiSTer-devel/MISTER-REPO-LINK
+      Original GitHub Repository: https://github.com/MiSTer-devel/AtariST_MiSTer
       Significant contributors:
-      * NAME THE MAIN
-      * CONTRIBUTORS
-      * ON MiSTer's SIDE
+      * Gyorgy Szombathelyi (gyurco): MiSTery core, GSTMCU, shifter, DMA, MiSTer port
+      * Alexey Melnikov (Sorgelig): MiSTer framework and maintenance, YM2149
+      * Till Harbaum: original MiST Atari ST core, FDC 1772, ACSI, MFP, IKBD, Viking card, Mega STe control
 
-  MISTER'S REPO SHORT NAME is a port of MiST's MiST NAME/OTHER SOURCE IN CASE MiSTer ported it from MIST/OTHER SOURCE
-      done by the MiST Development Team
-      Original GitHub Repository: https://github.com/mist-devel/MIST-REPO-LINK OR OTHER SOURCE
-      Significant contributors:
-      * NAME THE MAIN
-      * CONTRIBUTORS
-      * ON MiST's SIDE (OR OTHER SOURCE)
+  MiSTer's AtariST core is a port of MiSTery, the Atari ST/STe core for the MiST board
+      done by Gyorgy Szombathelyi, based on the MiST Atari ST core by Till Harbaum
+      Original GitHub Repository: https://github.com/gyurco/MiSTery
 
-  LIST SOME MORE SIGNIFICANT / MAIN AUTHERS OF SUBMODULES
-  HAVE A LOOK AT THIS EXAMPLE HOW TO: https://github.com/sy2002/gbc4mega65/blob/master/AUTHORS
+  Significant parts of the core:
+      * FX68K, cycle accurate 68000 CPU: Jorge Cwik (ijor)
+        https://github.com/ijor/fx68k
+      * Cycle accurate ST Blitter and shifter decap: Jorge Cwik
+      * GSTMCU, based on the schematics recovered by Christian Zietz: Gyorgy Szombathelyi
+      * HD63701 CPU of the real IKBD: Tsuyoshi Hasegawa
+      * YM2149 sound chip: MikeJ and Sorgelig
+      * MFP USART: Wolfgang Foerster
 
-Other than that and my own work, REPO SHORT NAME uses:
-------------------------------------------------------
+Other than that and my own work, MegaST uses:
+---------------------------------------------
 
-DO NOT FORGET TO CREDIT EVERYTHING YOU USE FROM OTHER PEOPLE HERE
-THE FOLLOWING LIST NEEDS ALWAYS TO BE PART OF YOUR LIST:
-  
   * MiSTer2MEGA65 by The MiSTer2MEGA65 Development Team
     https://github.com/sy2002/MiSTer2MEGA65
 

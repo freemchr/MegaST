@@ -1,0 +1,56 @@
+name: Problem report
+description: Something does not work (a game, a program, a menu option, a device)
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing MegaST! The more of these you fill in, the easier the problem is to find.
+  - type: input
+    id: version
+    attributes:
+      label: Core version
+      description: Shown on the welcome screen and in the Help menu
+      placeholder: "0.4.6"
+    validations:
+      required: true
+  - type: dropdown
+    id: board
+    attributes:
+      label: MEGA65 board
+      options: [R6, R5, R4, "Don't know"]
+    validations:
+      required: true
+  - type: input
+    id: tos
+    attributes:
+      label: TOS
+      placeholder: "EmuTOS 1.4 (from the release zip), TOS 1.04, TOS 2.06, ..."
+    validations:
+      required: true
+  - type: input
+    id: machine
+    attributes:
+      label: Machine settings
+      description: Machine type and memory from the menu
+      placeholder: "ST, 1 MB"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: Name the game or program and the disk image (e.g. "Golden Axe, Automation menu 123, drive A").
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen
+      placeholder: |
+        1. Mount ... in drive A
+        2. Reset
+        3. ...
+  - type: textarea
+    id: devices
+    attributes:
+      label: Devices and video
+      description: Mouse type and port, joystick, HDMI or VGA, anything on the PMOD ports
