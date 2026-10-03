@@ -75,17 +75,17 @@ type WHS_RECORD_ARRAY_TYPE is array (0 to WHS_RECORDS - 1) of WHS_RECORD_TYPE;
 -- window contains the amount of pages, so each zero-terminated string can be up to 4095 bytes = 4094 characters long.
 
 constant SCR_WELCOME : string :=
-   "Atari ST/STe for MEGA65 Version 0.4.5\n" &
+   "Atari ST/STe for MEGA65 Version 0.4.6\n" &
+   "\n"                           &
+   "MEGA65 port by Chris Freeman, 2026\n" &
+   "Report bugs at:\n" &
+   "github.com/freemchr/MegaST/issues\n" &
    "\n"                           &
    "MiSTer port by Till Harbaum, Gyorgy\n" &
    "Szombathelyi, Jorge Cwik, Alexey\n" &
    "Melnikov and many others\n" &
-   "\n"                           &
-   "MEGA65 port done in 2026\n" &
    "Powered by MiSTer2MEGA65\n\n" &
-   "Needs a MEGA65 R4/R5/R6 (SDRAM)\n" &
-   "TOS image: /atarist/tos.img\n" &
-   "Disk images (.st): /atarist\n\n" &
+   "Files: /atarist (tos.img, .st, .vhd)\n\n" &
    "  MEGA65 key       Atari ST\n" &
    "  " & CHR_LINE_10 & CHR_LINE_10 & CHR_LINE_10 & CHR_LINE_1 & CHR_LINE_1 & "\n" &
    "  Help             Options menu\n" &
@@ -94,23 +94,24 @@ constant SCR_WELCOME : string :=
    "  Arrow up         Delete\n" &
    "  MEGA + digits    Numeric keypad\n" &
    "  Inst/Del         Backspace\n" &
-   "  Port 1: ST mouse, Port 2: joystick\n" &
    "\n"                           &
    "  Press Space to continue.\n";
 
 constant HELP_1 : string :=
-   "\n Atari ST/STe for MEGA65 Version 0.4.5\n\n" &
+   "\n Atari ST/STe for MEGA65 Version 0.4.6\n\n" &
+   " MEGA65 port by Chris Freeman, 2026\n" &
+   " github.com/freemchr/MegaST/issues\n" &
    " MiSTer port of the MiSTery core\n" &
-   " MEGA65 port 2026, GPL v3\n" &
-   " Powered by MiSTer2MEGA65\n\n" &
+   " Powered by MiSTer2MEGA65, GPL v3\n\n" &
    " Put your TOS image as tos.img and\n" &
    " your .st floppy disk images into\n" &
    " the folder /atarist on the SD card.\n\n" &
    " 192k TOS (1.00-1.04) and 256k TOS\n" &
    " (1.06, 1.62, 2.06) and EmuTOS work.\n" &
    " STe mode needs TOS 1.06 or newer.\n\n" &
-   " An Atari ST mouse (or a mouSTer in\n" &
-   " Atari mode) goes into port 1.\n\n" &
+   " Mouse type (Atari, Amiga, 1351) and\n" &
+   " mouse port: Controllers & ports.\n" &
+   " The other port is the joystick.\n\n" &
    " Cursor right: next page    (1 of 3)\n" &
    " Press Space to close the help screen.";
 

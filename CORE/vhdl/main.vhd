@@ -330,14 +330,15 @@ begin
    joy_stick <= port1_db when st_joy_swap_i = '1' else port2_db;
 
    -- Joystick switches bounce (see joy_lockout.vhd): 5 ms lock-out for a port used as joystick,
+   -- and a release only counts after 15 ms (worn switches chatter while held),
    -- 0.5 ms for the raw mouse port (Atari mouse or a second joystick): short enough for the
    -- quadrature steps of a mouse, which the IKBD can not follow faster anyway
    i_port1_db : entity work.joy_lockout
-      generic map (G_CLK_SPEED => CORE_CLK_SPEED, G_LOCK_US => 5000)
+      generic map (G_CLK_SPEED => CORE_CLK_SPEED, G_LOCK_US => 5000, G_RELEASE_US => 15000)
       port map (clk_i => clk_main_i, joy_i => port1, joy_o => port1_db);
 
    i_port2_db : entity work.joy_lockout
-      generic map (G_CLK_SPEED => CORE_CLK_SPEED, G_LOCK_US => 5000)
+      generic map (G_CLK_SPEED => CORE_CLK_SPEED, G_LOCK_US => 5000, G_RELEASE_US => 15000)
       port map (clk_i => clk_main_i, joy_i => port2, joy_o => port2_db);
 
    i_mouse_port_db : entity work.joy_lockout
