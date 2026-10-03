@@ -28,3 +28,8 @@ TOS/
 
 # Built core files
 *.cor
+
+# Local test files: settings file, floppy images, release zips
+stcfg
+*.st
+*.zip
