@@ -77,7 +77,7 @@ type WHS_RECORD_ARRAY_TYPE is array (0 to WHS_RECORDS - 1) of WHS_RECORD_TYPE;
 constant SCR_WELCOME : string :=
    "Atari ST/STe for MEGA65 Version 0.4.6\n" &
    "\n"                           &
-   "MEGA65 port by Chris Freeman, 2026\n" &
+   "MEGA65 port by Chris Freeman\n" &
    "Report bugs at:\n" &
    "github.com/freemchr/MegaST/issues\n" &
    "\n"                           &
@@ -99,7 +99,7 @@ constant SCR_WELCOME : string :=
 
 constant HELP_1 : string :=
    "\n Atari ST/STe for MEGA65 Version 0.4.6\n\n" &
-   " MEGA65 port by Chris Freeman, 2026\n" &
+   " MEGA65 port by Chris Freeman\n" &
    " github.com/freemchr/MegaST/issues\n" &
    " MiSTer port of the MiSTery core\n" &
    " Powered by MiSTer2MEGA65, GPL v3\n\n" &
