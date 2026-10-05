@@ -159,6 +159,8 @@ int main(int argc, char** argv) {
             case 0:
                 if (top->fd_sd_rd & 1) { fd_lba = top->fd_sd_lba; top->fd_sd_ack = 1; fd_idx = 0; fd_state = 1; fd_reads++;
                                          printf("floppy read sector %u (frame %d)\n", fd_lba, frame); }
+                else if (top->fd_sd_wr & 1) { fd_lba = top->fd_sd_lba; top->fd_sd_ack = 1; fd_idx = 0; fd_state = 3;
+                                         printf("floppy WRITE sector %u (frame %d)\n", fd_lba, frame); }
                 break;
             case 1: {
                 size_t o = (size_t)fd_lba * 512 + fd_idx * 2;
@@ -168,6 +170,10 @@ int main(int argc, char** argv) {
             case 2:
                 top->sd_buff_wr = 0; fd_wait = 8;
                 if (++fd_idx == 256) { top->fd_sd_ack = 0; fd_state = 0; fd_wait = 20; } else fd_state = 1;
+                break;
+            case 3:     // write: step through the sector buffer, the data is not stored
+                top->sd_buff_addr = fd_idx; fd_wait = 3;
+                if (++fd_idx == 256) { top->fd_sd_ack = 0; fd_state = 0; fd_wait = 20; }
                 break;
             }
         }
