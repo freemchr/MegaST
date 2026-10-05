@@ -16,3 +16,4 @@ ghdl -a --std=08 --workdir="$W" -P"$W/xpm" ../../vhdl/tos_loader.vhd tb_tos_load
 ghdl -e --std=08 --workdir="$W" -P"$W/xpm" -Wl,-L"$W/lib" -o "$W/tb" tb_tos_loader
 echo "TOS auto-load:";   "$W/tb"
 echo "TOS from the menu:"; "$W/tb" -gMANUAL=true
+echo "Memory size changed:"; "$W/tb" -gMEMCHG=true

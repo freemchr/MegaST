@@ -3,8 +3,10 @@
 -- each word after a few 32 MHz cycles, like atarist_m65.sv. Checks every word arrives exactly once.
 -- MANUAL = true: the TOS is loaded via the manual TOS device (menu): the loader first has to clear
 -- the TOS system variables ($420-$43F, $51A-$51D) while the core is in reset (tos_loading).
+-- MEMCHG = true: the memory size is changed in the menu: the same clearing while the core is in
+-- reset, then the core has to leave the reset (cold boot).
 library ieee; use ieee.std_logic_1164.all; use ieee.numeric_std.all;
-entity tb_tos_loader is generic (MANUAL : boolean := false); end entity;
+entity tb_tos_loader is generic (MANUAL : boolean := false; MEMCHG : boolean := false); end entity;
 architecture sim of tb_tos_loader is
   signal qclk, mclk : std_logic := '0';
   signal addr : std_logic_vector(27 downto 0) := (others => '0');
@@ -17,6 +19,7 @@ architecture sim of tb_tos_loader is
   signal t192, cl, cld, tld : std_logic;
   signal ce_auto, ce_man : std_logic;
   signal done : boolean := false;
+  signal memcfg : std_logic_vector(9 downto 0) := "0000000000";
   constant N : integer := 4096;   -- bytes
 begin
   qclk <= not qclk after 10 ns when not done;      -- 50 MHz
@@ -24,7 +27,7 @@ begin
 
   dut : entity work.tos_loader port map (
     qnice_clk_i => qclk, qnice_rst_i => '0', qnice_addr_i => addr, qnice_data_i => data,
-    qnice_ce_i => ce_auto, qnice_cart_ce_i => '0', qnice_tosm_ce_i => ce_man, qnice_we_i => we, qnice_wait_o => wt,
+    qnice_ce_i => ce_auto, qnice_cart_ce_i => '0', qnice_tosm_ce_i => ce_man, qnice_we_i => we, qnice_sys_cfg_i => memcfg, qnice_wait_o => wt,
     qnice_csr_data_o => cdata,
     main_clk_i => mclk, main_dio_addr_o => m_addr, main_dio_data_o => m_data, main_dio_strobe_o => m_strobe,
     main_dio_ack_i => m_ack, main_tos192k_o => t192, main_cart_loaded_o => cl, main_cart_loading_o => cld,
@@ -43,7 +46,7 @@ begin
     wait until rising_edge(mclk);
     if m_strobe /= m_ack then
       cnt := cnt + 1;
-      if cnt = 16 and MANUAL and clr < 18 then
+      if cnt = 16 and (MANUAL or MEMCHG) and clr < 18 then
         -- the system variables are cleared first, while the core is in reset
         if clr < 16 then clr_exp := 16#210# + clr; else clr_exp := 16#28D# + clr - 16; end if;
         assert tld = '1' report "clear word written while the core is not in reset" severity failure;
@@ -62,6 +65,13 @@ begin
         m_ack <= m_strobe; cnt := 0;
       end if;
     end if;
+    if MEMCHG and clr = 18 then
+      for k in 1 to 200 loop wait until rising_edge(mclk); end loop;
+      assert tld = '0' report "core still in reset after the clearing" severity failure;
+      assert m_strobe = m_ack report "unexpected word after the clearing" severity failure;
+      report integer'image(clr) & " system variable words cleared, core out of reset (cold boot)";
+      done <= true; wait;
+    end if;
     if exp = N/2 then
       if MANUAL then assert clr = 18 and tld = '1' report "clearing incomplete" severity failure; end if;
       report "all " & integer'image(exp) & " words received, " & integer'image(dups) & " repeated, " &
@@ -73,6 +83,12 @@ begin
   -- QNICE: write byte i with value i mod 256, no gap between the writes (worst case)
   cpu : process
   begin
+    if MEMCHG then
+      for k in 1 to 20 loop wait until rising_edge(qclk); end loop;
+      assert tld = '0' report "core in reset before the memory change" severity failure;
+      memcfg <= "0000000100";   -- e.g. 512 KB -> 2 MB
+      wait;
+    end if;
     if MANUAL then
       -- CSR: status = loading (the shell does this before it opens the file), then start at once:
       -- the first data words have to wait until the clearing is done

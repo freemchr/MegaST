@@ -18,6 +18,12 @@
 -- cleared in the ST RAM, so that the new TOS makes a cold boot instead of trusting
 -- the system variables of the previous TOS.
 --
+-- The same happens when the system type or the memory size is changed in the menu
+-- (qnice_sys_cfg_i): the core is kept in reset (main_tos_loading_o), the system variables are
+-- cleared, then the ST makes a cold boot with the new configuration. Otherwise TOS would trust
+-- memctrl/phystop of the old configuration at the next reset and crash (on a real ST, the
+-- hardware changes only when it is off).
+--
 -- The QNICE side writes one byte per address (address = byte offset in the
 -- TOS image). Two bytes form one big endian 68000 word. Every word is passed
 -- to the core using a toggle handshake; while the previous word has not been
@@ -51,6 +57,7 @@ entity tos_loader is
       qnice_cart_ce_i   : in  std_logic;   -- cartridge device
       qnice_tosm_ce_i   : in  std_logic;   -- TOS device (manual load)
       qnice_we_i        : in  std_logic;
+      qnice_sys_cfg_i   : in  std_logic_vector(9 downto 0) := (others => '0');   -- system type and memory size menu bits
       qnice_wait_o      : out std_logic;
       qnice_csr_data_o  : out std_logic_vector(15 downto 0);   -- cartridge and manual TOS device
 
@@ -118,6 +125,11 @@ architecture synthesis of tos_loader is
    signal qnice_clr_delay   : natural range 0 to 255 := 0;
    signal qnice_clr_count   : natural range 0 to C_CLR_WORDS := 0;
 
+   -- system type or memory size changed: cold boot (core in reset until the system variables are cleared)
+   signal qnice_sys_cfg_d   : std_logic_vector(9 downto 0) := (others => '0');
+   signal qnice_cold        : std_logic := '0';
+   signal qnice_hold        : std_logic;   -- keep the core in reset
+
    signal qnice_hi_byte : std_logic_vector(7 downto 0);
    signal qnice_addr    : std_logic_vector(23 downto 1);
    signal qnice_data    : std_logic_vector(15 downto 0);
@@ -172,6 +184,7 @@ begin
    qnice_cart_loaded  <= '1' when qnice_csr_status(0) = C_ST_OK      else '0';
    qnice_cart_loading <= '1' when qnice_csr_status(0) = C_ST_LOADING else '0';
    qnice_tos_loading  <= '1' when qnice_csr_status(1) = C_ST_LOADING else '0';
+   qnice_hold         <= qnice_tos_loading or qnice_cold;
 
    qnice_proc : process(qnice_clk_i)
    begin
@@ -213,6 +226,15 @@ begin
             qnice_data      <= x"0000";
             qnice_addr      <= std_logic_vector(clr_addr(C_CLR_WORDS - qnice_clr_count));
             qnice_delay     <= 3;
+         elsif qnice_cold = '1' and qnice_pending = '0' then
+            qnice_cold      <= '0';   -- the last word is written: cold boot
+         end if;
+
+         -- system type or memory size changed: keep the core in reset and clear the system variables (again)
+         qnice_sys_cfg_d <= qnice_sys_cfg_i;
+         if qnice_sys_cfg_i /= qnice_sys_cfg_d then
+            qnice_cold      <= '1';
+            qnice_clr_delay <= 255;
          end if;
 
          if qnice_data_ce = '1' and qnice_we_i = '1' then
@@ -248,6 +270,8 @@ begin
             qnice_csr_status  <= (others => C_ST_IDLE);
             qnice_clr_delay   <= 0;
             qnice_clr_count   <= 0;
+            qnice_cold        <= '0';
+            qnice_sys_cfg_d   <= qnice_sys_cfg_i;
          end if;
       end if;
    end process qnice_proc;
@@ -271,7 +295,7 @@ begin
          src_in(39)            => qnice_tos192k,
          src_in(40)            => qnice_cart_loaded,
          src_in(41)            => qnice_cart_loading,
-         src_in(42)            => qnice_tos_loading,
+         src_in(42)            => qnice_hold,
          dest_clk              => main_clk_i,
          dest_out(22 downto 0) => main_dio_addr_o,
          dest_out(38 downto 23)=> main_dio_data_o,

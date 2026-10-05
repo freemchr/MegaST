@@ -801,6 +801,8 @@ begin
          qnice_cart_ce_i   => qnice_cart_ce,
          qnice_tosm_ce_i   => qnice_tosm_ce,
          qnice_we_i        => qnice_tos_we,
+         qnice_sys_cfg_i   => qnice_osm_control_i(C_MENU_STEROIDS downto C_MENU_ST) &
+                              qnice_osm_control_i(C_MENU_MEM_14M downto C_MENU_MEM_512K),
          qnice_wait_o      => qnice_tos_wait,
          qnice_csr_data_o  => qnice_csr_data,
 
