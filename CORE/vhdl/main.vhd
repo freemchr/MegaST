@@ -1,10 +1,11 @@
 ----------------------------------------------------------------------------------
--- Atari ST/STe for MEGA65
+-- Atari ST/STe for MEGA65 (MegaST)
 --
 -- Wrapper for the MiSTer core that runs exclusively in the core's clock domanin
 --
 -- MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
--- Atari ST port 2026, licensed under GPL v3
+-- This machine is based on AtariST_MiSTer
+-- MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
 library ieee;

@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
--- Atari ST/STe for MEGA65
+-- Atari ST/STe for MEGA65 (MegaST)
 --
 -- Quadrature mouse (Amiga mouse in the ST's pin order) to MiSTer PS/2 mouse events
 --
@@ -16,7 +16,9 @@
 -- caller derives it from the pot reading. A step counts in the same direction as the ps2.sv generator would
 -- produce it, so the mouse moves exactly like on the direct (raw) path.
 --
--- Atari ST port 2026, licensed under GPL v3
+-- This machine is based on AtariST_MiSTer
+-- Powered by MiSTer2MEGA65
+-- MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
 library ieee;

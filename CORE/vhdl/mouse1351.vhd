@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
--- Atari ST/STe for MEGA65
+-- Atari ST/STe for MEGA65 (MegaST)
 --
 -- Commodore 1351 mouse (proportional mode) to MiSTer PS/2 mouse events
 --
@@ -14,7 +14,9 @@
 --
 -- The M2M framework delivers inverted pot values (255 - value).
 --
--- Atari ST port 2026, licensed under GPL v3
+-- This machine is based on AtariST_MiSTer
+-- Powered by MiSTer2MEGA65
+-- MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
 library ieee;

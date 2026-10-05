@@ -13,7 +13,9 @@
 //
 // Output: 1024 x 523 clocks per frame @ 32.083 MHz = 31.3 kHz, 59.9 Hz
 //
-// Atari ST port 2026, licensed under GPL v3
+// This machine is based on AtariST_MiSTer
+// Powered by MiSTer2MEGA65
+// MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 //
 
 module viking_scale (

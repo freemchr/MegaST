@@ -37,7 +37,7 @@ How the port works
   71 Hz monochrome mode and in the 15 kHz VGA modes) and `ascal` scales the image for HDMI.
   For "zoom-in", the core blanks everything but the graphics area (`PIX_ACTIVE` of the
   shifter, the lines with DE of the previous frame), so `ascal` scales only the graphics.
-* **Framework changes:** `M2M/vhdl/top_mega65-r*.vhd` pass the SDRAM and PMOD pins to the core.
+* **Framework changes** (all of them, with how to re-apply them: [m2m/exceptions.md](m2m/exceptions.md)): `M2M/vhdl/top_mega65-r*.vhd` pass the SDRAM and PMOD pins to the core.
   `M2M/rom/shell.asm` supports "unbuffered" virtual drives (buffer ID `0xAAAA`, `VD_NOBUFFER`)
   that are read and written directly on the SD card; this is used for the hard disks, with
   the fast seek of `M2M/rom/vd_fastseek.asm`. `M2M/vhdl/av_pipeline/analog_pipeline.vhd` has

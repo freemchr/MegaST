@@ -4,7 +4,9 @@
 ; Included by shell.asm. Needs the variables VD_UB_CP* (shell_vars.asm).
 ; Test: CORE/sim/fastseek (QNICE emulator, FAT32 image with fragmented files)
 ;
-; Atari ST port 2026, licensed under GPL v3
+; This machine is based on AtariST_MiSTer
+; Powered by MiSTer2MEGA65
+; MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 ; ****************************************************************************
 
 ; ----------------------------------------------------------------------------

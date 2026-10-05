@@ -13,7 +13,7 @@ Usage:
     python3 make_st_disk.py --size 1440 blank.st     # 1.44 MB high density (Mega STe, TT, Falcon)
     python3 make_st_disk.py --label GAMES blank.st   # with a volume label
 
-Atari ST port 2026, licensed under GPL v3
+Part of MegaST (Atari ST/STe for MEGA65), done by Chris Freeman in 2026, licensed under GPL v3
 """
 
 import argparse

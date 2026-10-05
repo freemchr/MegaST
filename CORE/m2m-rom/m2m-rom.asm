@@ -6,7 +6,9 @@
 ;
 ; The execution starts at the label START_FIRMWARE.
 ;
-; done by sy2002 and MJoergen in 2022, Atari ST port 2026, licensed under GPL v3
+; MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
+; This machine is based on AtariST_MiSTer
+; MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 ; ****************************************************************************
 
 ; If the define RELEASE is defined, then the ROM will be a self-contained and

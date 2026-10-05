@@ -28,7 +28,9 @@
 //
 // The year registers count from 1980, the MEGA65 RTC counts from 2000.
 //
-// Atari ST port 2026, licensed under GPL v3
+// This machine is based on AtariST_MiSTer
+// Powered by MiSTer2MEGA65
+// MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 //
 
 module rp5c15_m65 (

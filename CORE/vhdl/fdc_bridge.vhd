@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
--- Atari ST/STe for MEGA65
+-- Atari ST/STe for MEGA65 (MegaST)
 --
 -- Bridge between the M2M virtual drives (vdrives.vhd, QNICE clock domain,
 -- 8-bit "SD byte level access") and the Atari ST floppy controller
@@ -28,7 +28,9 @@
 --    few hundred nanoseconds, so mega65.vhd stalls QNICE using wait states when
 --    it reads sd_buff_din (C_VD_DIN_WAIT).
 --
--- Atari ST port 2026, licensed under GPL v3
+-- This machine is based on AtariST_MiSTer
+-- Powered by MiSTer2MEGA65
+-- MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
 library ieee;

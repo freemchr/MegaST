@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------------------------------------
--- Atari ST/STe for MEGA65
+-- Atari ST/STe for MEGA65 (MegaST)
 --
 -- Swapping the floppy drives A: and B: (e.g. to boot from B:)
 --
@@ -11,7 +11,9 @@
 --
 -- Runs in the clock domain of the core.
 --
--- Atari ST port 2026, licensed under GPL v3
+-- This machine is based on AtariST_MiSTer
+-- Powered by MiSTer2MEGA65
+-- MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 ---------------------------------------------------------------------------------------------------------
 
 library ieee;
