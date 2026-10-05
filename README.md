@@ -97,6 +97,11 @@ Usage
 
 * Numeric keypad: hold the <kbd>MEGA</kbd> key. MEGA + `0`..`9`, `+`, `-`, `*`, `/`, `.` and
   <kbd>Return</kbd> are the keypad keys, MEGA + Shift + `8` / `9` are the keypad keys `(` and `)`.
+* **Mouse:** an Atari ST mouse works out of the box. For an **Amiga mouse** (or a mouSTer in
+  Amiga mode) or a **Commodore 1351** mouse, select it first in the menu: "Controllers & ports" →
+  "Mouse type" → Amiga / 1351. With the wrong mouse type, an Amiga mouse only jitters in small
+  steps. "Mouse port" selects the MEGA65 port the mouse is plugged into (default: port 1); the
+  joystick goes into the other port.
 
 TOS
 ---
