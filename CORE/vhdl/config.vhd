@@ -326,7 +326,7 @@ constant OPTM_S_SAVING     : string := "<Saving>";          -- the internal writ
 --             Do use a lower case \n. If you forget one of them or if you use upper case, you will run into undefined behavior.
 --          2. Start each line that contains an actual menu item (multi- or single-select) with a Space character,
 --             otherwise you will experience visual glitches.
-constant OPTM_SIZE         : natural := 92;  -- amount of items including empty lines:
+constant OPTM_SIZE         : natural := 94;  -- amount of items including empty lines:
                                              -- needs to be equal to the number of lines in OPTM_ITEMS and amount of items in OPTM_GROUPS
                                              -- IMPORTANT: If SAVE_SETTINGS is true and OPTM_SIZE changes: Make sure to re-generate and
                                              -- and re-distribute the config file. You can make a new one using M2M/tools/make_config.sh
@@ -407,28 +407,30 @@ constant OPTM_ITEMS        : string :=
    " 720x480 59.94 Hz\n"          &   -- 67
    " 800x600 60 Hz\n"             &   -- 68
    "\n"                           &   -- 69
-   " Back to main menu\n"         &   -- 70
-   " VGA: %s\n"                   &   -- 71
-   " VGA Settings\n"              &   -- 72
-   "\n"                           &   -- 73
-   " 31 kHz (standard)\n"         &   -- 74
-   " 15 kHz (RGB, SCART)\n"       &   -- 75
-   " 15 kHz with CSync\n"         &   -- 76
-   "\n"                           &   -- 77
-   " No scanlines\n"              &   -- 78
-   " Scanlines 25%\n"             &   -- 79
-   " Scanlines 50%\n"             &   -- 80
-   " Scanlines 75%\n"             &   -- 81
-   "\n"                           &   -- 82
-   " Back to main menu\n"         &   -- 83
-   " HDMI: CRT emulation\n"       &   -- 84
-   " Zoom-in (hide border)\n"     &   -- 85
-   " Audio improvements\n"        &   -- 86
-   "\n"                           &   -- 87
-   " Reset Atari ST\n"            &   -- 88
-   " About & Help\n"              &   -- 89
-   "\n"                           &   -- 90
-   " Close Menu\n"                ;   -- 91
+   " DVI mode (no sound)\n"       &   -- 70
+   "\n"                           &   -- 71
+   " Back to main menu\n"         &   -- 72
+   " VGA: %s\n"                   &   -- 73
+   " VGA Settings\n"              &   -- 74
+   "\n"                           &   -- 75
+   " 31 kHz (standard)\n"         &   -- 76
+   " 15 kHz (RGB, SCART)\n"       &   -- 77
+   " 15 kHz with CSync\n"         &   -- 78
+   "\n"                           &   -- 79
+   " No scanlines\n"              &   -- 80
+   " Scanlines 25%\n"             &   -- 81
+   " Scanlines 50%\n"             &   -- 82
+   " Scanlines 75%\n"             &   -- 83
+   "\n"                           &   -- 84
+   " Back to main menu\n"         &   -- 85
+   " HDMI: CRT emulation\n"       &   -- 86
+   " Zoom-in (hide border)\n"     &   -- 87
+   " Audio improvements\n"        &   -- 88
+   "\n"                           &   -- 89
+   " Reset Atari ST\n"            &   -- 90
+   " About & Help\n"              &   -- 91
+   "\n"                           &   -- 92
+   " Close Menu\n"                ;   -- 93
 
 -- define your own constants here and choose meaningful names
 -- make sure that your first group uses the value 1 (0 means "no menu item", such as text and line),
@@ -457,13 +459,14 @@ constant OPTM_G_MouseType  : integer := 19;
 constant OPTM_G_PMOD       : integer := 20;
 constant OPTM_G_Cubase     : integer := 21;
 constant OPTM_G_HDMI       : integer := 22;
-constant OPTM_G_VGA        : integer := 23;
-constant OPTM_G_Scanl      : integer := 24;
-constant OPTM_G_CRT        : integer := 25;
-constant OPTM_G_Zoom       : integer := 26;
-constant OPTM_G_Audio      : integer := 27;
-constant OPTM_G_Reset      : integer := 28;
-constant OPTM_G_About      : integer := 29;
+constant OPTM_G_DVI        : integer := 23;
+constant OPTM_G_VGA        : integer := 24;
+constant OPTM_G_Scanl      : integer := 25;
+constant OPTM_G_CRT        : integer := 26;
+constant OPTM_G_Zoom       : integer := 27;
+constant OPTM_G_Audio      : integer := 28;
+constant OPTM_G_Reset      : integer := 29;
+constant OPTM_G_About      : integer := 30;
 
 -- !!! DO NOT TOUCH !!!
 type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC- 1;
@@ -540,28 +543,30 @@ constant OPTM_GROUPS       : OPTM_GTYPE := (
                                              OPTM_G_HDMI,                                              -- 67 720x480 59.94 Hz
                                              OPTM_G_HDMI,                                              -- 68 800x600 60 Hz
                                              OPTM_G_LINE,                                              -- 69
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 70 Back to main menu
-                                             OPTM_G_SUBMENU,                                           -- 71 VGA: %s
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 72 VGA Settings
-                                             OPTM_G_LINE,                                              -- 73
-                                             OPTM_G_VGA + OPTM_G_STDSEL,                               -- 74 31 kHz (standard)
-                                             OPTM_G_VGA,                                               -- 75 15 kHz (RGB, SCART)
-                                             OPTM_G_VGA,                                               -- 76 15 kHz with CSync
-                                             OPTM_G_LINE,                                              -- 77
-                                             OPTM_G_Scanl + OPTM_G_STDSEL,                             -- 78 No scanlines
-                                             OPTM_G_Scanl,                                             -- 79 Scanlines 25%
-                                             OPTM_G_Scanl,                                             -- 80 Scanlines 50%
-                                             OPTM_G_Scanl,                                             -- 81 Scanlines 75%
-                                             OPTM_G_LINE,                                              -- 82
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 83 Back to main menu
-                                             OPTM_G_CRT + OPTM_G_SINGLESEL,                            -- 84 HDMI: CRT emulation
-                                             OPTM_G_Zoom + OPTM_G_SINGLESEL,                           -- 85 Zoom-in (hide border)
-                                             OPTM_G_Audio + OPTM_G_SINGLESEL,                          -- 86 Audio improvements
-                                             OPTM_G_LINE,                                              -- 87
-                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 88 Reset Atari ST
-                                             OPTM_G_About + OPTM_G_HELP,                               -- 89 About & Help
-                                             OPTM_G_LINE,                                              -- 90
-                                             OPTM_G_CLOSE                                              -- 91 Close Menu
+                                             OPTM_G_DVI + OPTM_G_SINGLESEL,                            -- 70 DVI mode (no sound)
+                                             OPTM_G_LINE,                                              -- 71
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 72 Back to main menu
+                                             OPTM_G_SUBMENU,                                           -- 73 VGA: %s
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 74 VGA Settings
+                                             OPTM_G_LINE,                                              -- 75
+                                             OPTM_G_VGA + OPTM_G_STDSEL,                               -- 76 31 kHz (standard)
+                                             OPTM_G_VGA,                                               -- 77 15 kHz (RGB, SCART)
+                                             OPTM_G_VGA,                                               -- 78 15 kHz with CSync
+                                             OPTM_G_LINE,                                              -- 79
+                                             OPTM_G_Scanl + OPTM_G_STDSEL,                             -- 80 No scanlines
+                                             OPTM_G_Scanl,                                             -- 81 Scanlines 25%
+                                             OPTM_G_Scanl,                                             -- 82 Scanlines 50%
+                                             OPTM_G_Scanl,                                             -- 83 Scanlines 75%
+                                             OPTM_G_LINE,                                              -- 84
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 85 Back to main menu
+                                             OPTM_G_CRT + OPTM_G_SINGLESEL,                            -- 86 HDMI: CRT emulation
+                                             OPTM_G_Zoom + OPTM_G_SINGLESEL,                           -- 87 Zoom-in (hide border)
+                                             OPTM_G_Audio + OPTM_G_SINGLESEL,                          -- 88 Audio improvements
+                                             OPTM_G_LINE,                                              -- 89
+                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 90 Reset Atari ST
+                                             OPTM_G_About + OPTM_G_HELP,                               -- 91 About & Help
+                                             OPTM_G_LINE,                                              -- 92
+                                             OPTM_G_CLOSE                                              -- 93 Close Menu
                                            );
 
 --------------------------------------------------------------------------------------------------------------------

@@ -153,6 +153,10 @@ Video
 * **HDMI:** the image is scaled by `ascal` (4:3, with the border). "Zoom-in (hide border)" shows
   only the graphics area (320x200, 640x200 or 640x400) and uses the full width of 16:9 modes.
   The border is black on VGA in this mode.
+* **DVI monitors** (HDMI-to-DVI cable or adapter): if the picture is garbled, enable "DVI mode
+  (no sound)" in the HDMI settings. It switches off the HDMI audio and info packets that DVI
+  monitors cannot decode. If the menu is unreadable on the DVI monitor, change the setting while
+  a VGA monitor is connected (the setting is saved), or try a lower HDMI mode such as 800x600.
 * **VGA:** the color modes are 15 kHz modes. By default they are doubled to 31 kHz for VGA
   monitors ("VGA: 31 kHz"), optionally with scanlines (25%, 50%, 75%). "15 kHz (RGB, SCART)"
   outputs the original 15 kHz signal for CRTs and TVs, "15 kHz with CSync" puts composite sync on

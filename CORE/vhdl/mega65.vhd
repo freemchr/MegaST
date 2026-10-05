@@ -312,14 +312,15 @@ constant C_MENU_HDMI_5_4_50    : natural := 65;
 constant C_MENU_HDMI_640_60    : natural := 66;
 constant C_MENU_HDMI_720_5994  : natural := 67;
 constant C_MENU_SVGA_800_60    : natural := 68;
-constant C_MENU_VGA_15KHZ      : natural := 75;
-constant C_MENU_VGA_CSYNC      : natural := 76;
-constant C_MENU_SCANLINES_25   : natural := 79;
-constant C_MENU_SCANLINES_50   : natural := 80;
-constant C_MENU_SCANLINES_75   : natural := 81;
-constant C_MENU_CRT_EMULATION  : natural := 84;
-constant C_MENU_HDMI_ZOOM      : natural := 85;
-constant C_MENU_IMPROVE_AUDIO  : natural := 86;
+constant C_MENU_HDMI_DVI       : natural := 70;
+constant C_MENU_VGA_15KHZ      : natural := 77;
+constant C_MENU_VGA_CSYNC      : natural := 78;
+constant C_MENU_SCANLINES_25   : natural := 81;
+constant C_MENU_SCANLINES_50   : natural := 82;
+constant C_MENU_SCANLINES_75   : natural := 83;
+constant C_MENU_CRT_EMULATION  : natural := 86;
+constant C_MENU_HDMI_ZOOM      : natural := 87;
+constant C_MENU_IMPROVE_AUDIO  : natural := 88;
 -- 82 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
 
 ---------------------------------------------------------------------------------------------
@@ -672,7 +673,7 @@ begin
 
    -- Use On-Screen-Menu selections to configure several audio and video settings
    -- Video and audio mode control
-   qnice_dvi_o                <= '0';                                         -- 0=HDMI (with sound), 1=DVI (no sound)
+   qnice_dvi_o                <= qnice_osm_control_i(C_MENU_HDMI_DVI);         -- 0=HDMI (with sound), 1=DVI (no sound)
    qnice_vga_15khz            <= qnice_osm_control_i(C_MENU_VGA_15KHZ) or qnice_osm_control_i(C_MENU_VGA_CSYNC);
 
    -- VGA: 31 kHz (scandoubler for the 15 kHz color modes) or 15 kHz (RGB for CRTs and SCART)
