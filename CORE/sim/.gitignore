@@ -3,3 +3,5 @@ rtl_sim/
 *.ppm
 *.png
 build.log
+obj_bram/
+build_bram.log

@@ -36,6 +36,11 @@
 //============================================================================
 
 module atarist_m65
+#(
+	// 0: ST RAM and TOS in the SDRAM (MEGA65 R4/R5/R6, sdram_m65.v)
+	// 1: in the FPGA's block RAM (MEGA65 R3/R3A, bram_m65.v): 512 KB ST RAM, no Viking card
+	parameter BRAM_MEM = 0
+)
 (
 	input         clk_32,          // 32.08 MHz system clock
 	input         clk_96,          // 96.25 MHz SDRAM clock (phase aligned to clk_32)
@@ -271,12 +276,14 @@ assign audio_r = {1'b0, audio_mix_r[15:1]};
 //////////////////////////////////////////////////////////////////////////////////
 
 // enable additional ste/megaste features
-wire       MEM512K       = (cfg_mem == 3'd0);
-wire       MEM1M         = (cfg_mem == 3'd1);
-wire       MEM2M         = (cfg_mem == 3'd2);
-wire       MEM4M         = (cfg_mem == 3'd3);
-wire       MEM8M         = (cfg_mem == 3'd4);
-wire       MEM14M        = (cfg_mem == 3'd5);
+// MEGA65 R3 (block RAM): always 512 KB
+wire [2:0] mem_size      = BRAM_MEM ? 3'd0 : cfg_mem;
+wire       MEM512K       = (mem_size == 3'd0);
+wire       MEM1M         = (mem_size == 3'd1);
+wire       MEM2M         = (mem_size == 3'd2);
+wire       MEM4M         = (mem_size == 3'd3);
+wire       MEM8M         = (mem_size == 3'd4);
+wire       MEM14M        = (mem_size == 3'd5);
 wire [1:0] fdc_wp        = cfg_fdc_wp;
 // MiSTer's status bit 8 is TOS_CONTROL_VIDEO_COLOR (1 = color monitor), despite the wire's name
 wire       mono_monitor  = ~cfg_mono;
@@ -285,9 +292,9 @@ wire       blitter_en    = (cfg_blitter || ste);
 wire       psg_stereo    = cfg_psg_stereo;
 wire       ste           = cfg_ste || cfg_mste;
 wire       mste          = cfg_mste;
-wire       steroids      = cfg_ste && cfg_mste;  // a STE on steroids
+wire       steroids      = cfg_ste && cfg_mste && !BRAM_MEM;  // a STE on steroids (needs the SDRAM)
 wire       cubase_enable = cfg_cubase;
-wire       viking_en     = cfg_viking;
+wire       viking_en     = cfg_viking && !BRAM_MEM;    // the Viking card needs the SDRAM
 wire       narrow_brd    = cfg_narrow_brd;
 wire       mde60         = cfg_mde60;
 
@@ -1252,38 +1259,74 @@ wire [15:0] ram_data_out;
 wire [63:0] ram_data_out64;
 wire [15:0] rom_data_out;
 
-assign sdram_cke = 1'b1;
+generate
+if (BRAM_MEM) begin : g_bram
+	// MEGA65 R3/R3A: no SDRAM
+	assign sdram_clk   = 1'b0;
+	assign sdram_cke   = 1'b0;
+	assign sdram_ras_n = 1'b1;
+	assign sdram_cas_n = 1'b1;
+	assign sdram_we_n  = 1'b1;
+	assign sdram_cs_n  = 1'b1;
+	assign sdram_ba    = 2'b00;
+	assign sdram_a     = 13'd0;
+	assign sdram_dqml  = 1'b0;
+	assign sdram_dqmh  = 1'b0;
+	assign sdram_dq    = 16'hZZZZ;
 
-sdram_m65 sdram (
-	// interface to the IS42S16320F chip
-	.sd_data     	( sdram_dq                   ),
-	.sd_addr     	( sdram_a                    ),
-	.sd_dqm      	( {sdram_dqmh, sdram_dqml}   ),
-	.sd_cs       	( sdram_cs_n                 ),
-	.sd_ba       	( sdram_ba                   ),
-	.sd_we       	( sdram_we_n                 ),
-	.sd_ras      	( sdram_ras_n                ),
-	.sd_cas      	( sdram_cas_n                ),
-	.sd_clk      	( sdram_clk                  ),
+	bram_m65 bram (
+		.clk_96        ( clk_96                   ),
+		.clk_8_en      ( mhz8_en1                 ),
 
-	// system interface
-	.clk_96        ( clk_96                   ),
-	.clk_8_en      ( mhz8_en1                 ),
-	.init          ( init                     ),
+		// cpu/chipset interface
+		.din           ( ram_data_in              ),
+		.addr          ( { 1'b0, sdram_address }  ),
+		.ds            ( { sdram_uds, sdram_lds } ),
+		.req           ( sdram_req                ),
+		.we            ( sdram_we                 ),
+		.dout          ( ram_data_out             ),
+		.dout64        ( ram_data_out64           ),
 
-	// cpu/chipset interface
-	.din           ( ram_data_in              ),
-	.addr          ( { 1'b0, sdram_address }  ),
-	.ds            ( { sdram_uds, sdram_lds } ),
-	.req           ( sdram_req                ),
-	.we            ( sdram_we                 ),
-	.dout          ( ram_data_out             ),
-	.dout64        ( ram_data_out64           ),
+		// ROM access port
+		.rom_oe        ( ~rom_n                   ),
+		.rom_addr      ( { 1'b0, rom_a }          ),
+		.rom_dout      ( rom_data_out             )
+	);
+end else begin : g_sdram
+	assign sdram_cke = 1'b1;
 
-	// ROM access port
-	.rom_oe        ( ~rom_n                   ),
-	.rom_addr      ( { 1'b0, rom_a }          ),
-	.rom_dout      ( rom_data_out             )
-);
+	sdram_m65 sdram (
+		// interface to the IS42S16320F chip
+		.sd_data     	( sdram_dq                   ),
+		.sd_addr     	( sdram_a                    ),
+		.sd_dqm      	( {sdram_dqmh, sdram_dqml}   ),
+		.sd_cs       	( sdram_cs_n                 ),
+		.sd_ba       	( sdram_ba                   ),
+		.sd_we       	( sdram_we_n                 ),
+		.sd_ras      	( sdram_ras_n                ),
+		.sd_cas      	( sdram_cas_n                ),
+		.sd_clk      	( sdram_clk                  ),
+
+		// system interface
+		.clk_96        ( clk_96                   ),
+		.clk_8_en      ( mhz8_en1                 ),
+		.init          ( init                     ),
+
+		// cpu/chipset interface
+		.din           ( ram_data_in              ),
+		.addr          ( { 1'b0, sdram_address }  ),
+		.ds            ( { sdram_uds, sdram_lds } ),
+		.req           ( sdram_req                ),
+		.we            ( sdram_we                 ),
+		.dout          ( ram_data_out             ),
+		.dout64        ( ram_data_out64           ),
+
+		// ROM access port
+		.rom_oe        ( ~rom_n                   ),
+		.rom_addr      ( { 1'b0, rom_a }          ),
+		.rom_dout      ( rom_data_out             )
+	);
+end
+endgenerate
 
 endmodule
