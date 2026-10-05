@@ -13,6 +13,12 @@ runs games and GEM programs from floppy and hard disk images. Download the core 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
+**Latest version: [0.4.7 beta](https://github.com/freemchr/MegaST/releases/tag/v0.4.7)**
+(October 5, 2026): the A key works (it did not in 0.4.6), and the new HDMI option "DVI mode (no
+sound)" helps DVI monitors on an HDMI-to-DVI cable. When updating from 0.4.6, also copy the new
+`atarist/stcfg` from the zip, otherwise the menu settings are not saved. All changes:
+[VERSIONS.md](VERSIONS.md).
+
 Tested on a MEGA65 R6
 ---------------------
 
