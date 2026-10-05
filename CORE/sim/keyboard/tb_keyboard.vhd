@@ -17,6 +17,8 @@ architecture sim of tb_keyboard is
   constant K_COLON  : natural := 45;
   constant K_GBP    : natural := 48;
   constant K_A      : natural := 10;
+  constant K_3      : natural := 8;
+  constant K_ALEFT  : natural := 57;
   type key_list is array(natural range <>) of natural;
 
   function st(col : natural; row : natural) return natural is begin return col * 8 + row; end function;
@@ -28,6 +30,7 @@ architecture sim of tb_keyboard is
   signal matrix  : std_logic_vector(119 downto 0);
   signal done    : boolean := false;
   signal printed : std_logic := '0';
+  signal uk      : std_logic := '0';
   -- monitor: key mon_key must never be pressed with (mon_shift = '1') or without (mon_shift = '0') Shift
   signal mon_key   : integer := -1;
   signal mon_shift : std_logic := '0';
@@ -36,7 +39,7 @@ begin
   key_n <= pressed(key_num);
 
   dut : entity work.keyboard generic map (G_CLK_SPEED => 1000) port map (
-    clk_main_i => clk, key_num_i => key_num, key_pressed_n_i => key_n, as_printed_i => printed,
+    clk_main_i => clk, key_num_i => key_num, key_pressed_n_i => key_n, as_printed_i => printed, uk_i => uk,
     st_matrix_n_o => matrix);
 
   monitor : process(clk)
@@ -99,6 +102,17 @@ begin
     press((0 => K_GBP));                 expect((0 => st(11, 4)), "printed: Pound = backslash");
     press((K_LSHIFT, K_A));              expect((st(1, 5), st(4, 5)), "printed: Shift+A");
     press((K_MEGA, K_PLUS));             expect((0 => st(14, 5)), "printed: MEGA++ = keypad +");
+    -- UK TOS
+    uk <= '1';
+    press((K_LSHIFT, K_2));              expect((st(5, 1), st(1, 5)), "printed UK: Shift+2 = double quote (ST Shift+2)");
+    press((0 => K_AT));                  expect((st(11, 6), st(1, 5)), "printed UK: @ (ST Shift+')");
+    press((0 to -1 => 0));
+    mon_key <= st(11, 4); mon_shift <= '1';      -- # (US \ key) must not come with Shift
+    press((K_LSHIFT, K_3));              expect((0 => st(11, 4)), "printed UK: Shift+3 = # (ST # key)");
+    mon_key <= -1;
+    press((0 => K_GBP));                 expect((0 => st(4, 6)), "printed UK: Pound = backslash (ISO key)");
+    press((K_LSHIFT, K_ALEFT));          expect((st(11, 4), st(1, 5)), "printed UK: Shift+Arrow left = ~");
+    uk <= '0';
     printed <= '0';
     press((0 => K_PLUS));                expect((0 => st(9, 2)), "positional: + (ST -)");
     done <= true; wait;

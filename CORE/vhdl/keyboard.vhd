@@ -32,10 +32,11 @@
 --
 -- The MEGA65 Help key opens the M2M on-screen-menu and is therefore not mapped.
 --
--- Menu "Keyboard as printed" (as_printed_i): digits and symbols give the character printed on the MEGA65
--- key (for the US ST layout, i.e. a US TOS). The core presses or hides the ST's Shift key as needed, e.g. MEGA65 Shift+2
--- is ST Shift+' ("), MEGA65 + is ST Shift+= (+). Keys without a shifted symbol on the MEGA65 give the
--- same character with Shift. Extra characters that are not printed on the MEGA65 keys:
+-- Menu Keyboard "as printed" (as_printed_i): digits and symbols give the character printed on the MEGA65
+-- key, for the US or the UK ST layout (uk_i: the language of the TOS). The core presses or hides the ST's
+-- Shift key as needed, e.g. MEGA65 Shift+2 is ST Shift+' (US) or Shift+2 (UK), MEGA65 + is ST Shift+=.
+-- Keys without a shifted symbol on the MEGA65 give the same character with Shift. Extra characters that
+-- are not printed on the MEGA65 keys:
 --
 --    Shift + :  [          Shift + @  {          Pound      \          Arrow left           `
 --    Shift + ;  ]          Shift + *  }          Shift + -  _          Shift + Arrow left   ~
@@ -66,6 +67,7 @@ entity keyboard is
 
       -- Menu: digits and symbols as printed on the MEGA65 keys (else positional)
       as_printed_i         : in std_logic := '0';
+      uk_i                 : in std_logic := '0';      -- "as printed" for a UK TOS (else US)
 
       -- Atari ST keyboard matrix: low active, index = column * 8 + row
       st_matrix_n_o        : out std_logic_vector(119 downto 0)
@@ -302,6 +304,7 @@ begin
       variable want_on  : boolean;                          -- a pressed symbol needs Shift
       variable want_off : boolean;                          -- a pressed symbol needs no Shift
       variable st_shift : boolean;
+      variable uk       : boolean;
 
       -- ST key (col, row) is pressed while the MEGA65 key is pressed.
       -- The matrix and the key state are explicit parameters: Vivado (2026.1) turns the first call of a
@@ -329,6 +332,7 @@ begin
          shift  := key_pressed_n(m65_left_shift) = '0' or key_pressed_n(m65_right_shift) = '0';
          keypad := key_pressed_n(m65_mega) = '0';
          printed := as_printed_i = '1' and not keypad;
+         uk      := uk_i = '1';
          sym      := (others => '1');
          want_on  := false;
          want_off := false;
@@ -368,8 +372,13 @@ begin
          elsif printed then
             if shift then   -- ! " # $ % & ' ( ) 0
                map_sym(sym, want_on, want_off, key_pressed_n(m65_1), st_1,     true);
-               map_sym(sym, want_on, want_off, key_pressed_n(m65_2), st_quote, true);
-               map_sym(sym, want_on, want_off, key_pressed_n(m65_3), st_3,     true);
+               if uk then   -- UK ST: " is Shift+2, # has its own key (US \ position)
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_2), st_2,      true);
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_3), st_bslash, false);
+               else
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_2), st_quote,  true);
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_3), st_3,      true);
+               end if;
                map_sym(sym, want_on, want_off, key_pressed_n(m65_4), st_4,     true);
                map_sym(sym, want_on, want_off, key_pressed_n(m65_5), st_5,     true);
                map_sym(sym, want_on, want_off, key_pressed_n(m65_6), st_7,     true);
@@ -430,7 +439,13 @@ begin
             if shift then
                map_sym(sym, want_on, want_off, key_pressed_n(m65_plus),       st_equal,    false);  -- +
                map_sym(sym, want_on, want_off, key_pressed_n(m65_minus),      st_minus,    true);   -- _
-               map_sym(sym, want_on, want_off, key_pressed_n(m65_gbp),        st_bslash,   true);   -- |
+               if uk then   -- UK ST: \ | on the ISO key, # ~ on the US \ key
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_gbp),        st_iso,      true);   -- |
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_arrow_left), st_bslash,   true);   -- ~
+               else
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_gbp),        st_bslash,   true);   -- |
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_arrow_left), st_grave,    true);   -- ~
+               end if;
                map_sym(sym, want_on, want_off, key_pressed_n(m65_at),         st_lbracket, true);   -- {
                map_sym(sym, want_on, want_off, key_pressed_n(m65_asterisk),   st_rbracket, true);   -- }
                map_sym(sym, want_on, want_off, key_pressed_n(m65_arrow_up),   st_6,        true);   -- ^
@@ -440,12 +455,16 @@ begin
                map_sym(sym, want_on, want_off, key_pressed_n(m65_comma),      st_comma,    true);   -- <
                map_sym(sym, want_on, want_off, key_pressed_n(m65_dot),        st_dot,      true);   -- >
                map_sym(sym, want_on, want_off, key_pressed_n(m65_slash),      st_slash,    true);   -- ?
-               map_sym(sym, want_on, want_off, key_pressed_n(m65_arrow_left), st_grave,    true);   -- ~
             else
                map_sym(sym, want_on, want_off, key_pressed_n(m65_plus),       st_equal,    true);   -- +
                map_sym(sym, want_on, want_off, key_pressed_n(m65_minus),      st_minus,    false);  -- -
-               map_sym(sym, want_on, want_off, key_pressed_n(m65_gbp),        st_bslash,   false);  -- \
-               map_sym(sym, want_on, want_off, key_pressed_n(m65_at),         st_2,        true);   -- @
+               if uk then   -- UK ST: \ on the ISO key, @ is Shift+'
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_gbp),     st_iso,      false);  -- \
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_at),      st_quote,    true);   -- @
+               else
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_gbp),     st_bslash,   false);  -- \
+                  map_sym(sym, want_on, want_off, key_pressed_n(m65_at),      st_2,        true);   -- @
+               end if;
                map_sym(sym, want_on, want_off, key_pressed_n(m65_asterisk),   st_8,        true);   -- *
                map_sym(sym, want_on, want_off, key_pressed_n(m65_arrow_up),   st_6,        true);   -- ^
                map_sym(sym, want_on, want_off, key_pressed_n(m65_colon),      st_semicol,  true);   -- :

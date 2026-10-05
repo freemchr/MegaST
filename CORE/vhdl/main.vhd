@@ -54,6 +54,7 @@ entity main is
       st_pmod_i               : in  std_logic;              -- serial port, MIDI and printer port on the PMODs
       st_cubase_i             : in  std_logic;              -- Cubase 2/3 dongle in the cartridge port
       st_kbd_print_i          : in  std_logic;              -- keyboard: symbols as printed on the MEGA65 keys
+      st_kbd_uk_i             : in  std_logic;              -- ... for a UK TOS (else US)
 
       -- MEGA65 real time clock (M2M format), used by the Mega ST RTC (rp5c15_m65.sv)
       rtc_i                   : in  std_logic_vector(64 downto 0);
@@ -557,6 +558,7 @@ begin
          key_num_i            => kb_key_num_i,
          key_pressed_n_i      => kb_key_pressed_n_i,
          as_printed_i         => st_kbd_print_i,
+         uk_i                 => st_kbd_uk_i,
 
          -- Atari ST keyboard matrix
          st_matrix_n_o        => st_matrix_n

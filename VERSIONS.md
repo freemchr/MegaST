@@ -1,13 +1,17 @@
-Version 0.4.8 beta - not released yet
-=====================================
+Version 0.4.8 beta - October 6, 2026
+====================================
 
 * Changing the machine type or the memory size in the menu crashed the ST until a TOS was
   loaded again (issue #7). TOS keeps the memory layout in RAM and trusts it at the next reset.
   The core now clears it and restarts the ST with a cold boot automatically.
-* New option "Keyboard as printed" in "Controllers & ports" (issue #6): digits and symbols give
-  the character printed on the MEGA65 key (US TOS) instead of the ST key at the same position.
+* New option "Keyboard" in "Controllers & ports" (issue #6): "As printed, US TOS" / "As printed,
+  UK TOS" give the character printed on the MEGA65 key instead of the ST key at the same position
+  ("ST keys (positional)" stays the default).
+* MEGA65 R3/R3A support: its own core file with the ST RAM in block RAM (512 KB, no Viking, no
+  STEroids). Confirmed working on an R3A by a tester (issue #2). Builds for the R4 and R5 are
+  included too (not tested on hardware yet).
 
-**Important:** the menu has one more item, so `/atarist/stcfg` must be the new 95 byte file
+**Important:** the menu has five more items, so `/atarist/stcfg` must be the new 99 byte file
 from the release zip (the old 94 byte file is reported as corrupt and settings are not saved).
 
 Version 0.4.7 beta - October 5, 2026

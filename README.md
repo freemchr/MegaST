@@ -13,11 +13,11 @@ runs games and GEM programs from floppy and hard disk images. Download the core 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
-**Latest version: [0.4.7 beta](https://github.com/freemchr/MegaST/releases/tag/v0.4.7)**
-(October 5, 2026): the A key works (it did not in 0.4.6), and the new HDMI option "DVI mode (no
-sound)" helps DVI monitors on an HDMI-to-DVI cable. When updating from 0.4.6, also copy the new
-`atarist/stcfg` from the zip, otherwise the menu settings are not saved. All changes:
-[VERSIONS.md](VERSIONS.md).
+**Latest version: [0.4.8 beta](https://github.com/freemchr/MegaST/releases/tag/v0.4.8)**
+(October 6, 2026, pre-release for testing): core files for the R3/R3A, R4, R5 and R6; the ST
+restarts by itself after changing the machine type or memory size; new keyboard option "as
+printed". Copy the new `atarist/stcfg` (99 bytes) from the zip, otherwise the menu settings are
+not saved. All changes: [VERSIONS.md](VERSIONS.md).
 
 Tested on a MEGA65 R6
 ---------------------
@@ -88,7 +88,7 @@ Requirements
   * your floppy disk images (`.st`), hard disk images (`.hd`, `.img`, `.vhd`) and cartridges (`.stc`, `.img`)
   * optionally `stcfg`, an empty settings file, if you want the menu settings to be saved (included
     in the release zip, or `cd M2M/tools && ./make_config.sh stcfg auto`). The file must have exactly
-    as many bytes as the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 95). When
+    as many bytes as the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 99). When
     the menu changes in a new release, a settings file of the old size is ignored: use the new one.
 
 Usage
@@ -117,11 +117,12 @@ Usage
 
 * Numeric keypad: hold the <kbd>MEGA</kbd> key. MEGA + `0`..`9`, `+`, `-`, `*`, `/`, `.` and
   <kbd>Return</kbd> are the keypad keys, MEGA + Shift + `8` / `9` are the keypad keys `(` and `)`.
-* **Keyboard as printed** (next version, "Controllers & ports" menu, issue #6): digits and symbols
+* **Keyboard "as printed"** (0.4.8, "Controllers & ports" → "Keyboard", issue #6): digits and symbols
   give the character printed on the MEGA65 key instead of the ST key at the same position, e.g.
-  Shift + `2` is `"`, `+` is `+`, `@` is `@`, `:` is `:`. This assumes the US keyboard layout (a
-  US TOS, or EmuTOS set to US); with other TOS languages the ST itself uses another layout.
-  Characters that are not printed on the MEGA65:
+  Shift + `2` is `"`, `+` is `+`, `@` is `@`, `:` is `:`. The ST's own layout depends on the
+  language of the TOS, so choose "As printed, US TOS" or "As printed, UK TOS" (the EmuTOS in the
+  release zip is UK). Other TOS languages: use "ST keys (positional)", the default. Characters that
+  are not printed on the MEGA65:
 
   | MEGA65               | Atari ST             |
   |----------------------|----------------------|
@@ -131,7 +132,7 @@ Usage
   | Shift + `-`          | `_`                  |
   | `←`, Shift + `←`     | `` ` ``, `~`         |
 
-  Keys without a shifted symbol on the MEGA65 (`0`, `+`, `=`) give the same character with Shift.
+  Keys without a shifted symbol on the MEGA65 (`0`, `+`, `=`, `↑`) give the same character with Shift.
 * **Mouse:** an Atari ST mouse works out of the box. For an **Amiga mouse** (or a mouSTer in
   Amiga mode) or a **Commodore 1351** mouse, select it first in the menu: "Controllers & ports" →
   "Mouse type" → Amiga / 1351. With the wrong mouse type, an Amiga mouse only jitters in small
@@ -151,11 +152,10 @@ TOS may not). It is fine for GEM programs and for a first test, but some games c
 **For games, use a real Atari TOS:** TOS 1.02 or 1.04 for the ST (some games only run reliably
 with TOS 1.02), TOS 1.62 or 2.06 for the STe. Use a ROM image dumped from your own Atari.
 
-**Changing the memory size or the machine type:** in version 0.4.7 and older, the ST does not boot
-after the memory size or the machine type has been changed in the menu: TOS keeps the old memory
-layout in RAM and trusts it at the next reset. Load a TOS with "TOS" in the menu (or switch the
-MEGA65 off and on) after the change. The next version restarts the ST with a cold boot
-automatically (issue #7).
+**Changing the memory size or the machine type:** since 0.4.8 the ST restarts with a cold boot by
+itself (issue #7). In 0.4.7 and older it did not boot after such a change, because TOS keeps the
+old memory layout in RAM and trusts it at the next reset: load a TOS with "TOS" in the menu (or
+switch the MEGA65 off and on) after the change.
 
 Real time clock
 ---------------
