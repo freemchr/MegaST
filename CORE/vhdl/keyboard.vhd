@@ -276,11 +276,13 @@ begin
       variable fshift   : boolean;
       variable keypad   : boolean;
 
-      -- ST key (col, row) is pressed while the MEGA65 key is pressed
-      procedure map_key(m65 : natural; atari : natural) is
+      -- ST key (col, row) is pressed while the MEGA65 key is pressed.
+      -- The matrix and the key state are explicit parameters: Vivado (2026.1) turns the first call of a
+      -- procedure that writes the process variable m implicitly into a constant (key always pressed).
+      procedure map_key(variable mx : inout std_logic_vector(119 downto 0); m65_n : std_logic; atari : natural) is
       begin
-         if key_pressed_n(m65) = '0' then
-            m(atari) := '0';
+         if m65_n = '0' then
+            mx(atari) := '0';
          end if;
       end procedure map_key;
 
@@ -297,99 +299,99 @@ begin
                               key_pressed_n(m65_f9) = '0');
 
          -- letters
-         map_key(m65_a, st_a);   map_key(m65_b, st_b);   map_key(m65_c, st_c);   map_key(m65_d, st_d);
-         map_key(m65_e, st_e);   map_key(m65_f, st_f);   map_key(m65_g, st_g);   map_key(m65_h, st_h);
-         map_key(m65_i, st_i);   map_key(m65_j, st_j);   map_key(m65_k, st_k);   map_key(m65_l, st_l);
-         map_key(m65_m, st_m);   map_key(m65_n, st_n);   map_key(m65_o, st_o);   map_key(m65_p, st_p);
-         map_key(m65_q, st_q);   map_key(m65_r, st_r);   map_key(m65_s, st_s);   map_key(m65_t, st_t);
-         map_key(m65_u, st_u);   map_key(m65_v, st_v);   map_key(m65_w, st_w);   map_key(m65_x, st_x);
-         map_key(m65_y, st_y);   map_key(m65_z, st_z);
+         map_key(m, key_pressed_n(m65_a), st_a);   map_key(m, key_pressed_n(m65_b), st_b);   map_key(m, key_pressed_n(m65_c), st_c);   map_key(m, key_pressed_n(m65_d), st_d);
+         map_key(m, key_pressed_n(m65_e), st_e);   map_key(m, key_pressed_n(m65_f), st_f);   map_key(m, key_pressed_n(m65_g), st_g);   map_key(m, key_pressed_n(m65_h), st_h);
+         map_key(m, key_pressed_n(m65_i), st_i);   map_key(m, key_pressed_n(m65_j), st_j);   map_key(m, key_pressed_n(m65_k), st_k);   map_key(m, key_pressed_n(m65_l), st_l);
+         map_key(m, key_pressed_n(m65_m), st_m);   map_key(m, key_pressed_n(m65_n), st_n);   map_key(m, key_pressed_n(m65_o), st_o);   map_key(m, key_pressed_n(m65_p), st_p);
+         map_key(m, key_pressed_n(m65_q), st_q);   map_key(m, key_pressed_n(m65_r), st_r);   map_key(m, key_pressed_n(m65_s), st_s);   map_key(m, key_pressed_n(m65_t), st_t);
+         map_key(m, key_pressed_n(m65_u), st_u);   map_key(m, key_pressed_n(m65_v), st_v);   map_key(m, key_pressed_n(m65_w), st_w);   map_key(m, key_pressed_n(m65_x), st_x);
+         map_key(m, key_pressed_n(m65_y), st_y);   map_key(m, key_pressed_n(m65_z), st_z);
 
          -- digits, or the numeric keypad while the MEGA key is held down
          if keypad then
-            map_key(m65_1, st_kp_1);   map_key(m65_2, st_kp_2);   map_key(m65_3, st_kp_3);
-            map_key(m65_4, st_kp_4);   map_key(m65_5, st_kp_5);   map_key(m65_6, st_kp_6);
-            map_key(m65_7, st_kp_7);   map_key(m65_0, st_kp_0);
+            map_key(m, key_pressed_n(m65_1), st_kp_1);   map_key(m, key_pressed_n(m65_2), st_kp_2);   map_key(m, key_pressed_n(m65_3), st_kp_3);
+            map_key(m, key_pressed_n(m65_4), st_kp_4);   map_key(m, key_pressed_n(m65_5), st_kp_5);   map_key(m, key_pressed_n(m65_6), st_kp_6);
+            map_key(m, key_pressed_n(m65_7), st_kp_7);   map_key(m, key_pressed_n(m65_0), st_kp_0);
             -- MEGA + Shift + 8 / 9 = ( ) as printed on the MEGA65
             if shift then
-               map_key(m65_8, st_kp_lpar);   map_key(m65_9, st_kp_rpar);
+               map_key(m, key_pressed_n(m65_8), st_kp_lpar);   map_key(m, key_pressed_n(m65_9), st_kp_rpar);
             else
-               map_key(m65_8, st_kp_8);      map_key(m65_9, st_kp_9);
+               map_key(m, key_pressed_n(m65_8), st_kp_8);      map_key(m, key_pressed_n(m65_9), st_kp_9);
             end if;
-            map_key(m65_plus,     st_kp_plus);
-            map_key(m65_minus,    st_kp_minus);
-            map_key(m65_asterisk, st_kp_star);
-            map_key(m65_slash,    st_kp_slash);
-            map_key(m65_dot,      st_kp_dot);
-            map_key(m65_return,   st_kp_enter);
+            map_key(m, key_pressed_n(m65_plus), st_kp_plus);
+            map_key(m, key_pressed_n(m65_minus), st_kp_minus);
+            map_key(m, key_pressed_n(m65_asterisk), st_kp_star);
+            map_key(m, key_pressed_n(m65_slash), st_kp_slash);
+            map_key(m, key_pressed_n(m65_dot), st_kp_dot);
+            map_key(m, key_pressed_n(m65_return), st_kp_enter);
          else
-            map_key(m65_1, st_1);   map_key(m65_2, st_2);   map_key(m65_3, st_3);   map_key(m65_4, st_4);
-            map_key(m65_5, st_5);   map_key(m65_6, st_6);   map_key(m65_7, st_7);   map_key(m65_8, st_8);
-            map_key(m65_9, st_9);   map_key(m65_0, st_0);
+            map_key(m, key_pressed_n(m65_1), st_1);   map_key(m, key_pressed_n(m65_2), st_2);   map_key(m, key_pressed_n(m65_3), st_3);   map_key(m, key_pressed_n(m65_4), st_4);
+            map_key(m, key_pressed_n(m65_5), st_5);   map_key(m, key_pressed_n(m65_6), st_6);   map_key(m, key_pressed_n(m65_7), st_7);   map_key(m, key_pressed_n(m65_8), st_8);
+            map_key(m, key_pressed_n(m65_9), st_9);   map_key(m, key_pressed_n(m65_0), st_0);
          end if;
 
          -- function keys
          if fshift then
-            map_key(m65_f1, st_f2);
-            map_key(m65_f3, st_f4);
-            map_key(m65_f5, st_f6);
-            map_key(m65_f7, st_f8);
-            map_key(m65_f9, st_f10);
+            map_key(m, key_pressed_n(m65_f1), st_f2);
+            map_key(m, key_pressed_n(m65_f3), st_f4);
+            map_key(m, key_pressed_n(m65_f5), st_f6);
+            map_key(m, key_pressed_n(m65_f7), st_f8);
+            map_key(m, key_pressed_n(m65_f9), st_f10);
          else
-            map_key(m65_f1, st_f1);
-            map_key(m65_f3, st_f3);
-            map_key(m65_f5, st_f5);
-            map_key(m65_f7, st_f7);
-            map_key(m65_f9, st_f9);
+            map_key(m, key_pressed_n(m65_f1), st_f1);
+            map_key(m, key_pressed_n(m65_f3), st_f3);
+            map_key(m, key_pressed_n(m65_f5), st_f5);
+            map_key(m, key_pressed_n(m65_f7), st_f7);
+            map_key(m, key_pressed_n(m65_f9), st_f9);
          end if;
-         map_key(m65_f11,        st_undo);
-         map_key(m65_f13,        st_help);
+         map_key(m, key_pressed_n(m65_f11), st_undo);
+         map_key(m, key_pressed_n(m65_f13), st_help);
 
          -- special keys
          if not keypad then
-            map_key(m65_return,  st_return);
+            map_key(m, key_pressed_n(m65_return), st_return);
          end if;
-         map_key(m65_space,      st_space);
-         map_key(m65_esc,        st_esc);
-         map_key(m65_ins_del,    st_bs);
-         map_key(m65_tab,        st_tab);
-         map_key(m65_arrow_up,   st_delete);
-         map_key(m65_no_scrl,    st_insert);
-         map_key(m65_clr_home,   st_home);
-         map_key(m65_run_stop,   st_undo);
+         map_key(m, key_pressed_n(m65_space), st_space);
+         map_key(m, key_pressed_n(m65_esc), st_esc);
+         map_key(m, key_pressed_n(m65_ins_del), st_bs);
+         map_key(m, key_pressed_n(m65_tab), st_tab);
+         map_key(m, key_pressed_n(m65_arrow_up), st_delete);
+         map_key(m, key_pressed_n(m65_no_scrl), st_insert);
+         map_key(m, key_pressed_n(m65_clr_home), st_home);
+         map_key(m, key_pressed_n(m65_run_stop), st_undo);
 
          -- symbols (positional mapping)
          if not keypad then
-            map_key(m65_plus,       st_minus);
-            map_key(m65_minus,      st_equal);
-            map_key(m65_asterisk,   st_rbracket);
-            map_key(m65_dot,        st_dot);
-            map_key(m65_slash,      st_slash);
+            map_key(m, key_pressed_n(m65_plus), st_minus);
+            map_key(m, key_pressed_n(m65_minus), st_equal);
+            map_key(m, key_pressed_n(m65_asterisk), st_rbracket);
+            map_key(m, key_pressed_n(m65_dot), st_dot);
+            map_key(m, key_pressed_n(m65_slash), st_slash);
          end if;
-         map_key(m65_gbp,        st_bslash);
-         map_key(m65_arrow_left, st_grave);
-         map_key(m65_at,         st_lbracket);
-         map_key(m65_colon,      st_semicol);
-         map_key(m65_semicolon,  st_quote);
-         map_key(m65_equal,      st_iso);
-         map_key(m65_comma,      st_comma);
+         map_key(m, key_pressed_n(m65_gbp), st_bslash);
+         map_key(m, key_pressed_n(m65_arrow_left), st_grave);
+         map_key(m, key_pressed_n(m65_at), st_lbracket);
+         map_key(m, key_pressed_n(m65_colon), st_semicol);
+         map_key(m, key_pressed_n(m65_semicolon), st_quote);
+         map_key(m, key_pressed_n(m65_equal), st_iso);
+         map_key(m, key_pressed_n(m65_comma), st_comma);
 
          -- modifiers (MEGA + Shift + 8 / 9 are the keypad keys ( ): the ST does not see the shift key)
          if not fshift and not (keypad and (key_pressed_n(m65_8) = '0' or key_pressed_n(m65_9) = '0')) then
-            map_key(m65_left_shift,  st_lshift);
-            map_key(m65_right_shift, st_rshift);
+            map_key(m, key_pressed_n(m65_left_shift), st_lshift);
+            map_key(m, key_pressed_n(m65_right_shift), st_rshift);
          end if;
-         map_key(m65_ctrl,       st_ctrl);
-         map_key(m65_alt,        st_alt);
+         map_key(m, key_pressed_n(m65_ctrl), st_ctrl);
+         map_key(m, key_pressed_n(m65_alt), st_alt);
          if caps_counter /= 0 then
             m(st_caps) := '0';
          end if;
 
          -- cursor keys
-         map_key(m65_up_crsr,    st_up);
-         map_key(m65_vert_crsr,  st_down);
-         map_key(m65_left_crsr,  st_left);
-         map_key(m65_horz_crsr,  st_right);
+         map_key(m, key_pressed_n(m65_up_crsr), st_up);
+         map_key(m, key_pressed_n(m65_vert_crsr), st_down);
+         map_key(m, key_pressed_n(m65_left_crsr), st_left);
+         map_key(m, key_pressed_n(m65_horz_crsr), st_right);
 
          st_matrix_n_o <= m;
       end if;

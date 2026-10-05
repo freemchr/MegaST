@@ -45,6 +45,8 @@ begin
     end procedure;
   begin
     wait for 100 ns;
+    press((0 => 10));                    expect((0 => st(4, 5)),  "A");
+    press((0 => 13));                    expect((0 => st(5, 5)),  "S");
     press((0 => K_8));                   expect((0 => st(8, 1)),  "8");
     press((K_MEGA, K_8));                expect((0 => st(13, 3)), "MEGA+8 = keypad 8");
     press((K_MEGA, K_1));                expect((0 => st(12, 6)), "MEGA+1 = keypad 1");

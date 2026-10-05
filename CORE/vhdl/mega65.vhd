@@ -256,6 +256,18 @@ signal jp_snap      : std_logic_vector(95 downto 0);
 signal jp_sr        : std_logic_vector(95 downto 0);
 signal jp_capture, jp_sel, jp_shift, jp_tck, jp_tdi : std_logic;
 
+-- JTAG probe of the keyboard (USER3 data register, 176 bits, see below)
+signal kp_keys      : std_logic_vector(79 downto 0) := (others => '1');
+signal kp_cnt_a     : unsigned(7 downto 0) := (others => '0');
+signal kp_cnt_s     : unsigned(7 downto 0) := (others => '0');
+signal kp_cnt_st_a  : unsigned(7 downto 0) := (others => '0');
+signal kp_st_a_old  : std_logic := '1';
+signal kp_st_matrix : std_logic_vector(119 downto 0);
+signal kp_kbd_bytes : std_logic_vector(31 downto 0);
+signal kp_snap      : std_logic_vector(175 downto 0);
+signal kp_sr        : std_logic_vector(175 downto 0);
+signal kp_capture, kp_sel, kp_shift, kp_tck, kp_tdi : std_logic;
+
 ---------------------------------------------------------------------------------------------
 -- Clocks and active high reset signals for each clock domain
 ---------------------------------------------------------------------------------------------
@@ -622,7 +634,9 @@ begin
          sdram_a_o            => sdram_a_o,
          sdram_dqml_o         => sdram_dqml_o,
          sdram_dqmh_o         => sdram_dqmh_o,
-         sdram_dq_io          => sdram_dq_io
+         sdram_dq_io          => sdram_dq_io,
+         dbg_st_matrix_o      => kp_st_matrix,
+         dbg_kbd_bytes_o      => kp_kbd_bytes
       ); -- i_main
 
    ---------------------------------------------------------------------------------------------
@@ -1067,5 +1081,58 @@ begin
          end if;
       end if;
    end process jp_shiftreg;
+
+   -- JTAG probe of the keyboard: JTAG instruction USER3 (0x22), then a 176 bit data register scan
+   -- (LSB first) returns: 119..0: the ST keyboard matrix from keyboard.vhd (low active, column * 8 + row),
+   -- 151..120: the last 4 bytes the CPU read from the keyboard ACIA (newest in 127..120),
+   -- 159..152: presses of the MEGA65 key A (key 10), 167..160: presses of S (key 13),
+   -- 175..168: presses of the ST matrix key A (column 4, row 5).
+   kp_sample : process (main_clk)
+   begin
+      if rising_edge(main_clk) then
+         kp_keys(main_kb_key_num_i) <= main_kb_key_pressed_n_i;
+         if main_kb_key_num_i = 10 and main_kb_key_pressed_n_i = '0' and kp_keys(10) = '1' then
+            kp_cnt_a <= kp_cnt_a + 1;
+         end if;
+         if main_kb_key_num_i = 13 and main_kb_key_pressed_n_i = '0' and kp_keys(13) = '1' then
+            kp_cnt_s <= kp_cnt_s + 1;
+         end if;
+         kp_st_a_old <= kp_st_matrix(37);
+         if kp_st_matrix(37) = '0' and kp_st_a_old = '1' then
+            kp_cnt_st_a <= kp_cnt_st_a + 1;
+         end if;
+         kp_snap <= std_logic_vector(kp_cnt_st_a) & std_logic_vector(kp_cnt_s) & std_logic_vector(kp_cnt_a) &
+                    kp_kbd_bytes & kp_st_matrix;
+      end if;
+   end process kp_sample;
+
+   kp_bscan : BSCANE2
+      generic map (
+         JTAG_CHAIN => 3
+      )
+      port map (
+         CAPTURE => kp_capture,
+         DRCK    => open,
+         RESET   => open,
+         RUNTEST => open,
+         SEL     => kp_sel,
+         SHIFT   => kp_shift,
+         TCK     => kp_tck,
+         TDI     => kp_tdi,
+         TMS     => open,
+         UPDATE  => open,
+         TDO     => kp_sr(0)
+      );
+
+   kp_shiftreg : process (kp_tck)
+   begin
+      if rising_edge(kp_tck) then
+         if kp_sel = '1' and kp_capture = '1' then
+            kp_sr <= kp_snap;
+         elsif kp_sel = '1' and kp_shift = '1' then
+            kp_sr <= kp_tdi & kp_sr(175 downto 1);
+         end if;
+      end if;
+   end process kp_shiftreg;
 
 end architecture synthesis;

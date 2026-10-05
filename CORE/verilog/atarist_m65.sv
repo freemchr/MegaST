@@ -150,7 +150,11 @@ module atarist_m65
 	output [12:0] sdram_a,
 	output        sdram_dqml,
 	output        sdram_dqmh,
-	inout  [15:0] sdram_dq
+	inout  [15:0] sdram_dq,
+
+	// debugging (JTAG probe in mega65.vhd): the last 4 bytes the CPU read from the keyboard ACIA's
+	// data register, the newest one in bits 7..0
+	output reg [31:0] dbg_kbd_bytes
 );
 
 wire UART_RXD = uart_rxd;
@@ -753,6 +757,16 @@ assign joy_port_ste = cfg_ste_pads;
 /* ------------------------------------------------------------------------------ */
 
 wire [7:0] kbd_acia_data_out;
+
+// MEGA65 debugging: remember the bytes the CPU reads from the keyboard ACIA's data register
+wire       kbd_data_rd = n6850 & ~mbus_a[2] & mbus_a[1] & rw;
+reg        kbd_data_rd_d;
+reg  [7:0] kbd_data_last;
+always @(posedge clk_32) begin
+	kbd_data_rd_d <= kbd_data_rd;
+	if (kbd_data_rd) kbd_data_last <= kbd_acia_data_out;
+	if (kbd_data_rd_d & ~kbd_data_rd) dbg_kbd_bytes <= { dbg_kbd_bytes[23:0], kbd_data_last };
+end
 wire       kbd_acia_irq;
 
 acia kbd_acia (

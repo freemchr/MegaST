@@ -136,7 +136,11 @@ entity main is
       sdram_a_o               : out   std_logic_vector(12 downto 0);
       sdram_dqml_o            : out   std_logic;
       sdram_dqmh_o            : out   std_logic;
-      sdram_dq_io             : inout std_logic_vector(15 downto 0)
+      sdram_dq_io             : inout std_logic_vector(15 downto 0);
+
+      -- debugging (JTAG probe in mega65.vhd)
+      dbg_st_matrix_o         : out std_logic_vector(119 downto 0);  -- ST keyboard matrix (low active)
+      dbg_kbd_bytes_o         : out std_logic_vector(31 downto 0)    -- last 4 bytes the CPU read from the keyboard ACIA
    );
 end entity main;
 
@@ -238,7 +242,8 @@ component atarist_m65 is
       sdram_a         : out   std_logic_vector(12 downto 0);
       sdram_dqml      : out   std_logic;
       sdram_dqmh      : out   std_logic;
-      sdram_dq        : inout std_logic_vector(15 downto 0)
+      sdram_dq        : inout std_logic_vector(15 downto 0);
+      dbg_kbd_bytes   : out   std_logic_vector(31 downto 0)
    );
 end component atarist_m65;
 
@@ -496,7 +501,8 @@ begin
          sdram_a         => sdram_a_o,
          sdram_dqml      => sdram_dqml_o,
          sdram_dqmh      => sdram_dqmh_o,
-         sdram_dq        => sdram_dq_io
+         sdram_dq        => sdram_dq_io,
+         dbg_kbd_bytes   => dbg_kbd_bytes_o
       ); -- i_atarist
 
    -- Floppy drives A: and B: can be swapped in the menu (e.g. to boot from B:)
@@ -545,6 +551,8 @@ begin
          -- Atari ST keyboard matrix
          st_matrix_n_o        => st_matrix_n
       ); -- i_keyboard
+
+   dbg_st_matrix_o <= st_matrix_n;
 
 end architecture synthesis;
 
