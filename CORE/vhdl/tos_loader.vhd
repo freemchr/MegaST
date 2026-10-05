@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
--- Atari ST/STe for MEGA65
+-- Atari ST/STe for MEGA65 (MegaST)
 --
 -- TOS and cartridge loader: QNICE devices that receive the TOS image (auto-load,
 -- see C_CRTROMS_AUTO in globals.vhd), another TOS image and cartridge images
@@ -28,7 +28,9 @@
 -- the base address of the ROM at offset 8 (os_beg): If the high word of it is
 -- $00FC, then tos192k_o is set.
 --
--- Atari ST port 2026, licensed under GPL v3
+-- This machine is based on AtariST_MiSTer
+-- Powered by MiSTer2MEGA65
+-- MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
 library ieee;

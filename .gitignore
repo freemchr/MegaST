@@ -33,3 +33,6 @@ TOS/
 stcfg
 *.st
 *.zip
+
+# Python
+__pycache__/

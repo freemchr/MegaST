@@ -23,7 +23,9 @@
 // sector buffer words are little endian ({byte 1, byte 0}) like MiSTer's
 // hps_io in WIDE mode.
 //
-// Atari ST port 2026, licensed under GPL v3
+// This machine is based on AtariST_MiSTer
+// Powered by MiSTer2MEGA65
+// MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 //
 
 module acsi_ctrl (

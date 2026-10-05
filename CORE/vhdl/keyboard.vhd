@@ -1,5 +1,5 @@
 ---------------------------------------------------------------------------------------------------------
--- Atari ST/STe for MEGA65
+-- Atari ST/STe for MEGA65 (MegaST)
 --
 -- MEGA65 keyboard to Atari ST keyboard matrix
 --
@@ -33,7 +33,8 @@
 -- The MEGA65 Help key opens the M2M on-screen-menu and is therefore not mapped.
 --
 -- MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
--- Atari ST port 2026, licensed under GPL v3
+-- This machine is based on AtariST_MiSTer
+-- MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 ---------------------------------------------------------------------------------------------------------
 
 library IEEE;

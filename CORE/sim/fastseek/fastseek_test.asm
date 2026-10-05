@@ -13,7 +13,9 @@
 ; VD_UB_CP_SHIFT=3: checkpoints at least every 8 sectors: for the 6 MB file
 ; the shift has to become 5 (the 512 checkpoints cover 8 MB)
 ;
-; Atari ST port 2026, licensed under GPL v3
+; This machine is based on AtariST_MiSTer
+; Powered by MiSTer2MEGA65
+; MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 ; ****************************************************************************
 
 #define RELEASE
