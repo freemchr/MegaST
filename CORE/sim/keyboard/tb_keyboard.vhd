@@ -1,5 +1,7 @@
 -- GHDL test of keyboard.vhd: numeric keypad via the MEGA key (MEGA + digit, MEGA + Shift + 8/9 = ( ),
 -- MEGA + Return = keypad Enter) and the normal mapping of the same keys without MEGA.
+-- Menu "Keyboard as printed": digits and symbols as printed on the MEGA65 keys; a monitor checks that the
+-- ST never sees a symbol key together with the wrong Shift state (C_SETTLE).
 library ieee; use ieee.std_logic_1164.all;
 entity tb_keyboard is end entity;
 architecture sim of tb_keyboard is
@@ -8,6 +10,13 @@ architecture sim of tb_keyboard is
   constant K_8      : natural := 27;
   constant K_LSHIFT : natural := 15;
   constant K_MEGA   : natural := 61;
+  constant K_2      : natural := 59;
+  constant K_7      : natural := 24;
+  constant K_PLUS   : natural := 40;
+  constant K_AT     : natural := 46;
+  constant K_COLON  : natural := 45;
+  constant K_GBP    : natural := 48;
+  constant K_A      : natural := 10;
   type key_list is array(natural range <>) of natural;
 
   function st(col : natural; row : natural) return natural is begin return col * 8 + row; end function;
@@ -18,12 +27,27 @@ architecture sim of tb_keyboard is
   signal key_n   : std_logic;
   signal matrix  : std_logic_vector(119 downto 0);
   signal done    : boolean := false;
+  signal printed : std_logic := '0';
+  -- monitor: key mon_key must never be pressed with (mon_shift = '1') or without (mon_shift = '0') Shift
+  signal mon_key   : integer := -1;
+  signal mon_shift : std_logic := '0';
 begin
   clk <= not clk after 5 ns when not done;
   key_n <= pressed(key_num);
 
   dut : entity work.keyboard generic map (G_CLK_SPEED => 1000) port map (
-    clk_main_i => clk, key_num_i => key_num, key_pressed_n_i => key_n, st_matrix_n_o => matrix);
+    clk_main_i => clk, key_num_i => key_num, key_pressed_n_i => key_n, as_printed_i => printed,
+    st_matrix_n_o => matrix);
+
+  monitor : process(clk)
+    variable sh : std_logic;
+  begin
+    if rising_edge(clk) and mon_key >= 0 then
+      sh := not (matrix(st(1, 5)) and matrix(st(3, 7)));
+      assert not (matrix(mon_key) = '0' and sh = mon_shift)
+        report "ST sees the symbol key with the wrong Shift state" severity failure;
+    end if;
+  end process;
 
   scan : process(clk) begin
     if rising_edge(clk) then key_num <= (key_num + 1) mod 80; end if;
@@ -55,6 +79,28 @@ begin
     press((K_MEGA, K_RETURN));           expect((0 => st(14, 7)), "MEGA+Return = keypad Enter");
     press((0 => K_RETURN));              expect((0 => st(11, 5)), "Return");
     press((0 => K_MEGA));                expect((0 to -1 => 0), "MEGA alone");
+
+    -- keyboard as printed (the monitor watches every transition)
+    printed <= '1';
+    press((0 => K_2));                   expect((0 => st(5, 1)), "printed: 2");
+    mon_key <= st(11, 6); mon_shift <= '0';      -- " is ST Shift+': the ' key must not come without Shift
+    press((K_LSHIFT, K_2));              expect((st(11, 6), st(1, 5)), "printed: Shift+2 = double quote (ST Shift+')");
+    press((0 => K_LSHIFT));              expect((0 => st(1, 5)), "printed: Shift alone");
+    press((K_LSHIFT, K_2));              expect((st(11, 6), st(1, 5)), "printed: Shift held, then 2");
+    press((0 to -1 => 0));               -- release all keys before the monitor changes
+    mon_key <= st(11, 6); mon_shift <= '1';      -- ' must not come with Shift
+    press((K_LSHIFT, K_7));              expect((0 => st(11, 6)), "printed: Shift+7 = quote (ST ', Shift hidden)");
+    mon_key <= st(10, 1); mon_shift <= '0';      -- = must never come without Shift
+    press((0 => K_PLUS));                expect((st(10, 1), st(1, 5)), "printed: + (ST Shift+=)");
+    mon_key <= -1;
+    press((0 => K_AT));                  expect((st(5, 1), st(1, 5)), "printed: @ (ST Shift+2)");
+    press((K_LSHIFT, K_COLON));          expect((0 => st(10, 3)), "printed: Shift+: = [");
+    press((0 => K_COLON));               expect((st(10, 5), st(1, 5)), "printed: : (ST Shift+;)");
+    press((0 => K_GBP));                 expect((0 => st(11, 4)), "printed: Pound = backslash");
+    press((K_LSHIFT, K_A));              expect((st(1, 5), st(4, 5)), "printed: Shift+A");
+    press((K_MEGA, K_PLUS));             expect((0 => st(14, 5)), "printed: MEGA++ = keypad +");
+    printed <= '0';
+    press((0 => K_PLUS));                expect((0 => st(9, 2)), "positional: + (ST -)");
     done <= true; wait;
   end process;
 end architecture;

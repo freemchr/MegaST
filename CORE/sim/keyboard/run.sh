@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GHDL test of keyboard.vhd (numeric keypad via the MEGA key). Needs GHDL (e.g. from the OSS CAD Suite).
+# GHDL test of keyboard.vhd (numeric keypad via the MEGA key, menu "Keyboard as printed"). Needs GHDL (e.g. from the OSS CAD Suite).
 # Usage: ./run.sh
 set -e
 cd "$(dirname "$0")"

@@ -88,7 +88,7 @@ Requirements
   * your floppy disk images (`.st`), hard disk images (`.hd`, `.img`, `.vhd`) and cartridges (`.stc`, `.img`)
   * optionally `stcfg`, an empty settings file, if you want the menu settings to be saved (included
     in the release zip, or `cd M2M/tools && ./make_config.sh stcfg auto`). The file must have exactly
-    as many bytes as the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 94). When
+    as many bytes as the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 95). When
     the menu changes in a new release, a settings file of the old size is ignored: use the new one.
 
 Usage
@@ -117,6 +117,21 @@ Usage
 
 * Numeric keypad: hold the <kbd>MEGA</kbd> key. MEGA + `0`..`9`, `+`, `-`, `*`, `/`, `.` and
   <kbd>Return</kbd> are the keypad keys, MEGA + Shift + `8` / `9` are the keypad keys `(` and `)`.
+* **Keyboard as printed** (next version, "Controllers & ports" menu, issue #6): digits and symbols
+  give the character printed on the MEGA65 key instead of the ST key at the same position, e.g.
+  Shift + `2` is `"`, `+` is `+`, `@` is `@`, `:` is `:`. This assumes the US keyboard layout (a
+  US TOS, or EmuTOS set to US); with other TOS languages the ST itself uses another layout.
+  Characters that are not printed on the MEGA65:
+
+  | MEGA65               | Atari ST             |
+  |----------------------|----------------------|
+  | Shift + `:` / `;`    | `[` / `]`            |
+  | Shift + `@` / `*`    | `{` / `}`            |
+  | `£`, Shift + `£`     | `\`, `\|`            |
+  | Shift + `-`          | `_`                  |
+  | `←`, Shift + `←`     | `` ` ``, `~`         |
+
+  Keys without a shifted symbol on the MEGA65 (`0`, `+`, `=`) give the same character with Shift.
 * **Mouse:** an Atari ST mouse works out of the box. For an **Amiga mouse** (or a mouSTer in
   Amiga mode) or a **Commodore 1351** mouse, select it first in the menu: "Controllers & ports" →
   "Mouse type" → Amiga / 1351. With the wrong mouse type, an Amiga mouse only jitters in small
@@ -136,10 +151,11 @@ TOS may not). It is fine for GEM programs and for a first test, but some games c
 **For games, use a real Atari TOS:** TOS 1.02 or 1.04 for the ST (some games only run reliably
 with TOS 1.02), TOS 1.62 or 2.06 for the STe. Use a ROM image dumped from your own Atari.
 
-**Changing the memory size:** in version 0.4.7 and older, the ST does not boot after the memory
-size has been changed in the menu: TOS keeps the old memory layout in RAM and trusts it at the next
-reset. Load a TOS with "TOS" in the menu (or switch the MEGA65 off and on) after changing the
-memory size. The next version restarts the ST with a cold boot automatically.
+**Changing the memory size or the machine type:** in version 0.4.7 and older, the ST does not boot
+after the memory size or the machine type has been changed in the menu: TOS keeps the old memory
+layout in RAM and trusts it at the next reset. Load a TOS with "TOS" in the menu (or switch the
+MEGA65 off and on) after the change. The next version restarts the ST with a cold boot
+automatically (issue #7).
 
 Real time clock
 ---------------

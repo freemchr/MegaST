@@ -32,6 +32,18 @@
 --
 -- The MEGA65 Help key opens the M2M on-screen-menu and is therefore not mapped.
 --
+-- Menu "Keyboard as printed" (as_printed_i): digits and symbols give the character printed on the MEGA65
+-- key (for the US ST layout, i.e. a US TOS). The core presses or hides the ST's Shift key as needed, e.g. MEGA65 Shift+2
+-- is ST Shift+' ("), MEGA65 + is ST Shift+= (+). Keys without a shifted symbol on the MEGA65 give the
+-- same character with Shift. Extra characters that are not printed on the MEGA65 keys:
+--
+--    Shift + :  [          Shift + @  {          Pound      \          Arrow left           `
+--    Shift + ;  ]          Shift + *  }          Shift + -  _          Shift + Arrow left   ~
+--    Shift + Pound  |
+--
+-- When the Shift state that the ST sees has to change, the symbol key follows C_SETTLE later, so that the
+-- IKBD never sees the symbol key together with the wrong Shift state.
+--
 -- MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
 -- This machine is based on AtariST_MiSTer
 -- MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
@@ -51,6 +63,9 @@ entity keyboard is
       -- Interface to the MEGA65 keyboard
       key_num_i            : in integer range 0 to 79;   -- cycles through all MEGA65 keys
       key_pressed_n_i      : in std_logic;               -- low active: debounced feedback: is kb_key_num_i pressed right now?
+
+      -- Menu: digits and symbols as printed on the MEGA65 keys (else positional)
+      as_printed_i         : in std_logic := '0';
 
       -- Atari ST keyboard matrix: low active, index = column * 8 + row
       st_matrix_n_o        : out std_logic_vector(119 downto 0)
@@ -245,8 +260,14 @@ constant C_CAPS_PULSE : natural := G_CLK_SPEED / 20;  -- 50 ms
 
 signal key_pressed_n : std_logic_vector(79 downto 0) := (others => '1');
 
+-- "Keyboard as printed": delay of a symbol key after the Shift state of the ST changed
+constant C_SETTLE     : natural := G_CLK_SPEED / 50;  -- 20 ms
+
 signal caps_state    : std_logic := '1';
 signal caps_counter  : natural range 0 to C_CAPS_PULSE := 0;
+
+signal st_shift_d    : boolean := false;
+signal settle_cnt    : natural range 0 to C_SETTLE := 0;
 
 begin
 
@@ -276,6 +297,11 @@ begin
       variable shift    : boolean;
       variable fshift   : boolean;
       variable keypad   : boolean;
+      variable printed  : boolean;
+      variable sym      : std_logic_vector(119 downto 0);   -- symbol keys of the "as printed" mapping
+      variable want_on  : boolean;                          -- a pressed symbol needs Shift
+      variable want_off : boolean;                          -- a pressed symbol needs no Shift
+      variable st_shift : boolean;
 
       -- ST key (col, row) is pressed while the MEGA65 key is pressed.
       -- The matrix and the key state are explicit parameters: Vivado (2026.1) turns the first call of a
@@ -287,11 +313,25 @@ begin
          end if;
       end procedure map_key;
 
+      -- "As printed": ST key atari with (sh = true) or without Shift is pressed while the MEGA65 key is pressed
+      procedure map_sym(variable mx : inout std_logic_vector(119 downto 0); variable on_v, off_v : inout boolean;
+                        m65_n : std_logic; atari : natural; sh : boolean) is
+      begin
+         if m65_n = '0' then
+            mx(atari) := '0';
+            if sh then on_v := true; else off_v := true; end if;
+         end if;
+      end procedure map_sym;
+
    begin
       if rising_edge(clk_main_i) then
          m      := (others => '1');
          shift  := key_pressed_n(m65_left_shift) = '0' or key_pressed_n(m65_right_shift) = '0';
          keypad := key_pressed_n(m65_mega) = '0';
+         printed := as_printed_i = '1' and not keypad;
+         sym      := (others => '1');
+         want_on  := false;
+         want_off := false;
 
          -- Shift + F1/F3/F5/F7/F9 means F2/F4/F6/F8/F10 (as printed on the MEGA65 keyboard):
          -- in this case the ST does not see the shift key
@@ -325,6 +365,30 @@ begin
             map_key(m, key_pressed_n(m65_slash), st_kp_slash);
             map_key(m, key_pressed_n(m65_dot), st_kp_dot);
             map_key(m, key_pressed_n(m65_return), st_kp_enter);
+         elsif printed then
+            if shift then   -- ! " # $ % & ' ( ) 0
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_1), st_1,     true);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_2), st_quote, true);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_3), st_3,     true);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_4), st_4,     true);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_5), st_5,     true);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_6), st_7,     true);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_7), st_quote, false);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_8), st_9,     true);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_9), st_0,     true);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_0), st_0,     false);
+            else
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_1), st_1, false);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_2), st_2, false);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_3), st_3, false);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_4), st_4, false);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_5), st_5, false);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_6), st_6, false);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_7), st_7, false);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_8), st_8, false);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_9), st_9, false);
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_0), st_0, false);
+            end if;
          else
             map_key(m, key_pressed_n(m65_1), st_1);   map_key(m, key_pressed_n(m65_2), st_2);   map_key(m, key_pressed_n(m65_3), st_3);   map_key(m, key_pressed_n(m65_4), st_4);
             map_key(m, key_pressed_n(m65_5), st_5);   map_key(m, key_pressed_n(m65_6), st_6);   map_key(m, key_pressed_n(m65_7), st_7);   map_key(m, key_pressed_n(m65_8), st_8);
@@ -361,26 +425,83 @@ begin
          map_key(m, key_pressed_n(m65_clr_home), st_home);
          map_key(m, key_pressed_n(m65_run_stop), st_undo);
 
+         -- symbols as printed on the MEGA65 keys
+         if printed then
+            if shift then
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_plus),       st_equal,    false);  -- +
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_minus),      st_minus,    true);   -- _
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_gbp),        st_bslash,   true);   -- |
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_at),         st_lbracket, true);   -- {
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_asterisk),   st_rbracket, true);   -- }
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_arrow_up),   st_6,        true);   -- ^
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_colon),      st_lbracket, false);  -- [
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_semicolon),  st_rbracket, false);  -- ]
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_equal),      st_equal,    false);  -- =
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_comma),      st_comma,    true);   -- <
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_dot),        st_dot,      true);   -- >
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_slash),      st_slash,    true);   -- ?
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_arrow_left), st_grave,    true);   -- ~
+            else
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_plus),       st_equal,    true);   -- +
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_minus),      st_minus,    false);  -- -
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_gbp),        st_bslash,   false);  -- \
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_at),         st_2,        true);   -- @
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_asterisk),   st_8,        true);   -- *
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_arrow_up),   st_6,        true);   -- ^
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_colon),      st_semicol,  true);   -- :
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_semicolon),  st_semicol,  false);  -- ;
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_equal),      st_equal,    false);  -- =
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_comma),      st_comma,    false);  -- ,
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_dot),        st_dot,      false);  -- .
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_slash),      st_slash,    false);  -- /
+               map_sym(sym, want_on, want_off, key_pressed_n(m65_arrow_left), st_grave,    false);  -- `
+            end if;
+         end if;
+
          -- symbols (positional mapping)
-         if not keypad then
+         if not printed and not keypad then
             map_key(m, key_pressed_n(m65_plus), st_minus);
             map_key(m, key_pressed_n(m65_minus), st_equal);
             map_key(m, key_pressed_n(m65_asterisk), st_rbracket);
             map_key(m, key_pressed_n(m65_dot), st_dot);
             map_key(m, key_pressed_n(m65_slash), st_slash);
          end if;
-         map_key(m, key_pressed_n(m65_gbp), st_bslash);
-         map_key(m, key_pressed_n(m65_arrow_left), st_grave);
-         map_key(m, key_pressed_n(m65_at), st_lbracket);
-         map_key(m, key_pressed_n(m65_colon), st_semicol);
-         map_key(m, key_pressed_n(m65_semicolon), st_quote);
-         map_key(m, key_pressed_n(m65_equal), st_iso);
-         map_key(m, key_pressed_n(m65_comma), st_comma);
+         if not printed then
+            map_key(m, key_pressed_n(m65_gbp), st_bslash);
+            map_key(m, key_pressed_n(m65_arrow_left), st_grave);
+            map_key(m, key_pressed_n(m65_at), st_lbracket);
+            map_key(m, key_pressed_n(m65_colon), st_semicol);
+            map_key(m, key_pressed_n(m65_semicolon), st_quote);
+            map_key(m, key_pressed_n(m65_equal), st_iso);
+            map_key(m, key_pressed_n(m65_comma), st_comma);
+         end if;
 
          -- modifiers (MEGA + Shift + 8 / 9 are the keypad keys ( ): the ST does not see the shift key)
-         if not fshift and not (keypad and (key_pressed_n(m65_8) = '0' or key_pressed_n(m65_9) = '0')) then
+         -- "as printed": a symbol needs Shift (pressed or not) or no Shift (hidden)
+         if want_off then
+            null;
+         elsif want_on and not fshift then
+            if shift then
+               map_key(m, key_pressed_n(m65_left_shift), st_lshift);
+               map_key(m, key_pressed_n(m65_right_shift), st_rshift);
+            else
+               m(st_lshift) := '0';
+            end if;
+         elsif not fshift and not (keypad and (key_pressed_n(m65_8) = '0' or key_pressed_n(m65_9) = '0')) then
             map_key(m, key_pressed_n(m65_left_shift), st_lshift);
             map_key(m, key_pressed_n(m65_right_shift), st_rshift);
+         end if;
+
+         -- the symbol keys follow C_SETTLE after a change of the ST's Shift state
+         st_shift   := m(st_lshift) = '0' or m(st_rshift) = '0';
+         st_shift_d <= st_shift;
+         if st_shift /= st_shift_d then
+            settle_cnt <= C_SETTLE;
+         elsif settle_cnt /= 0 then
+            settle_cnt <= settle_cnt - 1;
+         end if;
+         if st_shift = st_shift_d and settle_cnt = 0 then
+            m := m and sym;
          end if;
          map_key(m, key_pressed_n(m65_ctrl), st_ctrl);
          map_key(m, key_pressed_n(m65_alt), st_alt);

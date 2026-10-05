@@ -1,3 +1,15 @@
+Version 0.4.8 beta - not released yet
+=====================================
+
+* Changing the machine type or the memory size in the menu crashed the ST until a TOS was
+  loaded again (issue #7). TOS keeps the memory layout in RAM and trusts it at the next reset.
+  The core now clears it and restarts the ST with a cold boot automatically.
+* New option "Keyboard as printed" in "Controllers & ports" (issue #6): digits and symbols give
+  the character printed on the MEGA65 key (US TOS) instead of the ST key at the same position.
+
+**Important:** the menu has one more item, so `/atarist/stcfg` must be the new 95 byte file
+from the release zip (the old 94 byte file is reported as corrupt and settings are not saved).
+
 Version 0.4.7 beta - October 5, 2026
 ====================================
 

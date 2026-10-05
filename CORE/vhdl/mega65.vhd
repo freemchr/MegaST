@@ -316,23 +316,24 @@ constant C_MENU_JOYSWAP        : natural := 52;   -- mouse port: 51 port 1 (defa
 constant C_MENU_STEPADS        : natural := 54;
 constant C_MENU_PMOD           : natural := 55;
 constant C_MENU_CUBASE         : natural := 56;
-constant C_MENU_HDMI_16_9_50   : natural := 62;
-constant C_MENU_HDMI_16_9_60   : natural := 63;
-constant C_MENU_HDMI_4_3_50    : natural := 64;
-constant C_MENU_HDMI_5_4_50    : natural := 65;
-constant C_MENU_HDMI_640_60    : natural := 66;
-constant C_MENU_HDMI_720_5994  : natural := 67;
-constant C_MENU_SVGA_800_60    : natural := 68;
-constant C_MENU_HDMI_DVI       : natural := 70;
-constant C_MENU_VGA_15KHZ      : natural := 77;
-constant C_MENU_VGA_CSYNC      : natural := 78;
-constant C_MENU_SCANLINES_25   : natural := 81;
-constant C_MENU_SCANLINES_50   : natural := 82;
-constant C_MENU_SCANLINES_75   : natural := 83;
-constant C_MENU_CRT_EMULATION  : natural := 86;
-constant C_MENU_HDMI_ZOOM      : natural := 87;
-constant C_MENU_IMPROVE_AUDIO  : natural := 88;
--- 82 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
+constant C_MENU_KBD_PRINT      : natural := 57;
+constant C_MENU_HDMI_16_9_50   : natural := 63;
+constant C_MENU_HDMI_16_9_60   : natural := 64;
+constant C_MENU_HDMI_4_3_50    : natural := 65;
+constant C_MENU_HDMI_5_4_50    : natural := 66;
+constant C_MENU_HDMI_640_60    : natural := 67;
+constant C_MENU_HDMI_720_5994  : natural := 68;
+constant C_MENU_SVGA_800_60    : natural := 69;
+constant C_MENU_HDMI_DVI       : natural := 71;
+constant C_MENU_VGA_15KHZ      : natural := 78;
+constant C_MENU_VGA_CSYNC      : natural := 79;
+constant C_MENU_SCANLINES_25   : natural := 82;
+constant C_MENU_SCANLINES_50   : natural := 83;
+constant C_MENU_SCANLINES_75   : natural := 84;
+constant C_MENU_CRT_EMULATION  : natural := 87;
+constant C_MENU_HDMI_ZOOM      : natural := 88;
+constant C_MENU_IMPROVE_AUDIO  : natural := 89;
+-- 91 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
@@ -566,6 +567,7 @@ begin
          st_amigamouse_i      => main_osm_control_i(C_MENU_AMIGAMOUSE),
          st_pmod_i            => main_osm_control_i(C_MENU_PMOD),
          st_cubase_i          => main_osm_control_i(C_MENU_CUBASE),
+         st_kbd_print_i       => main_osm_control_i(C_MENU_KBD_PRINT),
          rtc_i                => main_rtc_i,
 
          -- TOS loader

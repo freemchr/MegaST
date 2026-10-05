@@ -77,7 +77,7 @@ simulation):
   an SDRAM model; boots TOS 1.04, 2.06 and EmuTOS, ACSI hard disk, `CROP=1` for zoom-in,
   `VFLAGS=-DRTC_TRACE` traces the real time clock
 * `CORE/sim/tos_loader/run.sh`, `CORE/sim/keyboard/run.sh`, `CORE/sim/floppy_swap/run.sh`:
-  GHDL tests of the TOS/cartridge loader, the keyboard (numeric keypad) and the floppy swap
+  GHDL tests of the TOS/cartridge loader, the keyboard (numeric keypad, "Keyboard as printed") and the floppy swap
 * `CORE/sim/fastseek/run.sh`: the fast seek of the firmware in the QNICE emulator (FAT32 image
   with fragmented files, compared with the FAT32 library)
 
