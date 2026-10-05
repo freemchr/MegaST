@@ -129,6 +129,16 @@ TOS
 cycle `tos.img` is used again, so rename your favourite TOS image to `tos.img`. STe and Mega STe
 modes need TOS 1.06 or newer (or EmuTOS).
 
+**Which TOS?** EmuTOS is in the release zip only because it is free and may be distributed (Atari's
+TOS may not). It is fine for GEM programs and for a first test, but some games crash with it.
+**For games, use a real Atari TOS:** TOS 1.02 or 1.04 for the ST (some games only run reliably
+with TOS 1.02), TOS 1.62 or 2.06 for the STe. Use a ROM image dumped from your own Atari.
+
+**Changing the memory size:** in version 0.4.7 and older, the ST does not boot after the memory
+size has been changed in the menu: TOS keeps the old memory layout in RAM and trusts it at the next
+reset. Load a TOS with "TOS" in the menu (or switch the MEGA65 off and on) after changing the
+memory size. The next version restarts the ST with a cold boot automatically.
+
 Real time clock
 ---------------
 
@@ -146,6 +156,29 @@ e.g. with a DOS (MBR) or Atari (AHDI) partition table. Images can be almost 4 GB
 limit of FAT32); disks larger than 1 GB need a driver with ICD commands (EmuTOS, HDDRIVER). EmuTOS finds the
 partitions automatically; with Atari TOS you need a hard disk driver (AHDI, HDDRIVER, ...),
 e.g. on a boot floppy or on the hard disk itself.
+
+How to use a hard disk image:
+
+1. Copy the image into `/atarist` on the SD card.
+2. Open the menu (<kbd>Help</kbd>), select "Hard disk 0" and choose the image.
+3. Reset the ST ("Reset Atari ST" in the menu). TOS only looks for hard disks when it starts.
+4. With **EmuTOS**, drive C: appears on the desktop (if not, check the partitions of the image).
+   With **Atari TOS**, the driver on the image (or on a boot floppy) starts and adds drive C:.
+   If there is no C: icon on the desktop, add it once with "Options" → "Install Disk Drive" (TOS 1.x)
+   or "Install Icon" (TOS 2.06), then "Save Desktop".
+
+Images that work in Hatari do not always work here:
+
+* Hatari often uses a PC folder as drive C: ("GEMDOS drive"). That needs no driver and no image at
+  all, so it works with any TOS. A real ST, and MegaST, needs a hard disk image with a driver.
+* Hatari also emulates IDE and SCSI disks. The ST and STe only have ACSI; the image must be prepared
+  for an ACSI disk (HDDRIVER and AHDI images usually are).
+* An image without a bootable driver (e.g. created by Hatari's `atari-hd-image` tool, which writes
+  a DOS partition table and no driver) works with EmuTOS, but with Atari TOS only together with a
+  driver from a boot floppy.
+
+A first test: if EmuTOS shows drive C: for the image, the image and the ACSI disk work, and any
+problem with Atari TOS is in the driver setup.
 
 The images are **not** loaded into RAM: every sector is read from and written to the SD card
 directly (write-through). The FAT32 library of the framework can only seek from the start of a
