@@ -37,6 +37,16 @@ Tested on a MEGA65 R6
 | HDMI "DVI mode (no sound)" with a DVI monitor | not tested yet |
 | R4/R5 boards (`CORE-R4.xpr`, `CORE-R5.xpr`) | not tested yet |
 
+Screenshots
+-----------
+
+| TOS 1.04 desktop | EmuTOS 1.4 (included in the release zip) |
+|---|---|
+| ![TOS 1.04 desktop](doc/screenshots/tos104-desktop.png) | ![EmuTOS 1.4 welcome screen](doc/screenshots/emutos-welcome.png) |
+
+(Frames from the simulation of the core, i.e. the exact picture the core generates, before the
+HDMI scaling.)
+
 Features
 --------
 
