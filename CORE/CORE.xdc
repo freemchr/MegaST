@@ -30,15 +30,6 @@ set_multicycle_path -from [get_clocks main_clk] -to [get_clocks sdram_clk] -end 
 set_multicycle_path -from [get_clocks main_clk] -to [get_clocks ikbd_clk] -start -setup 2
 set_multicycle_path -from [get_clocks main_clk] -to [get_clocks ikbd_clk] -start -hold 1
 
-## SDRAM (MEGA65 R4/R5/R6)
-## All SDRAM signals are registered in the IOBs. The SDRAM clock is the inverted 96 MHz clock
-## (ODDR), i.e. the SDRAM samples in the middle of the FPGA's output data eye and the FPGA samples
-## the read data one 96 MHz clock cycle later (CAS latency 2), just like on MiSTer.
-set_property IOB TRUE [get_ports {sdram_a_o[*] sdram_ba_o[*] sdram_ras_n_o sdram_cas_n_o sdram_we_n_o sdram_cs_n_o sdram_dqml_o sdram_dqmh_o}]
-set_property IOB TRUE [get_ports {sdram_dq_io[*]}]
-set_false_path -to   [get_ports {sdram_clk_o sdram_cke_o sdram_a_o[*] sdram_ba_o[*] sdram_ras_n_o sdram_cas_n_o sdram_we_n_o sdram_cs_n_o sdram_dqml_o sdram_dqmh_o sdram_dq_io[*]}]
-set_false_path -from [get_ports {sdram_dq_io[*]}]
-
 ## PMOD headers (serial port, MIDI, parallel port): asynchronous signals, the inputs are
 ## synchronized by an XPM CDC (see mega65.vhd). Pull-ups keep unconnected inputs inactive.
 set_property PULLUP TRUE [get_ports {p1lo_io[*] p1hi_io[*] p2lo_io[*] p2hi_io[*]}]

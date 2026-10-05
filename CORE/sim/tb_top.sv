@@ -109,7 +109,12 @@ module tb_top (
   wire [12:0] sdram_a;
   wire [15:0] sdram_dq;
 
+`ifdef BRAM_MEM
+  // MEGA65 R3 variant: ST RAM, TOS and cartridge in block RAM (VFLAGS=-DBRAM_MEM ./build.sh)
+  atarist_m65 #(.BRAM_MEM(1)) dut (
+`else
   atarist_m65 dut (
+`endif
     .clk_32(clk_32), .clk_96(clk_96), .clk_2(clk_2), .init(init), .reset_in(reset_in),
     .cfg_mem(cfg_mem), .cfg_ste(cfg_ste), .cfg_mste(1'b0), .cfg_blitter(1'b0), .cfg_mono(1'b0),
     .cfg_psg_stereo(1'b0), .cfg_narrow_brd(1'b1), .cfg_mde60(1'b0), .cfg_fdc_wp(2'b00),

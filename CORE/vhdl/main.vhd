@@ -18,7 +18,8 @@ use work.globals.all;
 
 entity main is
    generic (
-      G_VDNUM                 : natural                     -- amount of virtual drives
+      G_VDNUM                 : natural;                    -- amount of virtual drives
+      G_BRAM_MEM              : natural := 0                -- 1: ST RAM/TOS in block RAM (MEGA65 R3/R3A, 512 KB)
    );
    port (
       clk_main_i              : in  std_logic;              -- 32.083 MHz
@@ -148,6 +149,9 @@ end entity main;
 architecture synthesis of main is
 
 component atarist_m65 is
+   generic (
+      BRAM_MEM        : natural := 0
+   );
    port (
       clk_32          : in    std_logic;
       clk_96          : in    std_logic;
@@ -406,6 +410,9 @@ begin
                  st_pmod_i & '0' & st_pmod_i & '0';
 
    i_atarist : atarist_m65
+      generic map (
+         BRAM_MEM        => G_BRAM_MEM
+      )
       port map (
          clk_32          => clk_main_i,
          clk_96          => clk_sdram_i,

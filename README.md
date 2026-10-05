@@ -34,7 +34,8 @@ Tested on a MEGA65 R6
 | VGA scanlines, full borders | works |
 | Games: Golden Axe, Great Giana Sisters, Turrican | work |
 | Cartridges, PMOD serial/MIDI/printer, Cubase dongles, Viking card, 1351 mouse, mono monitor | not tested yet |
-| HDMI "DVI mode (no sound)" with a DVI monitor | not tested yet |
+| HDMI "DVI mode (no sound)" with a DVI monitor | works (tester report, issue #4) |
+| R3A board (`CORE-R3.xpr`, 512 KB) | works (tester report, issue #2) |
 | R4/R5 boards (`CORE-R4.xpr`, `CORE-R5.xpr`) | not tested yet |
 
 Screenshots
@@ -77,9 +78,10 @@ Features
 Requirements
 ------------
 
-* **MEGA65 R4, R5 or R6** board. The Atari ST core needs the SDRAM of these boards
-  (the ST RAM is accessed with a fixed, cycle exact timing). The R3/R3A board only has
-  HyperRAM and is not supported.
+* **MEGA65 R3, R3A, R4, R5 or R6** board. On the R4-R6 the ST RAM is in the SDRAM (up to 14 MB).
+  The R3/R3A has no SDRAM, and its HyperRAM is too slow for the ST's cycle exact memory timing, so
+  its own core (`MegaST-R3-...cor`) keeps the ST RAM in the FPGA's block RAM: **512 KB ST RAM**,
+  no Viking card and no STEroids mode, everything else is the same.
 * SD card with a folder `/atarist` containing
   * `tos.img`: your TOS image (mandatory). The release zip contains the free
     [EmuTOS](https://emutos.sourceforge.io) as `tos.img`; a TOS ROM dump of your own Atari also works.

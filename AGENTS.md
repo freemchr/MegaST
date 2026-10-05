@@ -34,7 +34,7 @@ documented changes. `CORE/sim/` holds the simulations.
 |-------|--------|--------|
 | R6 | SDRAM | Main target, tested on hardware by the maintainer (`CORE/CORE-R6.xpr`) |
 | R4, R5 | SDRAM | Same design (`CORE-R4.xpr`, `CORE-R5.xpr`); not tested on hardware |
-| R3, R3A | no SDRAM | Block RAM build on branch `r3`: 512 KB ST RAM, no Viking, no STEroids; not tested on hardware |
+| R3, R3A | no SDRAM | Block RAM build (`CORE-R3.xpr`): 512 KB ST RAM, no Viking, no STEroids; R3A confirmed by a tester (issue #2) |
 
 The maintainer only has an R6. Never call a build for another board "working" before a tester has
 reported it.
@@ -74,7 +74,7 @@ Simulate first. Every hardware round trip costs the maintainer time.
 
 * `CORE/sim/build.sh`: Verilator simulation of the whole ST (`cd obj_dir && ./simst <tos.img>
   <frames> [prefix] [ste] [hd.img]`). It writes every 10th frame as PPM. `VFLAGS=-DBRAM_MEM` builds
-  the R3 memory variant (branch `r3`). `KEY=<col*8+row> KEY_AT=<frame>` presses a key.
+  the R3 memory variant. `KEY=<col*8+row> KEY_AT=<frame>` presses a key.
 * `CORE/sim/{keyboard,tos_loader,floppy_swap}/run.sh`: GHDL unit tests.
 * `CORE/sim/fastseek/run.sh`: firmware fast seek in the QNICE emulator.
 * After a Vivado build check: timing met (WNS/WHS >= 0), no new critical warnings, no block RAM

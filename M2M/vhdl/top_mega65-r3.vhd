@@ -241,6 +241,10 @@ architecture synthesis of mega65_r3 is
    -- QNICE On Screen Menu selections
    signal main_osm_control_m     : std_logic_vector(255 downto 0);
 
+   -- MegaST: the paddle discharge pulses (pins 5 and 9, ~2 kHz) upset optical Amiga mice (pins 1-3
+   -- oscillate), so the pots are only drained while the 1351 mouse (the only pot user) is selected
+   signal fw_paddle_drain        : std_logic;
+
    -- QNICE general purpose register
    signal main_qnice_gp_reg      : std_logic_vector(255 downto 0);
 
@@ -336,6 +340,7 @@ architecture synthesis of mega65_r3 is
    signal qnice_dvi              : std_logic;
    signal qnice_video_mode       : video_mode_type;
    signal qnice_scandoubler      : std_logic;
+   signal qnice_scanlines        : std_logic_vector(1 downto 0);
    signal qnice_csync            : std_logic;
    signal qnice_audio_mute       : std_logic;
    signal qnice_audio_filter     : std_logic;
@@ -369,11 +374,14 @@ architecture synthesis of mega65_r3 is
    signal i2c_scl                : std_logic := 'H';
 
 
-   -- Atari ST for MEGA65: dummy SDRAM data bus (the R3/R3A board has no SDRAM)
+   -- Atari ST for MEGA65: dummy SDRAM data bus (the R3/R3A board has no SDRAM, the core keeps the
+   -- ST RAM and TOS in block RAM on this board, see CORE/verilog/bram_m65.v)
    signal r3_dummy_sdram_dq      : std_logic_vector(15 downto 0);
-   signal r3_dummy_pmod          : std_logic_vector(15 downto 0);
 
 begin
+
+   -- 48 = C_MENU_MOUSE1351 in CORE/vhdl/mega65.vhd
+   paddle_drain_o <= fw_paddle_drain and main_osm_control_m(48);
 
    -----------------------------------------------------------------------------------------
    -- MAX10 FPGA handling: extract reset signal
@@ -477,10 +485,7 @@ begin
    f_wdata_o     <= '1';
    f_wgate_o     <= '1';
    led_o         <= '0'; -- Off
-   p1lo_io       <= (others => 'Z');
-   p1hi_io       <= (others => 'Z');
-   p2lo_io       <= (others => 'Z');
-   p2hi_io       <= (others => 'Z');
+   -- Atari ST for MEGA65: the PMOD headers are driven by the core (see CORE port map below)
    qspidb_io     <= (others => 'Z');
    qspicsn_o     <= '1';
 
@@ -545,7 +550,7 @@ begin
       joy_2_right_n_o         => open,
       joy_2_fire_n_o          => open,
       paddle_i                => paddle_i,
-      paddle_drain_o          => paddle_drain_o,
+      paddle_drain_o          => fw_paddle_drain,
       hr_d_io                 => hr_d_io,
       hr_rwds_io              => hr_rwds_io,
       hr_reset_o              => hr_reset_o,
@@ -633,6 +638,7 @@ begin
       qnice_dvi_i             => qnice_dvi,
       qnice_video_mode_i      => qnice_video_mode,
       qnice_scandoubler_i     => qnice_scandoubler,
+      qnice_scanlines_i       => qnice_scanlines,
       qnice_csync_i           => qnice_csync,
       qnice_audio_mute_i      => qnice_audio_mute,
       qnice_audio_filter_i    => qnice_audio_filter,
@@ -680,7 +686,7 @@ begin
          clk_i                   => clk_i,
 
          -- Share clock and reset with the framework
-         main_clk_o              => main_clk,            -- CORE's 54 MHz clock
+         main_clk_o              => main_clk,            -- CORE's main clock
          main_rst_o              => main_rst,            -- CORE's reset, synchronized
 
          --------------------------------------------------------------------------------------------------------
@@ -695,6 +701,7 @@ begin
          qnice_dvi_o             => qnice_dvi,
          qnice_video_mode_o      => qnice_video_mode,
          qnice_scandoubler_o     => qnice_scandoubler,
+         qnice_scanlines_o       => qnice_scanlines,
          qnice_csync_o           => qnice_csync,
          qnice_audio_mute_o      => qnice_audio_mute,
          qnice_audio_filter_o    => qnice_audio_filter,
@@ -881,7 +888,7 @@ begin
          cart_a_i          => cart_a_in,
          cart_a_o          => cart_a_out,
 
-         -- Atari ST for MEGA65: The R3/R3A board has no SDRAM, the core does not work on R3/R3A
+         -- Atari ST for MEGA65: the R3/R3A board has no SDRAM (G_BOARD = "MEGA65_R3": block RAM)
          sdram_clk_o       => open,
          sdram_cke_o       => open,
          sdram_ras_n_o     => open,
@@ -893,10 +900,13 @@ begin
          sdram_dqml_o      => open,
          sdram_dqmh_o      => open,
          sdram_dq_io       => r3_dummy_sdram_dq,
-         p1lo_io           => r3_dummy_pmod(3 downto 0),
-         p1hi_io           => r3_dummy_pmod(7 downto 4),
-         p2lo_io           => r3_dummy_pmod(11 downto 8),
-         p2hi_io           => r3_dummy_pmod(15 downto 12),
+
+         -- Atari ST for MEGA65: PMOD headers (serial port, MIDI, parallel port); the R3/R3A has no
+         -- switchable PMOD power
+         p1lo_io           => p1lo_io,
+         p1hi_io           => p1hi_io,
+         p2lo_io           => p2lo_io,
+         p2hi_io           => p2hi_io,
          pmod1_en_o        => open,
          pmod2_en_o        => open
       ); -- CORE

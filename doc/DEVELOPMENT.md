@@ -12,6 +12,7 @@ How the port works
 | `CORE/AtariST_MiSTer/` | Copy of the MiSTer core (commit `426ef87`, June 2026), see "Changes to the MiSTer sources" below |
 | `CORE/verilog/atarist_m65.sv` | The Atari ST machine: `AtariST.sv` without the MiSTer framework (hps_io etc.) |
 | `CORE/verilog/sdram_m65.v` | Xilinx version of the MiSTer SDRAM controller (ODDR clock, IOB registers, DQM pins) |
+| `CORE/verilog/bram_m65.v` | MEGA65 R3/R3A (no SDRAM): ST RAM, TOS and cartridge in block RAM, same interface and bus timing as `sdram_m65.v` |
 | `CORE/verilog/cegen_m65.v` | Verilog replacement of `CEGen.vhd` (integer ports are not allowed on Vivado's language boundary) |
 | `CORE/vhdl/clk.vhd` | MMCM: 32.083 MHz system, 96.25 MHz SDRAM and 2.005 MHz IKBD clocks (phase aligned) |
 | `CORE/vhdl/main.vhd` | M2M wrapper of the ST machine, joysticks, video/audio formatting |
@@ -29,6 +30,12 @@ How the port works
 * **Memory:** ST RAM and the TOS ROM live in the SDRAM (like on MiSTer). The TOS image is
   always stored at $E00000; 192k TOS images (header `os_beg` = $FC0000) are detected by the
   loader and mapped to $FC0000.
+* **R3/R3A (no SDRAM):** `bram_m65.v` replaces the SDRAM controller (`G_BOARD = "MEGA65_R3"`,
+  parameter `BRAM_MEM` of `atarist_m65.sv`): 512 KB ST RAM, 256 KB TOS and 128 KB cartridge in
+  224 RAMB36, with the same 12-state bus cycle (read data at t = 6). The memory size is forced to
+  512 KB, Viking and STEroids are off. HyperRAM is not an option for ST RAM: the ST bus needs the
+  data within about 175 ns (video, DMA and blitter cannot wait). The SDRAM pin constraints are in
+  `CORE/CORE-SDRAM.xdc`, which only the R4-R6 projects include.
 * **Floppies:** the M2M firmware buffers the whole disk image in HyperRAM (2 MB per drive
   at $400000/$600000, the lower 4 MB belong to the framework) and serves sector requests
   of the FDC through `vdrives.vhd` and `fdc_bridge.vhd`.

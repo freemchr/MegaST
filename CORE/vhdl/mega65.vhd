@@ -282,6 +282,16 @@ signal ikbd_clk               : std_logic;               -- IKBD clock (2.005 MH
 -- On-Screen-Menu (OSM) items: must match the positions of the items in config.vhd
 ---------------------------------------------------------------------------------------------
 
+-- The MEGA65 R3/R3A has no SDRAM: the ST RAM (512 KB), TOS and cartridge are in block RAM (bram_m65.v)
+function bram_mem(board : string) return natural is
+begin
+   if board = "MEGA65_R3" then
+      return 1;
+   end if;
+   return 0;
+end function bram_mem;
+constant C_BRAM_MEM            : natural := bram_mem(G_BOARD);
+
 constant C_MENU_ST             : natural := 12;
 constant C_MENU_STE            : natural := 13;
 constant C_MENU_MSTE           : natural := 14;
@@ -523,7 +533,8 @@ begin
    -- main.vhd contains the actual MiSTer core
    i_main : entity work.main
       generic map (
-         G_VDNUM              => C_VDNUM
+         G_VDNUM              => C_VDNUM,
+         G_BRAM_MEM           => C_BRAM_MEM
       )
       port map (
          clk_main_i           => main_clk,
