@@ -114,7 +114,19 @@ int main(int argc, char** argv) {
     bool mouse_amiga = getenv("MOUSE_AMIGA") != nullptr;
     int mouse_phase = 0; uint64_t mouse_next = 0;
     top->joy_mouse = 0;
+    // KEY_AT=n KEY=i: press the ST matrix key i (column * 8 + row) from frame n on for 5 frames
+    int key_at = getenv("KEY_AT") ? atoi(getenv("KEY_AT")) : -1;
+    int key_idx = getenv("KEY") ? atoi(getenv("KEY")) : 0;
     while (frame < frames) {
+        if (key_at >= 0 && frame == key_at && (top->kbd_matrix[key_idx / 32] >> (key_idx % 32) & 1)) {
+            printf("key %d pressed at frame %d\n", key_idx, frame);
+            top->kbd_matrix[key_idx / 32] &= ~(1u << (key_idx % 32));
+        }
+        if (key_at >= 0 && frame == key_at + 5) {
+            printf("key %d released at frame %d\n", key_idx, frame);
+            top->kbd_matrix[key_idx / 32] |= 1u << (key_idx % 32);
+            key_at = -1;
+        }
         if (frame == reset_at) {
             printf("reset at frame %d\n", frame);
             top->reset_in = 1; top->dio_download = 1;

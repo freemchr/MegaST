@@ -4,7 +4,9 @@
 # Needs Verilator 5 (e.g. from the OSS CAD Suite: https://github.com/YosysHQ/oss-cad-suite-build).
 #
 # Usage:
-#    ./build.sh                     (VFLAGS=-DACSI_TRACE ./build.sh: trace the ACSI transfers)
+#    ./build.sh                     (VFLAGS=-DACSI_TRACE ./build.sh: trace the ACSI transfers,
+#                                    VFLAGS=-DKBD_TRACE: trace the bytes the IKBD sends;
+#                                    run with KEY=<column*8+row> KEY_AT=<frame> to press a key)
 #    cd obj_dir && ./simst <tos.img> <frames> [out_prefix] [ste] [hd.img]
 #
 # Every 10th frame is written as <out_prefix>_NNN.ppm (convert: python3 ../ppm2png.py in.ppm out.png)

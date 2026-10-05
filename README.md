@@ -151,8 +151,14 @@ Video
 * **VGA:** the color modes are 15 kHz modes. By default they are doubled to 31 kHz for VGA
   monitors ("VGA: 31 kHz"), optionally with scanlines (25%, 50%, 75%). "15 kHz (RGB, SCART)"
   outputs the original 15 kHz signal for CRTs and TVs, "15 kHz with CSync" puts composite sync on
-  the HSync pin (for MiSTer style VGA-to-SCART cables). The monochrome mode (71 Hz, or 60 Hz) is
-  always a 31 kHz mode.
+  the HSync pin (for MiSTer style VGA-to-SCART cables). The monochrome mode is output unchanged
+  with the original SM124 timing (640x400, 71.2 Hz, 35.7 kHz), so the VGA monitor must accept
+  that mode. "Mono 60 Hz" adds blank lines to get ~60 Hz (same 35.7 kHz line rate).
+* **HDMI and the 71 Hz mono mode:** the HDMI output always runs at the HDMI mode's rate
+  (50 or 60 Hz). `ascal` writes the 71 Hz frames into its frame buffer and reads them at the
+  output rate, so some frames are dropped (about 1 in 6 at 60 Hz), and fast scrolling can show a
+  tear line (the framework only supports single buffering). For smooth motion, enable "Mono 60 Hz"
+  and use a 60 Hz HDMI mode.
 
 Viking/SM194 card
 -----------------

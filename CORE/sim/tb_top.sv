@@ -57,6 +57,14 @@ module tb_top (
     if (dut.dma.acsi.irq & ~acsi_irq_d) acsi_irq_cnt <= acsi_irq_cnt + 1'd1;
     if (dut.dma.acsi_reg_sel & ~acsi_sel_d) acsi_din <= dut.dma.cpu_din[7:0];
   end
+`ifdef KBD_TRACE
+  // trace the bytes that the IKBD sends to the keyboard ACIA
+  reg kbd_rx_d;
+  always @(posedge clk_32) begin
+    kbd_rx_d <= dut.kbd_acia.serial_rx_data_available;
+    if (dut.kbd_acia.serial_rx_data_available & ~kbd_rx_d) $display("IKBD byte %h", dut.kbd_acia.serial_rx_data);
+  end
+`endif
 `ifdef RTC_TRACE
   // trace the accesses to the Mega ST real time clock
   reg rtc_sel_d; integer rtc_n = 0;
