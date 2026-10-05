@@ -44,8 +44,15 @@ MegaST is based on MiSTer2MEGA65 V2.0.1. Changes to the `M2M/` folder:
 `M2M/vhdl/top_mega65-r4.vhd`, `-r5.vhd`, `-r6.vhd`: the framework ties the SDRAM and the PMOD headers off.
 Instead, these pins are passed to the core (new ports `sdram_*`, `p1lo_io`, `p1hi_io`, `p2lo_io`,
 `p2hi_io`, `pmod1_en_o`, `pmod2_en_o` of `MEGA65_Core`, at the end of the `CORE` port map); the tie-offs
-are removed. `top_mega65-r3.vhd` (no SDRAM) leaves the SDRAM ports open and feeds the PMOD ports from
-dummy signals.
+are removed. `top_mega65-r3.vhd` (no SDRAM) leaves the SDRAM ports open and passes the PMOD pins to the core
+(`pmod_en` open: the PMOD power of the R3 is not switchable). For the R3, ST RAM, TOS and the cartridge
+are in block RAM (`CORE/verilog/bram_m65.v`, selected by `G_BOARD` in `CORE/vhdl/mega65.vhd`), see
+`doc/DEVELOPMENT.md`.
+
+### R3 top brought in line with the R4-R6 tops
+
+`M2M/vhdl/top_mega65-r3.vhd`: the paddle drain, the scanlines and the PMOD pins are wired like in
+`top_mega65-r6.vhd` (see the sections below).
 
 ### Paddle drain only for the 1351 mouse (board tops)
 

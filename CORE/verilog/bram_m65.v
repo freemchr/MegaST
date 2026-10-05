@@ -17,7 +17,9 @@
 //
 // Block RAM: 128 (RAM) + 64 (TOS) + 32 (cartridge) RAMB36.
 //
-// Atari ST port 2026, licensed under GPL v3
+// This machine is based on AtariST_MiSTer
+// Powered by MiSTer2MEGA65
+// MEGA65 port done by Chris Freeman in 2026 and licensed under GPL v3
 //
 module bram_m65 (
 	input             clk_96,     // the memory is accessed at 96 MHz
