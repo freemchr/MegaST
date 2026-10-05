@@ -12,4 +12,4 @@ body:
     id: setup
     attributes:
       label: Core version, board, TOS and machine settings
-      placeholder: "0.4.6, R6, TOS 1.04, ST 1 MB"
+      placeholder: "0.4.7, R6, TOS 1.04, ST 1 MB"

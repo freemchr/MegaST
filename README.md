@@ -21,12 +21,14 @@ Tested on a MEGA65 R6
 | TOS 1.04, boot to the desktop | works |
 | Floppy disks: loading, changing disks, reset with a disk inserted, saving | works |
 | Hard disk: 4 GB `.vhd` image (MiSTer image), boot, copying files, launching programs | works |
+| MEGA65 keyboard, all keys (A fixed in 0.4.7), numeric keypad via MEGA | works |
 | Atari ST mouse, Amiga mouse (optical, incl. right button), in port 1 or port 2 | works |
 | Joystick, with debouncing for bouncing and worn switches (Suncom TAC-2) | works |
 | Menu settings saved on the SD card (`stcfg`) | works |
 | VGA scanlines, full borders | works |
 | Games: Golden Axe, Great Giana Sisters, Turrican | work |
 | Cartridges, PMOD serial/MIDI/printer, Cubase dongles, Viking card, 1351 mouse, mono monitor | not tested yet |
+| HDMI "DVI mode (no sound)" with a DVI monitor | not tested yet |
 | R4/R5 boards (`CORE-R4.xpr`, `CORE-R5.xpr`) | not tested yet |
 
 Features
@@ -68,7 +70,7 @@ Requirements
   * your floppy disk images (`.st`), hard disk images (`.hd`, `.img`, `.vhd`) and cartridges (`.stc`, `.img`)
   * optionally `stcfg`, an empty settings file, if you want the menu settings to be saved (included
     in the release zip, or `cd M2M/tools && ./make_config.sh stcfg auto`). The file must have exactly
-    as many bytes as the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 92). When
+    as many bytes as the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 94). When
     the menu changes in a new release, a settings file of the old size is ignored: use the new one.
 
 Usage

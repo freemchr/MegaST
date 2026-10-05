@@ -11,7 +11,7 @@ body:
     attributes:
       label: Core version
       description: Shown on the welcome screen and in the Help menu
-      placeholder: "0.4.6"
+      placeholder: "0.4.7"
     validations:
       required: true
   - type: dropdown

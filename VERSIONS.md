@@ -1,3 +1,19 @@
+Version 0.4.7 beta - October 5, 2026
+====================================
+
+Bug fixes and one new option, based on the first tester reports.
+
+* The A key did not work (issue #1). A Vivado synthesis bug turned the first key mapping in
+  `keyboard.vhd` into a constant, so the ST always saw A as held down. Fixed and confirmed on
+  a MEGA65 R6.
+* New option "DVI mode (no sound)" in the HDMI settings for DVI monitors on an HDMI-to-DVI
+  cable, which show a garbled picture with the HDMI audio and info packets (issue #4).
+* README: the Amiga and 1351 mice have to be selected in the menu ("Mouse type", issue #5);
+  how the 71 Hz mono mode is shown on VGA and HDMI (issue #3).
+
+**Important:** the menu has two more items, so `/atarist/stcfg` must be the new 94 byte file
+from the release zip (the old 92 byte file is reported as corrupt and settings are not saved).
+
 Version 0.4.6 beta - October 3, 2026
 ====================================
 
