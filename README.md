@@ -13,10 +13,10 @@ runs games and GEM programs from floppy and hard disk images. Download the core 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
-**Latest version: [0.4.9 beta](https://github.com/freemchr/MegaST/releases/tag/v0.4.9)**
-(October 6, 2026, pre-release for testing): fixes the crash when opening the menu in 0.4.8.
-Core files for the R3/R3A, R4, R5 and R6; the ST restarts by itself after changing the machine
-type or memory size; keyboard option "as printed". Coming from 0.4.7 or older: copy the new
+**Latest version: [0.4.10 beta](https://github.com/freemchr/MegaST/releases/tag/v0.4.10)**
+(October 7, 2026, pre-release for testing): fixes hard disk writes (up to 0.4.9 they could corrupt
+the hard disk image, issue #11; back up your images) and ejects all disks on a long press of the
+reset button. Core files for the R3/R3A, R4, R5 and R6. Coming from 0.4.7 or older: copy the new
 `atarist/stcfg` (99 bytes) from the zip, otherwise the menu settings are not saved.
 All changes: [VERSIONS.md](VERSIONS.md).
 
