@@ -217,6 +217,17 @@ To create an empty, formatted disk (e.g. a save disk for a game), run
 `--label NAME`) and copy the image into `/atarist` on the SD card. (The FDC emulation cannot
 format a disk, so formatting a disk image in TOS does not work.)
 
+Game notes
+----------
+
+Tester reports about single games and disk images. Please report others in the
+[issues](https://github.com/freemchr/MegaST/issues), with the name and MD5 of the image.
+
+| Game / image | Note |
+|--------------|------|
+| Road Blasters (1988)(U.S. Gold).st (TOSEC, MD5 `f3afdf00840c7e91b48d6b3daf8a4daf`) | **Defective image**, also misbehaves in Hatari: no joystick control, and after a reset a long write back to the SD card (issues #8, #9). Use a different dump. |
+| Gauntlet | Works; press Insert (MEGA65 No Scroll) to start the game (issue #9). |
+
 Video
 -----
 
