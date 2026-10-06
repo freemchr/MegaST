@@ -9,6 +9,10 @@
 -- both FDC drives are announced again, one after the other, with the stored values. The read-only
 -- flags are passed per FDC drive (write protection).
 --
+-- eject_i (the M2M reset, which restarts the firmware and so forgets the mounted images) announces
+-- both FDC drives with the size 0, i.e. no disk (issue #10: the ST still read the old disk, while
+-- the menu showed none). main.vhd ejects the hard disks with it, too.
+--
 -- Runs in the clock domain of the core.
 --
 -- This machine is based on AtariST_MiSTer
@@ -22,6 +26,7 @@ use ieee.std_logic_1164.all;
 entity floppy_swap is
    port (
       clk_i            : in  std_logic;
+      eject_i          : in  std_logic;                     -- forget the images (M2M reset)
       swap_i           : in  std_logic;
 
       -- virtual drives (M2M firmware): img_mounted is strobed, size and read-only are valid meanwhile
@@ -66,6 +71,13 @@ begin
             swap     <= swap_i;
             announce <= 3;
          end if;
+
+         -- the firmware restarts and forgets its images: a later swap must not announce them again
+         if eject_i = '1' then
+            vd_size  <= (others => (others => '0'));
+            vd_ro    <= "00";
+            announce <= 0;
+         end if;
       end if;
    end process state;
 
@@ -90,6 +102,12 @@ begin
       elsif announce = 1 then
          fdc_mounted_o <= "10";
          fdc_size_o    <= vd_size(1) when swap = '0' else vd_size(0);
+      end if;
+
+      -- eject both drives: the FDC (and acsi_ctrl, which shares the size) take the size 0
+      if eject_i = '1' then
+         fdc_mounted_o <= "11";
+         fdc_size_o    <= (others => '0');
       end if;
    end process mapping;
 

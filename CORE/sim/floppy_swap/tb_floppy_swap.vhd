@@ -1,10 +1,12 @@
 -- GHDL test of floppy_swap.vhd: mount two images, swap the drives, check that the FDC drives are
 -- announced again with the right image sizes (rising edges of fdc_mounted) and that read/write
--- requests and the read-only flags are mapped to the right drives.
+-- requests and the read-only flags are mapped to the right drives, and that the M2M reset (eject_i)
+-- empties both drives.
 library ieee; use ieee.std_logic_1164.all; use ieee.numeric_std.all;
 entity tb_floppy_swap is end entity;
 architecture sim of tb_floppy_swap is
   signal clk : std_logic := '0';
+  signal eject : std_logic := '0';
   signal swap : std_logic := '0';
   signal vd_mounted : std_logic_vector(1 downto 0) := "00";
   signal vd_ro : std_logic := '0';
@@ -23,7 +25,7 @@ begin
   clk <= not clk after 5 ns when not done;
 
   dut : entity work.floppy_swap port map (
-    clk_i => clk, swap_i => swap, vd_mounted_i => vd_mounted, vd_readonly_i => vd_ro, vd_size_i => vd_size,
+    clk_i => clk, eject_i => eject, swap_i => swap, vd_mounted_i => vd_mounted, vd_readonly_i => vd_ro, vd_size_i => vd_size,
     vd_sd_rd_o => vd_rd, vd_sd_wr_o => vd_wr, fdc_mounted_o => fdc_mounted, fdc_size_o => fdc_size,
     fdc_readonly_o => fdc_ro, fdc_sd_rd_i => fdc_rd, fdc_sd_wr_i => fdc_wr);
 
@@ -79,6 +81,18 @@ begin
     for k in 1 to 10 loop wait until rising_edge(clk); end loop;
     assert latched(0) = 1474560 and latched(1) = SIZE_B and fdc_ro = "10" report "swap back: wrong" severity failure;
     report "swapped back: ok";
+
+    -- M2M reset (issue #10): both drives must be announced empty, and a swap must not bring the
+    -- forgotten images back
+    eject <= '1';
+    for k in 1 to 20 loop wait until rising_edge(clk); end loop;
+    eject <= '0';
+    for k in 1 to 5 loop wait until rising_edge(clk); end loop;
+    assert latched(0) = 0 and latched(1) = 0 report "eject: drives not empty" severity failure;
+    swap <= '1';
+    for k in 1 to 10 loop wait until rising_edge(clk); end loop;
+    assert latched(0) = 0 and latched(1) = 0 report "eject + swap: old image announced again" severity failure;
+    report "ejected: ok";
     done <= true; wait;
   end process;
 end architecture;

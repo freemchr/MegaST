@@ -458,7 +458,7 @@ begin
          sd_buff_din     => sd_buff_din_o(15 downto 0),
          sd_buff_wr      => sd_buff_wr_i,
 
-         hd_img_mounted  => img_mounted_i(3 downto 2),
+         hd_img_mounted  => img_mounted_i(3 downto 2) or (reset_hard_i & reset_hard_i),
          hd_sd_lba       => hd_lba,
          hd_sd_rd        => sd_rd_o(3 downto 2),
          hd_sd_wr        => sd_wr_o(3 downto 2),
@@ -519,6 +519,7 @@ begin
    i_floppy_swap : entity work.floppy_swap
       port map (
          clk_i            => clk_main_i,
+         eject_i          => reset_hard_i,
          swap_i           => st_fd_swap_i,
          vd_mounted_i     => img_mounted_i(1 downto 0),
          vd_readonly_i    => img_readonly_i,
