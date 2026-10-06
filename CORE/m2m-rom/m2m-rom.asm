@@ -359,8 +359,9 @@ END_OF_ROM      .DW 0
 ; Example: If your HEAP_SIZE would be 29696, then you write 29696-1024=28672
 ; instead, but when doing the sanity check calculations, you use 29696
 ; Atari ST: the menu with four virtual drives, a cartridge and several submenus
-; needs more than the default of 1024 words
-MENU_HEAP_SIZE  .EQU 2048
+; needs more than the default of 1024 words (0.4.8 needed about 2091 words:
+; 2048 led to "Heap corruption: Hint: OPTM_HEAP_SIZE" when opening the menu)
+MENU_HEAP_SIZE  .EQU 2560
 
 #ifndef RELEASE
 
@@ -368,7 +369,7 @@ MENU_HEAP_SIZE  .EQU 2048
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE       .EQU 5120                       ; 7168 - 2048 = 5120
+HEAP_SIZE       .EQU 4608                       ; 7168 - 2560 = 4608
 HEAP            .BLOCK 1
 
 ; in RELEASE mode: 28k of heap which leads to a better user experience when
@@ -377,7 +378,7 @@ HEAP            .BLOCK 1
 
 ; MegaST: 2560 words less for the checkpoint tables of the fast seek of the
 ; hard disks (VD_UB_CP in shell_vars.asm, 2052 words)
-HEAP_SIZE       .EQU 25088                      ; 29696 - 2048 - 2560 = 25088
+HEAP_SIZE       .EQU 24576                      ; 29696 - 2560 - 2560 = 24576
 HEAP            .BLOCK 1
 
 ; The monitor variables use 22 words, round to 32 for being safe and subtract
