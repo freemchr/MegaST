@@ -1,3 +1,12 @@
+Version 0.4.9 beta - October 6, 2026
+====================================
+
+* Opening the menu with the Help key stopped 0.4.8 with "Heap corruption: Hint: OPTM_HEAP_SIZE"
+  (error code 002B, reported in issue #6). The larger menu of 0.4.8 needed more than the 2048
+  words the firmware reserves for it; the menu buffer now has 2560 words.
+
+The menu is unchanged: the 99 byte `/atarist/stcfg` of 0.4.8 stays valid.
+
 Version 0.4.8 beta - October 6, 2026
 ====================================
 
