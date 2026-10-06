@@ -1,3 +1,19 @@
+Version 0.4.10 beta - October 7, 2026
+=====================================
+
+* **Hard disk writes were broken in all versions up to 0.4.9 (issue #11).** Every sector the ST
+  wrote to a hard disk image was filled with the floppy controller's sector buffer instead of the
+  ST's data, so new files, directories and the FAT were overwritten with wrong data. TOS kept
+  showing the files from its cache until it read the disk again, then they were gone.
+  `fdc_bridge.vhd` returned the sector buffer of the drive with an active sd_ack, but the firmware
+  reads the data of a write request before it sends the ack. **Hard disk images that were written
+  to with an older version may be damaged: restore them from a backup or check them.**
+* A long press of the MEGA65 reset button (restarts the menu firmware, which forgets the mounted
+  images) now also ejects the floppies and hard disks in the ST. Before, the ST could still read
+  the old floppy while the menu showed no disk (issue #10).
+
+The menu is unchanged: the 99 byte `/atarist/stcfg` of 0.4.8 and 0.4.9 stays valid.
+
 Version 0.4.9 beta - October 6, 2026
 ====================================
 

@@ -27,7 +27,8 @@ Tested on a MEGA65 R6
 |------|--------|
 | TOS 1.04, boot to the desktop | works |
 | Floppy disks: loading, changing disks, reset with a disk inserted, saving | works |
-| Hard disk: 4 GB `.vhd` image (MiSTer image), boot, copying files, launching programs | works |
+| Hard disk: 4 GB `.vhd` image (MiSTer image), boot, reading files, launching programs | works |
+| Hard disk: writing files | broken up to 0.4.9 (issue #11), fixed in 0.4.10, to be confirmed |
 | MEGA65 keyboard, all keys (A fixed in 0.4.7), numeric keypad via MEGA | works |
 | Atari ST mouse, Amiga mouse (optical, incl. right button), in port 1 or port 2 | works |
 | Joystick, with debouncing for bouncing and worn switches (Suncom TAC-2) | works |

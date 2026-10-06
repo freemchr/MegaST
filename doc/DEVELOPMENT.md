@@ -76,8 +76,10 @@ simulation):
 * `CORE/sim/build.sh`: Verilator simulation of the whole Atari ST machine (`atarist_m65.sv`) with
   an SDRAM model; boots TOS 1.04, 2.06 and EmuTOS, ACSI hard disk, `CROP=1` for zoom-in,
   `VFLAGS=-DRTC_TRACE` traces the real time clock
-* `CORE/sim/tos_loader/run.sh`, `CORE/sim/keyboard/run.sh`, `CORE/sim/floppy_swap/run.sh`:
-  GHDL tests of the TOS/cartridge loader, the keyboard (numeric keypad, "Keyboard as printed") and the floppy swap
+* `CORE/sim/tos_loader/run.sh`, `CORE/sim/keyboard/run.sh`, `CORE/sim/floppy_swap/run.sh`,
+  `CORE/sim/fdc_bridge/run.sh`: GHDL tests of the TOS/cartridge loader, the keyboard (numeric keypad,
+  "Keyboard as printed"), the floppy swap (and eject at the M2M reset) and the sector buffer read-back
+  of `fdc_bridge.vhd` (every drive returns its own buffer; the Verilator simulation bypasses it)
 * `CORE/sim/fastseek/run.sh`: the fast seek of the firmware in the QNICE emulator (FAT32 image
   with fragmented files, compared with the FAT32 library)
 
