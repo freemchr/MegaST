@@ -26,7 +26,10 @@
 --    QNICE sets sd_buff_addr and reads sd_buff_din. The address is transferred
 --    to the core clock domain and the byte is transferred back. This takes a
 --    few hundred nanoseconds, so mega65.vhd stalls QNICE using wait states when
---    it reads sd_buff_din (C_VD_DIN_WAIT).
+--    it reads sd_buff_din (C_VD_DIN_WAIT). Each drive's byte is transferred
+--    separately: the firmware reads the sector before it raises sd_ack, so the
+--    drive cannot be selected by its acknowledge signal (that returned the
+--    floppy buffer for the hard disk writes, issue #11).
 --
 -- This machine is based on AtariST_MiSTer
 -- Powered by MiSTer2MEGA65
@@ -86,7 +89,7 @@ architecture synthesis of fdc_bridge is
    signal qnice_pending    : std_logic;
    signal qnice_ack_core   : std_logic_vector(G_VDNUM - 1 downto 0);
    signal qnice_active     : natural range 0 to G_VDNUM - 1 := 0;   -- drive of the current transfer
-   signal qnice_rd_byte    : std_logic_vector(7 downto 0);
+   signal qnice_rd_byte    : std_logic_vector(8 * G_VDNUM - 1 downto 0);
    signal qnice_lba        : std_logic_vector(32 * G_VDNUM - 1 downto 0);
    signal qnice_rd         : std_logic_vector(G_VDNUM - 1 downto 0);
    signal qnice_wr         : std_logic_vector(G_VDNUM - 1 downto 0);
@@ -98,12 +101,11 @@ architecture synthesis of fdc_bridge is
    signal main_w_data      : std_logic_vector(15 downto 0);
    signal main_w_strobe    : std_logic;
    signal main_rd_addr     : std_logic_vector(8 downto 0);
-   signal main_rd_byte     : std_logic_vector(7 downto 0);
+   signal main_rd_byte     : std_logic_vector(8 * G_VDNUM - 1 downto 0);   -- drive i: bits 8*i+7 .. 8*i
    signal main_ack         : std_logic_vector(G_VDNUM - 1 downto 0);
-   signal main_din         : std_logic_vector(15 downto 0);
 
-   -- core to QNICE clock domain crossing: read byte, lba, read and write requests
-   constant C_M2Q_WIDTH    : natural := 8 + 34 * G_VDNUM;
+   -- core to QNICE clock domain crossing: read bytes, lba, read and write requests
+   constant C_M2Q_WIDTH    : natural := 42 * G_VDNUM;
    signal m2q_src          : std_logic_vector(C_M2Q_WIDTH - 1 downto 0);
    signal m2q_dst          : std_logic_vector(C_M2Q_WIDTH - 1 downto 0);
 
@@ -174,7 +176,7 @@ begin
       qnice_sd_lba_o(i)   <= qnice_lba(32 * i + 31 downto 32 * i);
       qnice_sd_rd_o(i)    <= qnice_rd(i);
       qnice_sd_wr_o(i)    <= qnice_wr(i);
-      qnice_buff_din_o(i) <= qnice_rd_byte;
+      qnice_buff_din_o(i) <= qnice_rd_byte(8 * i + 7 downto 8 * i);
    end generate qnice_outputs;
 
    ---------------------------------------------------------------------------------------------
@@ -187,28 +189,19 @@ begin
    main_buff_dout_o <= main_w_data;
    main_sd_ack_o    <= main_ack;
 
-   -- read data: sector buffer of the drive that is currently acknowledged
-   din_mux : process(all)
-   begin
-      main_din <= main_buff_din_i(15 downto 0);
-      for i in 0 to G_VDNUM - 1 loop
-         if main_ack(i) = '1' then
-            main_din <= main_buff_din_i(16 * i + 15 downto 16 * i);
-         end if;
-      end loop;
-   end process din_mux;
-
    main_proc : process(main_clk_i)
    begin
       if rising_edge(main_clk_i) then
          main_w_req_d <= main_w_req;
 
          -- the sector buffers of the clients have a registered output
-         if main_rd_addr(0) = '0' then
-            main_rd_byte <= main_din(7 downto 0);
-         else
-            main_rd_byte <= main_din(15 downto 8);
-         end if;
+         for i in 0 to G_VDNUM - 1 loop
+            if main_rd_addr(0) = '0' then
+               main_rd_byte(8 * i + 7 downto 8 * i) <= main_buff_din_i(16 * i + 7 downto 16 * i);
+            else
+               main_rd_byte(8 * i + 7 downto 8 * i) <= main_buff_din_i(16 * i + 15 downto 16 * i + 8);
+            end if;
+         end loop;
       end if;
    end process main_proc;
 
@@ -280,14 +273,14 @@ begin
          dest_out => qnice_w_ack
       ); -- i_cdc_m2q_wack
 
-   m2q_src(7 downto 0)                                           <= main_rd_byte;
-   m2q_src(8 + 32 * G_VDNUM - 1 downto 8)                        <= main_sd_lba_i;
-   m2q_src(8 + 33 * G_VDNUM - 1 downto 8 + 32 * G_VDNUM)         <= main_sd_rd_i;
-   m2q_src(8 + 34 * G_VDNUM - 1 downto 8 + 33 * G_VDNUM)         <= main_sd_wr_i;
-   qnice_rd_byte                                                 <= m2q_dst(7 downto 0);
-   qnice_lba                                                     <= m2q_dst(8 + 32 * G_VDNUM - 1 downto 8);
-   qnice_rd                                                      <= m2q_dst(8 + 33 * G_VDNUM - 1 downto 8 + 32 * G_VDNUM);
-   qnice_wr                                                      <= m2q_dst(8 + 34 * G_VDNUM - 1 downto 8 + 33 * G_VDNUM);
+   m2q_src(8 * G_VDNUM - 1 downto 0)                   <= main_rd_byte;
+   m2q_src(40 * G_VDNUM - 1 downto 8 * G_VDNUM)        <= main_sd_lba_i;
+   m2q_src(41 * G_VDNUM - 1 downto 40 * G_VDNUM)       <= main_sd_rd_i;
+   m2q_src(42 * G_VDNUM - 1 downto 41 * G_VDNUM)       <= main_sd_wr_i;
+   qnice_rd_byte                                       <= m2q_dst(8 * G_VDNUM - 1 downto 0);
+   qnice_lba                                           <= m2q_dst(40 * G_VDNUM - 1 downto 8 * G_VDNUM);
+   qnice_rd                                            <= m2q_dst(41 * G_VDNUM - 1 downto 40 * G_VDNUM);
+   qnice_wr                                            <= m2q_dst(42 * G_VDNUM - 1 downto 41 * G_VDNUM);
 
    i_cdc_m2q_data : xpm_cdc_array_single
       generic map (
