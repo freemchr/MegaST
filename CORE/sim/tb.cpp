@@ -61,6 +61,8 @@ int main(int argc, char** argv) {
     top = new Vtb_top;
     top->init = 1; top->reset_in = 1; top->cfg_mem = 1; top->cfg_ste = ste;
     top->cfg_crop = getenv("CROP") != nullptr;   // CROP=1: only the graphics area is active
+    top->cfg_mono = getenv("MONO") != nullptr;   // MONO=1: SM124 monochrome monitor (71 Hz)
+    int dump_from = getenv("DUMP_FROM") ? atoi(getenv("DUMP_FROM")) : -1;   // write every frame from this one on
     top->dio_download = 1; top->dio_strobe = 0; top->tos192k_in = 0;
     for (int i = 0; i < 4; i++) top->kbd_matrix[i] = 0xffffffff;
     for (int i = 0; i < 100; i++) cycle32();
@@ -218,7 +220,7 @@ int main(int argc, char** argv) {
         if (top->video_vs && !old_vs) {
             if (y > maxy) maxy = y;
             char name[256];
-            if (frame % 10 == 9 || frame == frames - 1) {
+            if (frame % 10 == 9 || frame == frames - 1 || (dump_from >= 0 && frame >= dump_from)) {
                 snprintf(name, sizeof(name), "%s_%03d.ppm", prefix.c_str(), frame);
                 FILE* o = fopen(name, "wb");
                 fprintf(o, "P6 %d %d 255\n", W, H); fwrite(img.data(), 1, img.size(), o); fclose(o);

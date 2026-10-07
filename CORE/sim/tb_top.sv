@@ -18,6 +18,7 @@ module tb_top (
   input         cart_loaded,
   input         cfg_viking,
   input         cfg_crop,
+  input         cfg_mono,      // 1 = SM124 monochrome monitor
   // hard disk 0 (the testbench emulates the M2M firmware / vdrives)
   input   [1:0] fd_img_mounted,
   output [31:0] fd_sd_lba,
@@ -117,7 +118,7 @@ module tb_top (
   atarist_m65 dut (
 `endif
     .clk_32(clk_32), .clk_96(clk_96), .clk_2(clk_2), .init(init), .reset_in(reset_in),
-    .cfg_mem(cfg_mem), .cfg_ste(cfg_ste), .cfg_mste(1'b0), .cfg_blitter(1'b0), .cfg_mono(1'b0),
+    .cfg_mem(cfg_mem), .cfg_ste(cfg_ste), .cfg_mste(1'b0), .cfg_blitter(1'b0), .cfg_mono(cfg_mono),
     .cfg_psg_stereo(1'b0), .cfg_narrow_brd(1'b1), .cfg_mde60(1'b0), .cfg_fdc_wp(2'b00),
     .cfg_viking(cfg_viking), .cfg_ste_pads(1'b0), .cfg_cubase(1'b0), .cfg_crop(cfg_crop),
     .rtc({1'b0, 8'h40, 8'h01, 8'h26, 8'h09, 8'h28, 8'h14, 8'h35, 8'h07}),  // Mon 2026-09-28 14:35:07 .cart_loaded(cart_loaded),
