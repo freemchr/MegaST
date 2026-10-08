@@ -158,6 +158,82 @@ Usage
   steps. "Mouse port" selects the MEGA65 port the mouse is plugged into (default: port 1); the
   joystick goes into the other port.
 
+Using disk images
+-----------------
+
+### The menu and the file browser
+
+* <kbd>Help</kbd> opens and closes the menu. Cursor up/down moves, <kbd>Return</kbd> selects.
+* Selecting "Floppy A:", "Floppy B:", "Hard disk 0:", "Hard disk 1:", "TOS:" or "Cartridge:"
+  opens the file browser in `/atarist`. Cursor up/down selects a file, cursor left/right turns the
+  page, <kbd>Return</kbd> opens a folder or mounts the file, <kbd>Run/Stop</kbd> cancels.
+  <kbd>F1</kbd> / <kbd>F3</kbd> switch between the internal and the external SD card.
+* The browser only shows the file types the core can use: `.st` (floppy), `.hd`, `.img`, `.vhd`
+  (hard disk), `.img`, `.rom` (TOS), `.stc`, `.img` (cartridge).
+* The menu shows the name of the mounted image next to the drive. To **unmount (eject)** a drive,
+  select its line and press <kbd>Space</kbd>.
+* With `/atarist/stmount` on the SD card (in the release zip), the mounted images and the chosen
+  TOS and cartridge are **remembered** and loaded again at the next start.
+
+### Floppy disk images
+
+1. Copy the `.st` image into `/atarist` on the SD card (or into a subfolder).
+2. Press <kbd>Help</kbd>, select "Floppy A:" and choose the image.
+3. To boot from it (most games): select "Reset Atari ST" in the menu, or switch the MEGA65 off
+   and on with `stmount` on the SD card. A disk mounted while the ST is running is seen like a
+   real disk change, e.g. to open it on the desktop.
+4. **Disk changes:** when a game asks for disk 2, mount disk 2 on "Floppy A:" (no reset).
+5. **Saving:** the ST writes into a copy in memory; about 2 seconds after the last write the core
+   writes the image back to the SD card. The **drive LED is yellow** until that is done: don't switch
+   off or remove the SD card while it is yellow. "Write protect floppies" (System settings)
+   protects the images; "Swap floppy A: and B:" boots from the disk in B:.
+6. New empty disk (e.g. for game saves): `python3 tools/make_st_disk.py blank.st` on your computer
+   (see [Floppy disks](#floppy-disks)).
+
+### Hard disk images
+
+1. Copy the image (`.hd`, `.img` or `.vhd`, up to 4 GB) into `/atarist` on the SD card.
+2. Press <kbd>Help</kbd>, select "Hard disk 0:" and choose the image. Large images show
+   "Scanning disk image..." for a moment.
+3. **Reset the ST** ("Reset Atari ST" in the menu). TOS only looks for hard disks when it starts,
+   so a hard disk mounted while the desktop is shown does not appear without a reset. With
+   `stmount` the image is mounted at power on before the ST starts, so no reset is needed.
+4. With **EmuTOS**, drive C: appears on the desktop by itself. With **Atari TOS**, the hard disk
+   driver on the image (HDDRIVER, AHDI, ICD, ...) starts first and adds drive C:. If there is no C:
+   icon, add it once with "Options" → "Install Disk Drive" (TOS 1.x) or "Install Icon" (TOS 2.06),
+   then "Save Desktop".
+5. Hard disk writes go straight to the SD card (no delay). The drive LED is red while the ST
+   accesses the hard disk.
+
+More about images, drivers and Hatari images: [Hard disks](#hard-disks).
+
+### FAQ
+
+**My image is not in the file browser.** Only `.st`, `.hd`, `.img`, `.vhd`, `.rom` and `.stc`
+files are shown. `.msa` and `.stx` floppy images and `.zip` files are not supported: unzip them
+on your computer and convert `.msa` to `.st` (e.g. with Hatari's `hmsa` tool:
+`hmsa game.msa` writes `game.st`). `.stx` (Pasti, copy protected originals) cannot be converted.
+
+**The hard disk is mounted, but there is no drive C:.** Reset the ST after mounting (see above).
+With Atari TOS the image needs a bootable hard disk driver, and a C: icon on the desktop. A quick
+test: boot the EmuTOS from the release zip. If EmuTOS shows C:, the image works and the problem is
+the driver or the desktop setup. (With 0.4.12 some users see images that are not found even with
+a correct setup; this is being investigated in issues #11 and #12.)
+
+**The game does not start from the floppy.** Mount the disk on "Floppy A:" and reset the ST. Some
+games need a real Atari TOS (TOS 1.02 or 1.04 for the ST, see [TOS](#tos)), some need 512 KB or
+1 MB of memory or the ST (not STe) machine type. A few images in circulation are defective, see
+[Game notes](#game-notes).
+
+**Are my saves on the floppy kept?** Yes, if the image is not write protected: wait until the
+drive LED is no longer yellow before switching off.
+
+**How do I get empty drives at the next start?** Unmount the drives with <kbd>Space</kbd> in the
+menu. Without `/atarist/stmount` on the SD card, all drives start empty anyway.
+
+**Can I use a folder of my PC as drive C: like in Hatari?** No, that is an emulator feature
+("GEMDOS drive"). The core needs a hard disk image, like a real ST.
+
 TOS
 ---
 
@@ -198,15 +274,7 @@ limit of FAT32); disks larger than 1 GB need a driver with ICD commands (EmuTOS,
 partitions automatically; with Atari TOS you need a hard disk driver (AHDI, HDDRIVER, ...),
 e.g. on a boot floppy or on the hard disk itself.
 
-How to use a hard disk image:
-
-1. Copy the image into `/atarist` on the SD card.
-2. Open the menu (<kbd>Help</kbd>), select "Hard disk 0" and choose the image.
-3. Reset the ST ("Reset Atari ST" in the menu). TOS only looks for hard disks when it starts.
-4. With **EmuTOS**, drive C: appears on the desktop (if not, check the partitions of the image).
-   With **Atari TOS**, the driver on the image (or on a boot floppy) starts and adds drive C:.
-   If there is no C: icon on the desktop, add it once with "Options" → "Install Disk Drive" (TOS 1.x)
-   or "Install Icon" (TOS 2.06), then "Save Desktop".
+How to use a hard disk image: see [Hard disk images](#hard-disk-images) above.
 
 Images that work in Hatari do not always work here:
 
