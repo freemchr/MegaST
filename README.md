@@ -29,6 +29,8 @@ Tested on a MEGA65 R6
 | Area | Result |
 |------|--------|
 | TOS 1.04, boot to the desktop | works |
+| TOS 2.06 (STe) and EmuTOS 1.4, boot and hard disk | work (tester reports) |
+| TOS 1.00, 1.02, 1.06, 1.62 | boot to the desktop in simulation, not tried on hardware yet |
 | Floppy disks: loading, changing disks, reset with a disk inserted, saving | works |
 | Hard disk: 4 GB `.vhd` image (MiSTer image), boot, reading files, launching programs | works |
 | Hard disk: writing files | broken up to 0.4.10 (issue #11), fixed in 0.4.11 (tested in simulation), to be confirmed |
@@ -156,6 +158,10 @@ modes need TOS 1.06 or newer (or EmuTOS).
 TOS may not). It is fine for GEM programs and for a first test, but some games crash with it.
 **For games, use a real Atari TOS:** TOS 1.02 or 1.04 for the ST (some games only run reliably
 with TOS 1.02), TOS 1.62 or 2.06 for the STe. Use a ROM image dumped from your own Atari.
+
+**TOS 1.06 and 1.62 start slowly:** after a cold boot without a hard disk, the screen stays
+white for about 14 seconds (measured in the simulator) before the desktop appears. The TOS boot
+code waits for a hard disk on the ACSI bus; the ST has not hung.
 
 **Changing the memory size or the machine type:** since 0.4.8 the ST restarts with a cold boot by
 itself (issue #7). In 0.4.7 and older it did not boot after such a change, because TOS keeps the
