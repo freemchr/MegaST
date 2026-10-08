@@ -198,7 +198,9 @@ _HLP_HEAP1_OK   MOVE    MENU_HEAP_SIZE, R8
                 RSUB    FATAL, 1 
 
                 ; run the menu
-_HLP_HEAP2_OK   RSUB    ROSM_REM_OLD, 1         ; remember current settings
+_HLP_HEAP2_OK   RSUB    MNT_OSM_NAMES, 1        ; MegaST: names of restored..
+                                                ; ..images (mntmem.asm)
+                RSUB    ROSM_REM_OLD, 1         ; remember current settings
                 RSUB    OPTM_SHOW, 1            ; fill VRAM
                 RSUB    SCR$OSM_O_ON, 1         ; make overlay visible
                 MOVE    OPTM_SELECTED, R9       ; use recently selected line
@@ -206,6 +208,7 @@ _HLP_HEAP2_OK   RSUB    ROSM_REM_OLD, 1         ; remember current settings
                 RSUB    OPTM_RUN, 1             ; run menu
                 RSUB    SCR$OSM_OFF, 1          ; make overlay invisible
                 RSUB    ROSM_SAVE, 1            ; save settings if appropriate
+                RSUB    MNT_SAVE, 1             ; MegaST: postponed save
 
                 ; Smart handling of last-recently-selected: only remember
                 ; LRS when the menu is closed via pressing the Help key again.

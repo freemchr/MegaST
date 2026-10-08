@@ -186,3 +186,7 @@ CRTROM_AUT_4KS  .BLOCK CRTROM_AUT_MAX           ; 4K start address within dev.
 CRTROM_AUT_MOD  .BLOCK CRTROM_AUT_MAX           ; mode: mandatory or optional
 CRTROM_AUT_NAM  .BLOCK CRTROM_AUT_MAX           ; startpos of filenames
 CRTROM_AUT_FILE .BLOCK FAT32$FDH_STRUCT_SIZE    ; file handle to autoload ROMs
+
+
+; MegaST: remember the mounted disk images (mntmem.asm)
+#include "mntmem_vars.asm"

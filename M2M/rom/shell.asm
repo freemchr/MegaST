@@ -119,6 +119,7 @@ START_SHELL     MOVE    LOG_M2M, R8             ; M2M start message
                 RSUB    KEYB$INIT, 1            ; keyboard library
                 RSUB    HELP_MENU_INIT, 1       ; menu library
                 RSUB    CRTROM_AUTOLOAD, 1      ; auto-load ROMs
+                RSUB    MNT_RESTORE, 1          ; MegaST: last mounted images
 
                 ; ------------------------------------------------------------
                 ; Reset management
@@ -415,62 +416,13 @@ _HM_SDMOUNTED3  MOVE    R8, R0                  ; R8: selected file name
                 SYSCALL(crlf, 1)
 
                 ; remember the file name for displaying it in the OSM in R2
-                ;
-                ; the convention for the position in the @OPTM_HEAP is:
-                ; a) for vdrives: vdrive number times @SCR$OSM_O_DX
-                ; b) for CRTs/ROMs: (#vdrives+#submenus+crt/rom id)
-                ;    times @SCR$OSM_O_DX
+                ; MegaST: moved to MNT_OSM_NAME (mntmem.asm), which
+                ; MNT_RESTORE uses, too
                 MOVE    R8, R2                  ; R2: file name
-                MOVE    OPTM_HEAP, R0
-                MOVE    @R0, R0
-                RBRA    _HM_SDMOUNTED3A, !Z     ; OPTM_HEAP is ready
-                MOVE    ERR_FATAL_INST, R8
-                MOVE    ERR_FATAL_INST7, R9
-                RBRA    FATAL, 1
-
-_HM_SDMOUNTED3A XOR     R8, R8
-                CMP     1, R5                   ; case (b)?
-                RBRA    _HM_SDMOUNTED3B, !Z     ; no, case (a)
-                MOVE    VDRIVES_NUM, R9
-                ADD     @R9, R8
-                MOVE    OPTM_SCOUNT, R9
-                ADD     @R9, R8
-
-_HM_SDMOUNTED3B ADD     R7, R8
-                MOVE    SCR$OSM_O_DX, R9
-                MOVE    @R9, R9
-                SYSCALL(mulu, 1)
-                ADD     R10, R0                 ; R0: string ptr for file name
-                MOVE    R9, R1                  ; R1: maximum string length
-                SUB     2, R1                   ; minus 2 because of frame
-
-                ; if the length of the name is <= the maximum size then just
-                ; copy as is; otherwise copy maximum size + 1 so that the
-                ; ellipsis is triggered (see _OPTM_CBS_REPL in options.asm)
-                MOVE    R2, R8
-                SYSCALL(strlen, 1)
-                CMP     R9, R1                  ; strlen(name) > maximum?
-                RBRA    _HM_SDMOUNTED4, N       ; yes
-                MOVE    R2, R8
-                MOVE    R0, R9
-                SYSCALL(strcpy, 1)
-                RBRA    _HM_SDMOUNTED5, 1
-
-                ; strlen(name) > maximum: copy maximum + 1 to trigger ellipsis
-_HM_SDMOUNTED4  MOVE    R2, R8
-                MOVE    R0, R9
-                MOVE    R1, R10
-                ADD     1, R10
-                SYSCALL(memcpy, 1)
-                ADD     R10, R9                 ; add zero terminator
-                MOVE    0, @R9
-
-                ; set "%s is replaced" flag for filename string to zero                
-_HM_SDMOUNTED5  MOVE    SCR$OSM_O_DX, R8        ; set "%s is replaced" flag
-                MOVE    @R8, R8
-                SUB     1, R8
-                ADD     R0, R8
-                MOVE    0, @R8
+                MOVE    R7, R8                  ; R8: drive or CRT/ROM number
+                MOVE    R5, R9                  ; R9: mode
+                MOVE    R2, R10                 ; R10: file name
+                RSUB    MNT_OSM_NAME, 1
 
                 ; load the disk image to the mount buffer
                 MOVE    SP, R6                  ; remember stack pointer
@@ -544,6 +496,10 @@ _HM_SDMOUNTED5A RSUB    HANDLE_IO, 1            ; wait for Space to be pressed
                 RBRA    _HM_SDMOUNTED2, 1
 
 _HM_SDMOUNTED6A MOVE    R9, R6                  ; R6: disk image type
+                MOVE    R7, R8                  ; MegaST: remember the image
+                MOVE    R5, R9                  ; (FB_PATH + file name)
+                MOVE    R2, R10
+                RSUB    MNT_REMEMBER, 1
                 RSUB    SCR$OSM_OFF, 1          ; hide the big window
 
                 ; Step #5: Notify MiSTer using the "SD" protocol, if we
@@ -615,6 +571,10 @@ _HM_MOUNTED     MOVE    R7, R8
 _HM_MOUNTED_C   CMP     OPTM_KEY_SELALT, R6
                 RBRA    _HM_MOUNTED_S, !Z       ; no
 
+                MOVE    R7, R8                  ; MegaST: forget the image
+                XOR     R9, R9                  ; (mode 0: vdrive)
+                RSUB    MNT_FORGET, 1
+
                 ; Unmount the whole drive by stobing the image mount signal
                 ; while setting the image size to zero
                 MOVE    R7, R8                  ; virtual drive number
@@ -653,6 +613,7 @@ _HM_MOUNTED_1   MOVE    R9, R8                  ; menu index
                 RBRA    _HM_START_MOUNT, 1      ; show browser and mount
 
 _HM_RET         RSUB    VD_MNT_ST_SET, 1        ; remember mount status
+                RSUB    MNT_SAVE, 1             ; MegaST: save mounted images
                 SYSCALL(leave, 1)
                 RET
 
@@ -1704,6 +1665,8 @@ FRAME_FULLSCR   SYSCALL(enter, 1)
 #include "crts-and-roms.asm"
 #include "filters.asm"
 #include "gencfg.asm"
+; MegaST: remember the mounted images (mntmem.asm)
+#include "mntmem.asm"
 #include "options.asm"
 #include "selectfile.asm"
 #include "strings.asm"

@@ -369,7 +369,8 @@ MENU_HEAP_SIZE  .EQU 2560
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE       .EQU 4608                       ; 7168 - 2560 = 4608
+; MegaST: 2048 words less for remembering the mounted images (mntmem.asm)
+HEAP_SIZE       .EQU 2560                       ; 7168 - 2560 - 2048 = 2560
 HEAP            .BLOCK 1
 
 ; in RELEASE mode: 28k of heap which leads to a better user experience when
@@ -377,8 +378,9 @@ HEAP            .BLOCK 1
 #else
 
 ; MegaST: 2560 words less for the checkpoint tables of the fast seek of the
-; hard disks (VD_UB_CP in shell_vars.asm, 2052 words)
-HEAP_SIZE       .EQU 24576                      ; 29696 - 2560 - 2560 = 24576
+; hard disks (VD_UB_CP in shell_vars.asm, 2052 words) and 2048 words less for
+; remembering the mounted images (MNT_PATHS etc. in shell_vars.asm, ~1900 words)
+HEAP_SIZE       .EQU 22528                      ; 29696 - 2560 - 2560 - 2048
 HEAP            .BLOCK 1
 
 ; The monitor variables use 22 words, round to 32 for being safe and subtract

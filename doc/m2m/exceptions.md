@@ -96,6 +96,31 @@ shorter than 1 ms, and ST software does not need debounced joysticks.
 * `M2M/rom/shell_vars.asm`: checkpoint tables `VD_UB_CP*` for the fast seek.
 * `M2M/rom/strings.asm`: `STR_VD_SCAN` ("Scanning disk image...").
 
+### Remembering the mounted images (Shell firmware)
+
+The framework does not remember mounted images (issue #13). Changes:
+
+* `M2M/rom/mntmem.asm` (new, included by `shell.asm`) and `M2M/rom/mntmem_vars.asm` (new, included by
+  `shell_vars.asm`): the full path of every mounted vdrive image and manually loaded CRT/ROM is kept in
+  `MNT_PATHS` and saved to the file `MNT_FILE` (256 bytes per entry, vdrives first). `MNT_RESTORE` loads
+  them again at startup, after `CRTROM_AUTOLOAD` and before `RP_SYSTEM_START` (core still in reset). The
+  file is opened through `HANDLE_DEV`, not `CONFIG_DEVH`, so the FAT32 library keeps the shared sector
+  buffer consistent with the vdrives. Like the settings file, it must exist with the exact size, else the
+  feature is off. Tested with `CORE/sim/mntmem/run.sh` (QNICE emulator).
+* `M2M/rom/selectfile.asm`: the browser tracks its current directory in `FB_PATH` (`FBP_SET`, `FBP_CD`),
+  because it only returns the bare file name.
+* `M2M/rom/shell.asm`: `HANDLE_MOUNTING` calls `MNT_REMEMBER` after a successful load, `MNT_FORGET` when a
+  drive is unmounted and `MNT_SAVE` on exit. The code that puts the file name into the menu
+  (`OPTM_HEAP`) moved to `MNT_OSM_NAME` in `mntmem.asm`, so that the restore can use it, too.
+* `M2M/rom/options.asm` (`HELP_MENU`): `MNT_OSM_NAMES` writes the names of the restored images when the
+  menu opens (`OPTM_HEAP` is only valid then); `MNT_SAVE` retries a postponed save when the menu closes.
+* `M2M/rom/sysdef.asm`: selector `M2M$CFG_MNT_FILE` (`0x0102`); `CORE/vhdl/config.vhd`: `SEL_MNT_FILE`
+  and `MNT_FILE` (empty string = off).
+* `CORE/m2m-rom/make_rom.sh` writes `MNT_ENTRIES` and `MNT_BUF_SIZE` to `globals.asm` (qasm cannot
+  compute expressions); `CORE/m2m-rom/m2m-rom.asm`: `HEAP_SIZE` 2048 words smaller for the new variables.
+
+Generic, a candidate for upstream.
+
 ### Bug fix: saving the settings with more than one virtual drive
 
 `M2M/rom/options.asm` (`ROSM_SAVE`): the vdrive id of the "any cache dirty?" loop was kept in `R8`, but

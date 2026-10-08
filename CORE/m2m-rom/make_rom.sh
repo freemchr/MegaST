@@ -37,6 +37,11 @@ awk '/constant C_CRTROMS_MAN_NUM/ {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); 
 awk '/constant C_CRTROMS_AUTO_NUM/ {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); val=a[1]; if (val+0 == 0) val=1; printf("CRTROM_AUT_MAX              .EQU %s\n", val)}' ../vhdl/globals.vhd >> globals.asm
 # MegaST: menu group of "Reset Atari ST" (OSM_SEL_POST in m2m-rom.asm), taken from ../vhdl/config.vhd
 awk '/constant OPTM_G_Reset / {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); printf("OPTM_G_RESET                .EQU %s\n", a[1])}' ../vhdl/config.vhd >> globals.asm
+# MegaST: entries of the file that remembers the mounted images (M2M/rom/mntmem.asm): one per vdrive and
+# per manually loadable CRT/ROM, 256 bytes each (qasm cannot compute expressions, so we do it here)
+awk '/constant C_VDNUM/ {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); vd=a[1]+0; if (vd == 0) vd=1}
+     /constant C_CRTROMS_MAN_NUM/ {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); cr=a[1]+0; if (cr == 0) cr=1}
+     END {printf("MNT_ENTRIES                 .EQU %d\nMNT_BUF_SIZE                .EQU %d\n", vd+cr, (vd+cr)*256)}' ../vhdl/globals.vhd >> globals.asm
 
 ##############################################################################
 # M2M framework: Generate shell_fhandles.asm

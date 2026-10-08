@@ -84,6 +84,9 @@ simulation):
   of `fdc_bridge.vhd` (every drive returns its own buffer; the Verilator simulation bypasses it)
 * `CORE/sim/fastseek/run.sh`: the fast seek of the firmware in the QNICE emulator (FAT32 image
   with fragmented files, compared with the FAT32 library)
+* `CORE/sim/mntmem/run.sh`: remembering the mounted images (`M2M/rom/mntmem.asm`) in the QNICE
+  emulator: path tracking of the file browser, saving to and restoring from `/atarist/stmount` on a
+  FAT32 image, with stubs for the rest of the shell
 * `CORE/sim/acsi_write/run.sh <emutos tos.img> [delay]`: hard disk writes in the Verilator
   simulation (run `build.sh` first). A floppy boot sector writes 64 KB with one `Rwabs` call, and
   `check.py` verifies every sector of the image. A delay (641666 = 20 ms per sector) makes the

@@ -50,7 +50,8 @@ reported it.
   `OPTM_ITEMS` / `OPTM_GROUPS` (`config.vhd`), every `C_MENU_*` in `mega65.vhd` below it shifts.
   `top_mega65-r*.vhd` also hard-code `main_osm_control_m(48)` (`C_MENU_MOUSE1351`). `OPTM_SIZE` is the
   size of the settings file `/atarist/stcfg`. If it changes, ship a new `stcfg` (all `0xFF`) and say so
-  in `VERSIONS.md` and the README.
+  in `VERSIONS.md` and the README. Likewise `/atarist/stmount` (remembered images) has
+  `(C_VDNUM + C_CRTROMS_MAN_NUM) * 256` bytes (`globals.vhd`, currently 1536): ship a new one if that changes.
 * **ST memory must stay fast.** The ST bus needs RAM read data within about 175 ns. In the simulator,
   TOS 1.04 survives 10 extra 96 MHz cycles and crashes at 11. Video, DMA and the blitter cannot wait.
   That rules out HyperRAM (about 90 ns average, much more while ascal bursts) for ST RAM.
@@ -77,6 +78,7 @@ Simulate first. Every hardware round trip costs the maintainer time.
   the R3 memory variant. `KEY=<col*8+row> KEY_AT=<frame>` presses a key.
 * `CORE/sim/{keyboard,tos_loader,floppy_swap,fdc_bridge}/run.sh`: GHDL unit tests.
 * `CORE/sim/fastseek/run.sh`: firmware fast seek in the QNICE emulator.
+* `CORE/sim/mntmem/run.sh`: remembering the mounted images (`/atarist/stmount`) in the QNICE emulator.
 * `CORE/sim/acsi_write/run.sh <emutos tos.img> [delay]`: hard disk writes (64 KB, every sector checked).
 * After a Vivado build check: timing met (WNS/WHS >= 0), no new critical warnings, no block RAM
   demoted to LUTRAM (Synth 8-5835).

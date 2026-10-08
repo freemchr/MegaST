@@ -227,7 +227,7 @@ ERR_FATAL_INST3 .EQU 3  ; shell.asm:         _HM_SDMOUNTED2A
 ERR_FATAL_INST4 .EQU 4  ; options.asm:       _OPTM_GK_MNT
 ERR_FATAL_INST5 .EQU 5  ; crts-and-roms.asm  HANDLE_CRTROM_M
 ERR_FATAL_INST6 .EQU 6  ; options.asm:       _OPTM_CBS_CTRM
-ERR_FATAL_INST7 .EQU 7  ; shell.asm:         _HM_SDMOUNTED3
+ERR_FATAL_INST7 .EQU 7  ; mntmem.asm:        MNT_OSM_NAME (MegaST, was shell.asm _HM_SDMOUNTED3)
 ERR_FATAL_INST8 .EQU 8  ; options.asm        _OPTM_CBS_I
 ERR_FATAL_INST9 .EQU 9  ; options.asm        _OPTM_CBS_I4
 ERR_FATAL_INSTA .EQU 10 ; shell.asm:         _HM_SDMOUNTED6B

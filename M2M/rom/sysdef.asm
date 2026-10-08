@@ -253,6 +253,7 @@ M2M$SYS_CORE_H_FREQ .EQU 0x700A     ; horizontal frequency in Hz
 M2M$CFG_WHS         .EQU 0x1000     ; Welcome & Help screens
 M2M$CFG_DIR_START   .EQU 0x0100     ; Start folder for file browser
 M2M$CFG_CFG_FILE    .EQU 0x0101     ; Config file for OSM persistence
+M2M$CFG_MNT_FILE    .EQU 0x0102     ; MegaST: file for remembering mounted images
 M2M$CFG_GENERAL     .EQU 0x0110     ; General configuration settings
 M2M$CFG_CORENAME    .EQU 0x0200     ; String: name and version of core
 

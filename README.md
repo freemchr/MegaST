@@ -97,6 +97,9 @@ Requirements
     in the release zip, or `cd M2M/tools && ./make_config.sh stcfg auto`). The file must have exactly
     as many bytes as the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 99). When
     the menu changes in a new release, a settings file of the old size is ignored: use the new one.
+  * optionally `stmount`, if the core shall remember the mounted floppy and hard disk images and
+    the TOS and cartridge chosen in the menu (included in the release zip). It must have exactly
+    1536 bytes, all 0x00 or all 0xFF (e.g. `python3 -c "open('stmount','wb').write(bytes(1536))"`).
 
 Usage
 -----
@@ -104,6 +107,12 @@ Usage
 * Press <kbd>Help</kbd> to open the on-screen menu: mount floppy disks, choose the machine
   type, memory size, video output and more. "Reset Atari ST" resets the ST (like the reset
   button of the MEGA65, the ST RAM is kept).
+* With `/atarist/stmount` on the SD card (see Requirements), the core remembers the images you
+  mounted and the TOS and cartridge you chose, and loads them again at the next start, before
+  the ST boots (so a hard disk is found and the right TOS starts). Unmounting a drive in the menu
+  forgets it. A long press of the reset button restarts the core like a power cycle, so the
+  remembered images come back; unmount them in the menu if you want empty drives. An image that
+  is no longer on the SD card is skipped.
 * Keyboard mapping (the MEGA65 has a C64 style layout, symbols are mapped by position):
 
   | MEGA65               | Atari ST             |

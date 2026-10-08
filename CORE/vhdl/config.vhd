@@ -184,11 +184,17 @@ constant WHS : WHS_RECORD_ARRAY_TYPE := (
 -- !!! DO NOT TOUCH !!!
 constant SEL_DIR_START     : std_logic_vector(15 downto 0) := x"0100";
 constant SEL_CFG_FILE      : std_logic_vector(15 downto 0) := x"0101";
+constant SEL_MNT_FILE      : std_logic_vector(15 downto 0) := x"0102";  -- MegaST
 
 -- START YOUR CONFIGURATION BELOW THIS LINE
 
 constant DIR_START         : string := "/atarist";
 constant CFG_FILE          : string := "/atarist/stcfg";
+
+-- MegaST: remember the mounted disk images and the manually loaded ROMs (TOS, cartridge) and load them
+-- again at the next start, if this file exists with exactly (C_VDNUM + C_CRTROMS_MAN_NUM) * 256 bytes
+-- (see M2M/rom/mntmem.asm). An empty string switches the feature off.
+constant MNT_FILE          : string := "/atarist/stmount";
 
 --------------------------------------------------------------------------------------------------------------------
 -- General configuration settings: Reset, Pause, OSD behavior, Ascal, etc. (Selector 0x0110)
@@ -690,6 +696,7 @@ begin
             when SEL_GENERAL           => data_o <= getGenConf(index);
             when SEL_DIR_START         => data_o <= str2data(DIR_START, index);
             when SEL_CFG_FILE          => data_o <= str2data(CFG_FILE, index);
+            when SEL_MNT_FILE          => data_o <= str2data(MNT_FILE, index);
             when SEL_CORENAME          => data_o <= str2data(CORENAME, index);
             when SEL_OPTM_ITEMS        => data_o <= str2data(OPTM_ITEMS, index);
             when SEL_OPTM_MOUNT_STR    => data_o <= str2data(OPTM_S_MOUNT, index);

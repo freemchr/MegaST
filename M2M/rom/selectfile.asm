@@ -61,6 +61,8 @@ _S_START        MOVE    M2M$RAMROM_DEV, R9
                 MOVE    M2M$RAMROM_4KWIN, R9
                 MOVE    M2M$CFG_DIR_START, @R9
                 MOVE    M2M$RAMROM_DATA, R9
+                MOVE    R9, R8                  ; MegaST: track the path of..
+                RSUB    FBP_SET, 1              ; ..the browser (mntmem.asm)
 
                 ; load sorted directory list into memory
                 MOVE    HANDLE_DEV, R8
@@ -81,6 +83,9 @@ _S_CD_AND_READ  MOVE    FB_HEAP, R10            ; start address of heap
                 ; default path not found, try root instead
 _S_ERR_PNF      ADD     1, SP                   ; see comment in shell.asm
                 MOVE    FN_ROOT_DIR, R9         ; try root
+                MOVE    R9, R8                  ; MegaST: track the path
+                RSUB    FBP_SET, 1
+                MOVE    HANDLE_DEV, R8          ; R8: device handle again
                 MOVE    FB_HEAP, R10
                 MOVE    @R10, R10
                 MOVE    HEAP_SIZE, R11
@@ -472,7 +477,8 @@ _ELEMENT_FOUND  MOVE    R11, R8                 ; R11: selected SLL element
                 MOVE    R6, @--SP               ; rem. abs itm idx for cursor
                 MOVE    0, @--SP                ; ..and new dir. starts at 0
 
-_CHANGEDIR      MOVE    R8, R9                  ; use this directory
+_CHANGEDIR      RSUB    FBP_CD, 1               ; MegaST: track the path
+                MOVE    R8, R9                  ; use this directory
                 MOVE    HANDLE_DEV, R8
                 RBRA    _S_CD_AND_READ, 1       ; create new linked-list
 
