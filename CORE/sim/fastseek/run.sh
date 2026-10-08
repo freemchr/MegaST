@@ -14,8 +14,8 @@ trap 'rm -rf "$W"' EXIT
 
 gcc -fcommon -O2 -DUSE_SD -DUSE_UART -DUSE_TIMER -UUSE_VGA -UUSE_IDE -UDEBUG \
     $Q/emulator/qnice.c $Q/emulator/uart.c $Q/emulator/sd.c $Q/emulator/timer.c -lpthread -o "$W/qnice" 2>/dev/null
-for v in fast small ref; do
-    D=""; [ $v = ref ] && D="-DREF_ONLY"; [ $v = small ] && D="-DVD_UB_CP_SHIFT=3"
+for v in fast small ref mnt; do
+    D=""; [ $v = ref ] && D="-DREF_ONLY"; [ $v = small ] && D="-DVD_UB_CP_SHIFT=3" ; [ $v = mnt ] && D="-DMNT_SIM"
     gcc -xc -E $D fastseek_test.asm | sed '/^#.*/d' > "$W/$v.asm"
     $Q/assembler/qasm "$W/$v.asm" "$W/$v.out" > "$W/$v.asm.log" || { cat "$W/$v.asm.log"; exit 1; }
 done
@@ -26,7 +26,7 @@ rc=0
 for layout in "1 frag" "8 frag" "8 contig" "64 contig"; do
     set -- $layout; spc=$1
     python3 make_fat32.py "$W/sd.img" $spc 6291456 $2
-    for v in fast small ref; do
+    for v in fast small ref mnt; do
         out=$("$W/qnice" -a "$W/sd.img" "$W/$v.out" < /dev/null 2>&1 | tr -d '\r')
         res=$(echo "$out" | grep -E "^(OK|FAIL)" || echo "FAIL: no result")
         n=$(echo "$out" | grep -o "[0-9]* instructions have been executed" | cut -d' ' -f1)

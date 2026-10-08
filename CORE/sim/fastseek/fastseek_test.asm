@@ -10,6 +10,10 @@
 ; through FH_FAST and reads it back through FH_REF.
 ;
 ; REF_ONLY defined: FH_FAST also uses f32_fseek (to compare the speed)
+; MNT_SIM defined: sequential reads skip the seek (like VD_UB_SEEK) and every
+; 16th access writes HD1.IMG through a third handle, like MNT_SAVE writes
+; /atarist/stmount (FILE_OPEN takes over the sector buffer without flushing
+; it, so the hard disk sector has to be flushed before, as the firmware does)
 ; VD_UB_CP_SHIFT=3: checkpoints at least every 8 sectors: for the 6 MB file
 ; the shift has to become 5 (the 512 checkpoints cover 8 MB)
 ;
@@ -90,7 +94,19 @@ _LOOP_1         CMP     FILE_SIZE_HI, R5        ; still in the file?
                 XOR     R5, R5
 
                 ; seek both handles and compare 4 bytes with the expected content
-_LOOP_2         MOVE    FH_FAST, R8
+_LOOP_2
+#ifdef MNT_SIM
+                MOVE    FH_FAST, R8             ; like VD_UB_SEEK: sequential
+                ADD     FAT32$FDH_ACCESS_LO, R8 ; access needs no seek
+                CMP     @R8, R4
+                RBRA    _LOOP_2S, !Z
+                MOVE    FH_FAST, R8
+                ADD     FAT32$FDH_ACCESS_HI, R8
+                CMP     @R8, R5
+                RBRA    _LOOP_2R, Z
+_LOOP_2S
+#endif
+                MOVE    FH_FAST, R8
                 MOVE    R4, R9
                 MOVE    R5, R10
                 MOVE    2, R11
@@ -101,7 +117,7 @@ _LOOP_2         MOVE    FH_FAST, R8
 #endif
                 CMP     0, R9
                 RBRA    ERR_SEEK, !Z
-                MOVE    FH_REF, R8
+_LOOP_2R        MOVE    FH_REF, R8
                 MOVE    R4, R9
                 MOVE    R5, R10
                 SYSCALL(f32_fseek, 1)
@@ -186,7 +202,19 @@ _WRITE_3        RSUB    EXPECTED, 1
                 CMP     4, R6
                 RBRA    _WRITE_3, !Z
 
-_NEXT           SUB     1, R7
+_NEXT
+#ifdef MNT_SIM
+                MOVE    R7, R8                  ; every 16th access (right
+                AND     0x000F, R8              ; after a write): write
+                RBRA    _NEXT_1, !Z             ; another file through its
+                MOVE    FH_FAST, R8             ; own handle (like MNT_SAVE
+                RSUB    FAT32$FLUSH, 1          ; with /atarist/stmount); the
+                CMP     0, R9                   ; firmware flushes every
+                RBRA    ERR_WRITE, !Z           ; hard disk write at once
+                RSUB    SIM_SAVE, 1
+_NEXT_1
+#endif
+                SUB     1, R7
                 RBRA    _LOOP, !Z
 
                 ; count the recorded checkpoints
@@ -218,6 +246,45 @@ _CNT_2          SUB     1, R1
                 SYSCALL(puthex, 1)
                 SYSCALL(crlf, 1)
                 HALT
+
+#ifdef MNT_SIM
+; like MNT_SAVE: open HD1.IMG with FH_OTH, write its first 1536 bytes (with
+; their original content, (pos * 7 + pos / 512 + 1) & 0xFF) and flush
+SIM_SAVE        INCRB
+                MOVE    DEVH, R8
+                MOVE    FH_OTH, R9
+                MOVE    FNAME1, R10
+                XOR     R11, R11
+                RSUB    FAT32$FILE_OPEN, 1
+                CMP     0, R10
+                RBRA    ERR_OPEN, !Z
+                XOR     R0, R0                  ; R0: position
+_SIMS_1         MOVE    R0, R1                  ; pos * 7
+                ADD     R1, R1
+                ADD     R0, R1
+                ADD     R1, R1
+                ADD     R0, R1
+                MOVE    R0, R2                  ; + pos / 512
+                AND     0xFFFB, SR
+                SHR     9, R2
+                ADD     R2, R1
+                ADD     1, R1                   ; + file number
+                AND     0x00FF, R1
+                MOVE    FH_OTH, R8
+                MOVE    R1, R9
+                RSUB    FAT32$FILE_WB, 1
+                CMP     0, R9
+                RBRA    ERR_WRITE, !Z
+                ADD     1, R0
+                CMP     1536, R0
+                RBRA    _SIMS_1, !Z
+                MOVE    FH_OTH, R8
+                RSUB    FAT32$FLUSH, 1
+                CMP     0, R9
+                RBRA    ERR_WRITE, !Z
+                DECRB
+                RET
+#endif
 
 ; open HD0.IMG into the file handle R9
 OPEN_FILE       INCRB
@@ -333,6 +400,7 @@ STR_CONTENT     .ASCII_W "FAIL: wrong file content"
 STR_AT          .ASCII_W " at position "
 STR_ITER        .ASCII_W ", iterations left: "
 FNAME           .ASCII_W "HD0.IMG"
+FNAME1          .ASCII_W "HD1.IMG"
 
 #include "../../../M2M/rom/vd_fastseek.asm"
 
@@ -351,6 +419,7 @@ VD_UB_NOFDH     .BLOCK  FAT32$FDH_STRUCT_SIZE
 DEVH            .BLOCK  FAT32$DEV_STRUCT_SIZE
 FH_FAST         .BLOCK  FAT32$FDH_STRUCT_SIZE
 FH_REF          .BLOCK  FAT32$FDH_STRUCT_SIZE
+FH_OTH          .BLOCK  FAT32$FDH_STRUCT_SIZE
 RND_LO_S        .BLOCK  1
 RND_HI_S        .BLOCK  1
 
