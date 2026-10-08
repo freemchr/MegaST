@@ -77,6 +77,7 @@ Simulate first. Every hardware round trip costs the maintainer time.
   the R3 memory variant. `KEY=<col*8+row> KEY_AT=<frame>` presses a key.
 * `CORE/sim/{keyboard,tos_loader,floppy_swap,fdc_bridge}/run.sh`: GHDL unit tests.
 * `CORE/sim/fastseek/run.sh`: firmware fast seek in the QNICE emulator.
+* `CORE/sim/acsi_write/run.sh <emutos tos.img> [delay]`: hard disk writes (64 KB, every sector checked).
 * After a Vivado build check: timing met (WNS/WHS >= 0), no new critical warnings, no block RAM
   demoted to LUTRAM (Synth 8-5835).
 

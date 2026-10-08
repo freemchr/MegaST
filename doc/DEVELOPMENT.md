@@ -84,6 +84,10 @@ simulation):
   of `fdc_bridge.vhd` (every drive returns its own buffer; the Verilator simulation bypasses it)
 * `CORE/sim/fastseek/run.sh`: the fast seek of the firmware in the QNICE emulator (FAT32 image
   with fragmented files, compared with the FAT32 library)
+* `CORE/sim/acsi_write/run.sh <emutos tos.img> [delay]`: hard disk writes in the Verilator
+  simulation (run `build.sh` first). A floppy boot sector writes 64 KB with one `Rwabs` call, and
+  `check.py` verifies every sector of the image. A delay (641666 = 20 ms per sector) makes the
+  writes as slow as the firmware's SD path; very long delays make the driver time out and retry
 
 `tools/JTAG.md` describes the JTAG tools used for debugging on the real hardware (a TE0790 adapter
 and Vivado's hardware manager, no ILA needed).
