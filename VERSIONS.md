@@ -1,3 +1,19 @@
+Version 0.4.11 beta - October 8, 2026
+=====================================
+
+* **Hard disk writes were still broken in 0.4.10 (issue #11).** The core's ACSI controller took
+  each word from the ST's DMA one clock cycle too early and got old data, so only the first 16
+  bytes of every written sector were correct. TOS kept showing the files from its cache until it
+  read the disk again (e.g. after a power cycle), then files, folders and the FAT were damaged.
+  **Hard disk images that were written to with 0.4.10 or older may be damaged: restore them from
+  a backup or check them.** Floppy disks were not affected.
+* When a hard disk driver times out during a long write and retries, the controller now cancels
+  the old command. Before, the data of the retry could be written to the wrong sectors.
+* New simulation test of hard disk writes (`CORE/sim/acsi_write`): 64 KB written in one go and
+  checked sector by sector, also with slow SD card timing.
+
+The menu is unchanged: the 99 byte `/atarist/stcfg` of 0.4.8 to 0.4.10 stays valid.
+
 Version 0.4.10 beta - October 7, 2026
 =====================================
 
