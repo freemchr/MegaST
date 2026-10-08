@@ -35,3 +35,11 @@ set_multicycle_path -from [get_clocks main_clk] -to [get_clocks ikbd_clk] -start
 set_property PULLUP TRUE [get_ports {p1lo_io[*] p1hi_io[*] p2lo_io[*] p2hi_io[*]}]
 set_false_path -to   [get_ports {p1lo_io[*] p1hi_io[*] p2lo_io[*] p2hi_io[*] pmod1_en_o pmod2_en_o}]
 set_false_path -from [get_ports {p1lo_io[*] p1hi_io[*] p2lo_io[*] p2hi_io[*]}]
+
+## HyperRAM clock: hb_ck_ddr_o_reg (hr_clk) feeds the clock ODDR (hr_clk_del, 90 degrees later), so this path has
+## only 2.5 ns. If the placer puts the register 10 or more rows away from the pin (D22, OLOGIC_X0Y205), R4/R5 builds
+## missed timing by up to 61 ps (0.4.12). Keep the register next to the pin (a hard pblock: Vivado makes it soft otherwise).
+create_pblock pblock_hr_ck
+add_cells_to_pblock [get_pblocks pblock_hr_ck] [get_cells {i_framework/i_hyperram/hyperram_ctrl_inst/hb_ck_ddr_o_reg[*]}]
+resize_pblock [get_pblocks pblock_hr_ck] -add {SLICE_X0Y200:SLICE_X5Y209}
+set_property IS_SOFT FALSE [get_pblocks pblock_hr_ck]

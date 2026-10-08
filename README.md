@@ -110,8 +110,9 @@ Usage
   button of the MEGA65, the ST RAM is kept).
 * With `/atarist/stmount` on the SD card (see Requirements), the core remembers the images you
   mounted and the TOS and cartridge you chose, and loads them again at the next start, before
-  the ST boots (so a hard disk is found and the right TOS starts). Unmounting a drive in the menu
-  forgets it. A long press of the reset button restarts the core like a power cycle, so the
+  the ST boots (so a hard disk is found and the right TOS starts). To unmount (eject) a drive,
+  select its line in the menu and press <kbd>Space</kbd>; this also forgets it. A drive that still
+  has unsaved writes stays mounted until they are written to the SD card (a few seconds). A long press of the reset button restarts the core like a power cycle, so the
   remembered images come back; unmount them in the menu if you want empty drives. An image that
   is no longer on the SD card is skipped.
 * Keyboard mapping (the MEGA65 has a C64 style layout, symbols are mapped by position):
