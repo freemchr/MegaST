@@ -42,7 +42,7 @@
 --    Shift + ;  ]          Shift + *  }          Shift + -  _          Shift + Arrow left   ~
 --    Shift + Pound  |
 --
--- When the Shift state that the ST sees has to change, the symbol key follows C_SETTLE later, so that the
+-- When the Shift state that the ST sees has to change, the symbol key (and F1..F10) follows C_SETTLE later, so that the
 -- IKBD never sees the symbol key together with the wrong Shift state.
 --
 -- MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
@@ -404,19 +404,21 @@ begin
             map_key(m, key_pressed_n(m65_9), st_9);   map_key(m, key_pressed_n(m65_0), st_0);
          end if;
 
-         -- function keys
+         -- function keys: like the symbol keys, they follow C_SETTLE after a change of the ST's Shift
+         -- state, otherwise the IKBD can see F6 (Shift+F5 on the MEGA65) while Shift is still pressed
+         -- and reports Shift+F6 (issue #16)
          if fshift then
-            map_key(m, key_pressed_n(m65_f1), st_f2);
-            map_key(m, key_pressed_n(m65_f3), st_f4);
-            map_key(m, key_pressed_n(m65_f5), st_f6);
-            map_key(m, key_pressed_n(m65_f7), st_f8);
-            map_key(m, key_pressed_n(m65_f9), st_f10);
+            map_key(sym, key_pressed_n(m65_f1), st_f2);
+            map_key(sym, key_pressed_n(m65_f3), st_f4);
+            map_key(sym, key_pressed_n(m65_f5), st_f6);
+            map_key(sym, key_pressed_n(m65_f7), st_f8);
+            map_key(sym, key_pressed_n(m65_f9), st_f10);
          else
-            map_key(m, key_pressed_n(m65_f1), st_f1);
-            map_key(m, key_pressed_n(m65_f3), st_f3);
-            map_key(m, key_pressed_n(m65_f5), st_f5);
-            map_key(m, key_pressed_n(m65_f7), st_f7);
-            map_key(m, key_pressed_n(m65_f9), st_f9);
+            map_key(sym, key_pressed_n(m65_f1), st_f1);
+            map_key(sym, key_pressed_n(m65_f3), st_f3);
+            map_key(sym, key_pressed_n(m65_f5), st_f5);
+            map_key(sym, key_pressed_n(m65_f7), st_f7);
+            map_key(sym, key_pressed_n(m65_f9), st_f9);
          end if;
          map_key(m, key_pressed_n(m65_f11), st_undo);
          map_key(m, key_pressed_n(m65_f13), st_help);

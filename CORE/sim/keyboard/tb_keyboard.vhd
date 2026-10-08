@@ -2,6 +2,7 @@
 -- MEGA + Return = keypad Enter) and the normal mapping of the same keys without MEGA.
 -- Menu "Keyboard as printed": digits and symbols as printed on the MEGA65 keys; a monitor checks that the
 -- ST never sees a symbol key together with the wrong Shift state (C_SETTLE).
+-- Shift + F5/F9 = F6/F10: the ST never sees F6/F10 together with Shift (issue #16).
 library ieee; use ieee.std_logic_1164.all;
 entity tb_keyboard is end entity;
 architecture sim of tb_keyboard is
@@ -19,6 +20,8 @@ architecture sim of tb_keyboard is
   constant K_A      : natural := 10;
   constant K_3      : natural := 8;
   constant K_ALEFT  : natural := 57;
+  constant K_F5     : natural := 6;
+  constant K_F9     : natural := 68;
   type key_list is array(natural range <>) of natural;
 
   function st(col : natural; row : natural) return natural is begin return col * 8 + row; end function;
@@ -42,13 +45,18 @@ begin
     clk_main_i => clk, key_num_i => key_num, key_pressed_n_i => key_n, as_printed_i => printed, uk_i => uk,
     st_matrix_n_o => matrix);
 
+  -- The IKBD scans the matrix column by column, so it can still see the old Shift state when the key appears
+  -- in the same clock cycle: the key must also not come within C_GAP cycles after the wrong Shift state.
   monitor : process(clk)
-    variable sh : std_logic;
+    constant C_GAP : natural := 10;   -- half of C_SETTLE (20 cycles with G_CLK_SPEED = 1000)
+    variable sh    : std_logic;
+    variable since : natural := C_GAP;
   begin
     if rising_edge(clk) and mon_key >= 0 then
       sh := not (matrix(st(1, 5)) and matrix(st(3, 7)));
-      assert not (matrix(mon_key) = '0' and sh = mon_shift)
-        report "ST sees the symbol key with the wrong Shift state" severity failure;
+      assert not (matrix(mon_key) = '0' and (sh = mon_shift or since < C_GAP))
+        report "ST sees the key with (or right after) the wrong Shift state" severity failure;
+      if sh = mon_shift then since := 0; elsif since < C_GAP then since := since + 1; end if;
     end if;
   end process;
 
@@ -82,6 +90,23 @@ begin
     press((K_MEGA, K_RETURN));           expect((0 => st(14, 7)), "MEGA+Return = keypad Enter");
     press((0 => K_RETURN));              expect((0 => st(11, 5)), "Return");
     press((0 => K_MEGA));                expect((0 to -1 => 0), "MEGA alone");
+
+    -- function keys (issue #16): F6 must never come with Shift, F5 never without Shift while it is held
+    press((0 => K_F5));                  expect((0 => st(5, 0)), "F5");
+    press((0 to -1 => 0));
+    mon_key <= st(6, 0); mon_shift <= '1';
+    press((0 => K_LSHIFT));              expect((0 => st(1, 5)), "Shift alone");
+    press((K_LSHIFT, K_F5));             expect((0 => st(6, 0)), "Shift held, then F5 = F6 (Shift hidden)");
+    press((0 => K_LSHIFT));              expect((0 => st(1, 5)), "F5 released, Shift still held");
+    press((0 to -1 => 0));
+    press((0 => K_F5));                  expect((0 => st(5, 0)), "F5 held");
+    press((K_LSHIFT, K_F5));             expect((0 => st(6, 0)), "F5 held, then Shift = F6");
+    press((0 to -1 => 0));
+    mon_key <= st(10, 0);
+    press((0 => K_LSHIFT));
+    press((K_LSHIFT, K_F9));             expect((0 => st(10, 0)), "Shift held, then F9 = F10");
+    press((0 to -1 => 0));
+    mon_key <= -1;
 
     -- keyboard as printed (the monitor watches every transition)
     printed <= '1';
