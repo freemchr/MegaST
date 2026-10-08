@@ -1,5 +1,5 @@
-Unreleased
-==========
+Version 0.4.12 beta - October 8, 2026
+=====================================
 
 * **The core remembers the mounted images (issue #13).** With the new file `/atarist/stmount`
   (1536 bytes, included in the zip), the floppy and hard disk images and the TOS and cartridge
@@ -7,7 +7,8 @@ Unreleased
   in the menu forgets it. A long press of the reset button now brings the remembered images back
   (like a power cycle) instead of leaving the drives empty.
 
-The menu is unchanged: the 99 byte `/atarist/stcfg` of 0.4.8 to 0.4.11 stays valid.
+The menu is unchanged: the 99 byte `/atarist/stcfg` of 0.4.8 to 0.4.11 stays valid. Hard disk writes
+are unchanged since 0.4.11.
 
 Version 0.4.11 beta - October 8, 2026
 =====================================
