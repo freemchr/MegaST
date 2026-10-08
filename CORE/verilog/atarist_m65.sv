@@ -1013,6 +1013,7 @@ wire        dio_dma_nak;
 wire  [7:0] dio_status_in;
 wire  [3:0] dio_status_index;
 wire  [3:0] dio_fifo_used;
+wire        dio_cmd_start, dio_fifo_reset;
 wire  [1:0] hd_present;
 
 acsi_ctrl acsi_ctrl (
@@ -1034,6 +1035,8 @@ acsi_ctrl acsi_ctrl (
 	.dio_status_in       ( dio_status_in       ),
 	.dio_status_index    ( dio_status_index    ),
 	.dio_fifo_used       ( dio_fifo_used       ),
+	.dio_cmd_start       ( dio_cmd_start       ),
+	.dio_fifo_reset      ( dio_fifo_reset      ),
 
 	.sd_lba              ( hd_sd_lba           ),
 	.sd_rd               ( hd_sd_rd            ),
@@ -1071,6 +1074,8 @@ dma dma (
 	.dio_status_in       ( dio_status_in       ),
 	.dio_status_index    ( dio_status_index    ),
 	.dio_fifo_used       ( dio_fifo_used       ),
+	.dio_cmd_start       ( dio_cmd_start       ),
+	.dio_fifo_reset      ( dio_fifo_reset      ),
 
 	// additional signals for ACSI interface
 	.acsi_irq     ( acsi_irq      ),

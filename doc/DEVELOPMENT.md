@@ -62,7 +62,9 @@ All changes are marked with `MEGA65` comments:
 * `rtl/fdc1772/fdc1772.sv`: sensitivity list for the floppy demultiplexer
 * `rtl/ikbd/hd63701/HD63701.v`: removed a stray carriage return inside a comment
 * `rtl/mfp/usart_top.vhd`: `entity` keyword for direct entity instantiation
-* `rtl/dma.v`: output `dio_fifo_used` (DMA FIFO fill level for the ACSI controller)
+* `rtl/dma.v`: outputs `dio_fifo_used` (DMA FIFO fill level), `dio_cmd_start` and `dio_fifo_reset`
+  for the ACSI controller
+* `rtl/acsi.v`: output `cmd_start`; a new command clears `busy` (a retry cancels the old command)
 * `rtl/ym2149.sv`: output `IOB_dir` (port B direction for the printer port), fixed a typo when
   reading port B in output mode
 * `rtl/gstmcu/gstshifter.v`: output `PIX_ACTIVE` (graphics area, for cropping the border)

@@ -42,7 +42,8 @@ module acsi (
 	input  [7:0] cpu_din,
 	output [7:0] cpu_dout,
 
-	output reg   irq
+	output reg   irq,
+	output reg   cmd_start    // MEGA65: the CPU writes the first byte of a command
 );
 
 reg cpu_selD;
@@ -91,7 +92,9 @@ always @(posedge clk) begin
       target <= 3'd0;
       irq <= 1'b0;
       busy <= 1'b0;
+      cmd_start <= 1'b0;   // MEGA65
    end else begin
+      cmd_start <= 1'b0;   // MEGA65
       
       // DMA transfer has been ack'd by io controller
       if(dma_ack && busy) begin
@@ -113,6 +116,12 @@ always @(posedge clk) begin
 			if(!cpu_a1) begin
 				// a0 == 0 -> first command byte
 				target <= cpu_din[7:5];
+
+				// MEGA65: a new command cancels a command that is still running (the
+				// driver timed out and retries): the IO controller stops it, and its
+				// late ack must not be taken as the answer to the new command
+				busy <= 1'b0;
+				cmd_start <= 1'b1;
 
 				// icd command?
 				if(cpu_din[4:0] == 5'h1f)

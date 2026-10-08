@@ -65,6 +65,8 @@ module dma (
 	output      [7:0] dio_status_in,
 	input       [3:0] dio_status_index,
 	output      [3:0] dio_fifo_used,    // MEGA65: fill level of the DMA FIFO (for the ACSI controller)
+	output            dio_cmd_start,    // MEGA65: the CPU starts a new ACSI command
+	output            dio_fifo_reset,   // MEGA65: the CPU toggles the DMA direction (FIFO reset)
 
 	// additional acsi control signals
 	output            acsi_irq,
@@ -171,6 +173,7 @@ acsi acsi(
 	 .reset       ( reset                 ),
 	 
 	 .irq         ( acsi_irq              ),
+	 .cmd_start   ( dio_cmd_start         ),   // MEGA65
 
 	  // acsi target enable
 	 .enable      ( acsi_enable           ),
@@ -416,6 +419,7 @@ always @(posedge clk)
 
 assign dio_data_out_reg = fifo_data_out;
 assign dio_fifo_used = fifo_wptr - fifo_rptr;   // MEGA65
+assign dio_fifo_reset = fifo_reset;              // MEGA65
 
 wire io_data_in_strobe = dio_data_in_strobe ^ dio_data_in_strobeD;
 wire io_data_out_strobe = dio_data_out_strobe ^ dio_data_out_strobeD;

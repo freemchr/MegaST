@@ -49,6 +49,8 @@ module acsi_ctrl (
 	input       [7:0] dio_status_in,
 	output reg  [3:0] dio_status_index,
 	input       [3:0] dio_fifo_used,
+	input             dio_cmd_start,   // the CPU starts a new command (first command byte)
+	input             dio_fifo_reset,  // the CPU toggles the DMA direction (FIFO reset)
 
 	// MiSTer "SD" block interface
 	output reg [31:0] sd_lba,
@@ -136,6 +138,10 @@ reg [24:0] timeout;
 reg  [1:0] sd_ackD;
 reg        tgt;               // 0/1: ACSI target
 reg  [7:0] status;
+reg        abort;
+reg        moved;             // data words of this command went through the DMA FIFO
+reg        fifo_ready;        // dio_fifo_used != 0 for at least one cycle
+reg        stale;             // busy still belongs to a cancelled command
 reg        led_r;
 assign led = led_r;
 
@@ -192,6 +198,19 @@ function [7:0] resp_byte(input [8:0] i);
 	endcase
 endfunction
 
+// A command is cancelled when the CPU starts a new one or resets the DMA FIFO while it is
+// still running. This happens when the driver times out (a long write through the slow SD
+// path of the M2M firmware) and retries. Without it, the controller took the data of the
+// retry as the next sectors of the old command and wrote them to the wrong sectors, and the
+// ack of the old command was taken as the answer to the retry (which then never ran).
+// A sector that is being read or written via the SD interface is finished first. A FIFO
+// reset only counts once data has moved: a driver may set the DMA direction after the
+// command bytes. When a FIFO reset cancels the command, acsi.v still shows it as busy until
+// the next command starts, so it must not be executed again (it would take the first sector
+// of the retry's data from the DMA, and the retry would then write everything one sector off).
+wire running   = state != S_IDLE && state != S_POLL && state != S_WAIT_IDLE;
+wire abort_now = running & (abort | dio_cmd_start | (dio_fifo_reset & moved));
+
 wire  [8:0] words_pad = {words[8:3] + (words[2:0] != 0), 3'b000};
 wire [32:0] lba_end   = {1'b0, lba} + length;
 wire        in_range  = lba_end <= {1'b0, blocks[tgt]};
@@ -199,6 +218,11 @@ wire        in_range  = lba_end <= {1'b0, blocks[tgt]};
 always @(posedge clk) begin
 	sbuf_we <= 1'b0;
 	sd_ackD <= sd_ack;
+	// dma.v raises the fill level in the cycle it stores a word, but its data output
+	// (dio_data_out_reg) is a register that shows the word one cycle later
+	fifo_ready <= dio_fifo_used != 4'd0;
+	if (running && dio_fifo_reset && moved && !abort) stale <= 1'b1;
+	if (dio_cmd_start) stale <= 1'b0;
 	if (spacing != 0) spacing <= spacing - 1'd1;
 	if (timeout != 0) timeout <= timeout - 1'd1;
 
@@ -209,16 +233,22 @@ always @(posedge clk) begin
 		asc[0] <= 8'h00;
 		asc[1] <= 8'h00;
 		led_r  <= 1'b0;
+		abort  <= 1'b0;
+		stale  <= 1'b0;
+	end else if (abort_now && state != S_RD_WAIT && state != S_WR_WAIT) begin
+		// cancelled: no ack (the CPU already waits for the new command)
+		state <= S_IDLE;
 	end else case (state)
 
 	S_IDLE: begin
+		abort            <= 1'b0;
 		led_r            <= 1'b0;
 		dio_status_index <= 4'd10;
 		state            <= S_POLL;
 	end
 
 	// status byte 10: { target, 4'b0, busy }
-	S_POLL: if (dio_status_in[0]) begin
+	S_POLL: if (dio_status_in[0] && !stale) begin
 		target           <= dio_status_in[7:5];
 		tgt              <= dio_status_in[5];
 		dio_status_index <= 4'd0;
@@ -246,6 +276,7 @@ always @(posedge clk) begin
 		spacing  <= 2'd3;
 		timeout  <= 25'h1ffffff;   // ~1 s
 		status   <= 8'h00;
+		moved    <= 1'b0;
 
 		if (target >= 2 || blocks[target[0]] == 0) begin
 			state <= S_NAK;
@@ -345,7 +376,10 @@ always @(posedge clk) begin
 
 	S_RD_WAIT: begin
 		if (sd_ack[tgt]) sd_rd <= 2'b00;
-		if (sd_ackD[tgt] & ~sd_ack[tgt]) begin
+		if (abort_now) abort <= 1'b1;
+		if (sd_ackD[tgt] & ~sd_ack[tgt] & abort_now) begin
+			state     <= S_IDLE;
+		end else if (sd_ackD[tgt] & ~sd_ack[tgt]) begin
 			word_cnt  <= 9'd0;
 			sbuf_addr <= 8'd0;
 			spacing   <= 2'd3;
@@ -363,6 +397,7 @@ always @(posedge clk) begin
 			// sbuf_q holds the word at sbuf_addr (the address is set >= 3 cycles earlier)
 			dio_data_in_reg    <= {sbuf_q[7:0], sbuf_q[15:8]};
 			dio_data_in_strobe <= ~dio_data_in_strobe;
+			moved              <= 1'b1;
 			word_cnt           <= word_cnt + 1'd1;
 			sbuf_addr          <= sbuf_addr + 1'd1;
 			spacing            <= 2'd3;
@@ -379,10 +414,11 @@ always @(posedge clk) begin
 			sd_lba      <= lba;
 			sd_wr[tgt]  <= 1'b1;
 			state       <= S_WR_WAIT;
-		end else if (spacing == 0 && dio_fifo_used != 4'd0) begin
+		end else if (spacing == 0 && fifo_ready && dio_fifo_used != 4'd0) begin
 			sbuf_we             <= 1'b1;
 			sbuf_wdata          <= {dio_data_out_reg[7:0], dio_data_out_reg[15:8]};
 			dio_data_out_strobe <= ~dio_data_out_strobe;
+			moved               <= 1'b1;
 			word_cnt            <= word_cnt + 1'd1;
 			spacing             <= 2'd3;
 			timeout             <= 25'h1ffffff;
@@ -395,7 +431,10 @@ always @(posedge clk) begin
 
 	S_WR_WAIT: begin
 		if (sd_ack[tgt]) sd_wr <= 2'b00;
-		if (sd_ackD[tgt] & ~sd_ack[tgt]) begin
+		if (abort_now) abort <= 1'b1;
+		if (sd_ackD[tgt] & ~sd_ack[tgt] & abort_now) begin
+			state     <= S_IDLE;
+		end else if (sd_ackD[tgt] & ~sd_ack[tgt]) begin
 			lba       <= lba + 1'd1;
 			length    <= length - 1'd1;
 			state     <= S_RD_REQ;

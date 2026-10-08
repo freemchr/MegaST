@@ -22,7 +22,10 @@ Changes to files in `CORE/AtariST_MiSTer/rtl/` (all marked with `MEGA65` comment
 * `fdc1772/fdc1772.sv`: complete sensitivity list of the floppy demultiplexer
 * `ikbd/hd63701/HD63701.v`: removed a stray carriage return inside a comment
 * `mfp/usart_top.vhd`: `entity` keyword for the direct entity instantiation
-* `dma.v`: output `dio_fifo_used` (DMA FIFO fill level, for the ACSI controller)
+* `dma.v`: outputs `dio_fifo_used` (DMA FIFO fill level), `dio_cmd_start` and `dio_fifo_reset`
+  (new ACSI command, DMA direction toggle), all for the ACSI controller
+* `acsi.v`: output `cmd_start`; the first byte of a new command clears `busy`, so the late ack of a
+  cancelled command (the driver timed out and retries) is not taken as the answer to the new one
 * `ym2149.sv`: output `IOB_dir` (port B direction, for the printer port); fixed a typo when port B
   is read in output mode
 * `gstmcu/gstshifter.v`: output `PIX_ACTIVE` (graphics area, for cropping the border)

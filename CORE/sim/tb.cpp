@@ -62,6 +62,7 @@ int main(int argc, char** argv) {
     top->init = 1; top->reset_in = 1; top->cfg_mem = 1; top->cfg_ste = ste;
     top->cfg_crop = getenv("CROP") != nullptr;   // CROP=1: only the graphics area is active
     top->cfg_mono = getenv("MONO") != nullptr;   // MONO=1: SM124 monochrome monitor (71 Hz)
+    top->cfg_mde60 = getenv("MONO60") != nullptr; // MONO60=1: mono 60 Hz mode
     int dump_from = getenv("DUMP_FROM") ? atoi(getenv("DUMP_FROM")) : -1;   // write every frame from this one on
     top->dio_download = 1; top->dio_strobe = 0; top->tos192k_in = 0;
     for (int i = 0; i < 4; i++) top->kbd_matrix[i] = 0xffffffff;
@@ -98,6 +99,11 @@ int main(int argc, char** argv) {
     top->dio_download = 0;
     top->reset_in = 0;
     int hd_state = 0, hd_idx = 0, hd_wait = 0; uint32_t hd_lba = 0; uint64_t hd_reads = 0, hd_writes = 0;
+    // HD_WR_DELAY=<cycles>: each sector write takes this many extra 32 MHz cycles (like the slow
+    // firmware path on the MEGA65), HD_TRACE=1: print every sector read/write,
+    // HD_OUT=<file>: save the hard disk image at the end
+    int hd_wr_delay = getenv("HD_WR_DELAY") ? atoi(getenv("HD_WR_DELAY")) : 0;
+    bool hd_trace = getenv("HD_TRACE") != nullptr;
     int fd_state = 0, fd_idx = 0, fd_wait = 0; uint32_t fd_lba = 0; uint64_t fd_reads = 0;
 
     // Run and dump frames
@@ -105,6 +111,8 @@ int main(int argc, char** argv) {
     const int W = 1024, H = 640;
     std::vector<uint8_t> img(W * H * 3, 0);
     int old_vs = 0, old_hs = 0, old_as = 1;
+    int lines = 0;                  // HSync pulses per frame
+    unsigned long long vs_ticks = 0; // ticks at the last VSync
     uint32_t last_a = 0; uint64_t n_bus = 0;
     // RESET_AT=n: reset the ST at frame n like the "Reset Atari ST" menu item
     // (main.vhd: reset_core also drives dio_download)
@@ -185,8 +193,10 @@ int main(int argc, char** argv) {
             if (hd_wait) hd_wait--;
             else switch (hd_state) {
             case 0:
-                if (top->hd_sd_rd & 1) { hd_lba = top->hd_sd_lba; top->hd_sd_ack = 1; hd_idx = 0; hd_state = 1; hd_reads++; }
-                else if (top->hd_sd_wr & 1) { hd_lba = top->hd_sd_lba; top->hd_sd_ack = 1; hd_idx = 0; hd_state = 3; hd_writes++; }
+                if (top->hd_sd_rd & 1) { hd_lba = top->hd_sd_lba; top->hd_sd_ack = 1; hd_idx = 0; hd_state = 1; hd_reads++;
+                                         if (hd_trace) printf("hd read sector %u (frame %d)\n", hd_lba, frame); }
+                else if (top->hd_sd_wr & 1) { hd_lba = top->hd_sd_lba; top->hd_sd_ack = 1; hd_idx = 0; hd_state = 3; hd_writes++;
+                                         if (hd_trace) printf("hd write sector %u (frame %d)\n", hd_lba, frame); }
                 break;
             case 1: {   // write one word into the sector buffer
                 size_t o = (size_t)hd_lba * 512 + hd_idx * 2;
@@ -202,8 +212,10 @@ int main(int argc, char** argv) {
             case 4: {
                 size_t o = (size_t)hd_lba * 512 + hd_idx * 2;
                 if (o + 1 < hd.size()) { hd[o] = top->hd_sd_buff_din & 0xff; hd[o + 1] = top->hd_sd_buff_din >> 8; }
-                if (++hd_idx == 256) { top->hd_sd_ack = 0; hd_state = 0; hd_wait = 20; } else hd_state = 3;
+                if (++hd_idx == 256) { hd_state = 5; hd_wait = hd_wr_delay; } else hd_state = 3;
                 break; }
+            case 5:     // end of a write: the firmware raises the ack after the SD card write
+                top->hd_sd_ack = 0; hd_state = 0; hd_wait = 20; break;
             }
         }
         if (top->video_ce) {
@@ -213,7 +225,7 @@ int main(int argc, char** argv) {
             }
             if (!top->video_hblank && !top->video_vblank) x++;
         }
-        if (top->video_hs && !old_hs) { if (x > maxx) maxx = x; if (x > 0) y++; x = 0; }
+        if (top->video_hs && !old_hs) { if (x > maxx) maxx = x; if (x > 0) y++; x = 0; lines++; }
         old_hs = top->video_hs;
         if (!top->dbg_cpu_as_n && old_as) { n_bus++; last_a = top->dbg_cpu_a << 1; }
         old_as = top->dbg_cpu_as_n;
@@ -230,10 +242,16 @@ int main(int argc, char** argv) {
                    (unsigned long long)hd_reads, (unsigned long long)hd_writes,
                    top->dbg_acsi_sel, top->dbg_acsi_busy, top->dbg_acsi_state, top->dbg_hd_present,
                    top->dbg_acsi_irq, top->dbg_acsi_din, top->dbg_dma_mode, top->dbg_gpip);
+            printf("frame %d timing: %d lines, %.2f Hz\n", frame, lines, 6 * 32.083333e6 / (double)(ticks - vs_ticks));
             fflush(stdout);
-            frame++; y = 0; maxx = 0;
+            frame++; y = 0; maxx = 0; lines = 0; vs_ticks = ticks;
         }
         old_vs = top->video_vs;
+    }
+    if (hd_name && getenv("HD_OUT")) {
+        FILE* h = fopen(getenv("HD_OUT"), "wb");
+        fwrite(hd.data(), 1, hd.size(), h); fclose(h);
+        printf("hard disk image saved: %s\n", getenv("HD_OUT"));
     }
     delete top;
     return 0;

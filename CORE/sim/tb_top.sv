@@ -19,6 +19,7 @@ module tb_top (
   input         cfg_viking,
   input         cfg_crop,
   input         cfg_mono,      // 1 = SM124 monochrome monitor
+  input         cfg_mde60,     // 1 = mono 60 Hz mode
   // hard disk 0 (the testbench emulates the M2M firmware / vdrives)
   input   [1:0] fd_img_mounted,
   output [31:0] fd_sd_lba,
@@ -97,11 +98,17 @@ module tb_top (
   assign dbg_acsi_state = dut.acsi_ctrl.state;
   assign dbg_hd_present = dut.hd_present;
 `ifdef ACSI_TRACE
+  reg [3:0] acsi_state_d;
+  always @(posedge clk_32) acsi_state_d <= dut.acsi_ctrl.state;
   // ACSI trace: commands, IO controller data, DMA RAM accesses and status (build with VFLAGS=-DACSI_TRACE)
   always @(posedge clk_32) begin
     if (dut.dma.acsi.busy & ~acsi_busy_d) $display("ACSI busy: cmd %02x %02x %02x %02x %02x %02x", dut.dma.acsi.cmd_parameter[0], dut.dma.acsi.cmd_parameter[1], dut.dma.acsi.cmd_parameter[2], dut.dma.acsi.cmd_parameter[3], dut.dma.acsi.cmd_parameter[4], dut.dma.acsi.cmd_parameter[5]);
     if (dut.dma.io_data_in_strobe) $display("DIO in %04x wptr %0d rptr %0d", dut.dma.dio_data_in_reg, dut.dma.fifo_wptr, dut.dma.fifo_rptr);
     if (dut.dma.ram_access_strobe) $display("DMA ram %s %04x scnt %0d", dut.dma.dma_direction_out ? "rd" : "wr", dut.dma.dma_direction_out ? dut.dma.ram_din : dut.dma.ram_dout, dut.dma.dma_scnt);
+    if (dut.dma.io_data_out_strobe) $display("DIO out %04x wptr %0d rptr %0d", dut.dma.dio_data_out_reg, dut.dma.fifo_wptr, dut.dma.fifo_rptr);
+    if (dut.dma.fifo_reset) $display("DMA fifo reset (direction %0d)", dut.dma.cpu_din[8]);
+    if (dut.dma.clk_en && dut.dma.cpu_req && !dut.dma.cpu_rw) $display("DMA %s write %04x", dut.dma.cpu_a1 ? "mode" : "data", dut.dma.cpu_din);
+    if (dut.acsi_ctrl.state != acsi_state_d) $display("ACSI ctrl state %0d -> %0d (abort %0d)", acsi_state_d, dut.acsi_ctrl.state, dut.acsi_ctrl.abort);
     if (dut.dma.io_dma_ack) $display("DIO ack status %02x", dut.dma.dio_dma_status);
     if (dut.dma.acsi.clk_en && dut.dma.acsi.cpu_req && dut.dma.acsi.cpu_rw) $display("ACSI status read %02x", dut.dma.acsi.dma_status);
   end
@@ -119,7 +126,7 @@ module tb_top (
 `endif
     .clk_32(clk_32), .clk_96(clk_96), .clk_2(clk_2), .init(init), .reset_in(reset_in),
     .cfg_mem(cfg_mem), .cfg_ste(cfg_ste), .cfg_mste(1'b0), .cfg_blitter(1'b0), .cfg_mono(cfg_mono),
-    .cfg_psg_stereo(1'b0), .cfg_narrow_brd(1'b1), .cfg_mde60(1'b0), .cfg_fdc_wp(2'b00),
+    .cfg_psg_stereo(1'b0), .cfg_narrow_brd(1'b1), .cfg_mde60(cfg_mde60), .cfg_fdc_wp(2'b00),
     .cfg_viking(cfg_viking), .cfg_ste_pads(1'b0), .cfg_cubase(1'b0), .cfg_crop(cfg_crop),
     .rtc({1'b0, 8'h40, 8'h01, 8'h26, 8'h09, 8'h28, 8'h14, 8'h35, 8'h07}),  // Mon 2026-09-28 14:35:07 .cart_loaded(cart_loaded),
     .dio_download(dio_download), .dio_addr(dio_addr), .dio_data(dio_data), .dio_strobe(dio_strobe),
