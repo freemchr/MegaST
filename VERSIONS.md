@@ -1,3 +1,22 @@
+Version 0.4.13 beta - October 9, 2026
+=====================================
+
+* **Function keys (issue #16):** F6, F8 and F10 (Shift+F5/F7/F9 on the MEGA65) sometimes arrived as
+  Shift+F6/F8/F10, so programs like GFA Basic reacted wrongly. The core hid Shift in the same moment
+  in which the F key appeared, and the ST's keyboard processor sometimes still saw Shift. The F key
+  now follows 20 ms after Shift is hidden.
+* **Right mouse button (issue #17):** the right button of an Atari mouse (or a mouSTer adapter) on
+  the mouse port did nothing. It now works like the right button of the Amiga mouse (pin 9).
+* More timing margin for the HyperRAM clock on all boards (the R4/R5 builds of 0.4.12 only met
+  timing after extra implementation runs).
+* README: how to unmount (eject) a drive: select its line in the menu and press Space.
+
+Known problem under investigation: some users report that a hard disk image is mounted but not
+seen by TOS with 0.4.12 (issues #11, #12). This version contains the same firmware.
+
+The menu is unchanged: the 99 byte `/atarist/stcfg` of 0.4.8 to 0.4.12 stays valid, and so does the
+1536 byte `/atarist/stmount` of 0.4.12.
+
 Version 0.4.12 beta - October 8, 2026
 =====================================
 

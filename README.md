@@ -13,12 +13,13 @@ runs games and GEM programs from floppy and hard disk images. Download the core 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
-**Latest version: [0.4.12 beta](https://github.com/freemchr/MegaST/releases/tag/v0.4.12)**
-(October 8, 2026, pre-release for testing): remembers the mounted disk images and the chosen TOS
-and cartridge (copy the new `atarist/stmount` from the zip, issue #13). **All versions up to
-0.4.10 damage hard disk images when writing** (issue #11): update, and restore your images from a
-backup. Core files for the R3/R3A, R4, R5 and R6. Coming from 0.4.7 or older: copy the new
-`atarist/stcfg` (99 bytes) from the zip, otherwise the menu settings are not saved.
+**Latest version: [0.4.13 beta](https://github.com/freemchr/MegaST/releases/tag/v0.4.13)**
+(October 9, 2026, pre-release for testing): fixes F6/F8/F10 (issue #16) and the right button of the
+Atari mouse (issue #17). Since 0.4.12 the core remembers the mounted disk images and the chosen TOS
+and cartridge (copy `atarist/stmount` from the zip, issue #13). **All versions up to 0.4.10 damage
+hard disk images when writing** (issue #11): update, and restore your images from a backup. Core
+files for the R3/R3A, R4, R5 and R6. Coming from 0.4.7 or older: copy the new `atarist/stcfg`
+(99 bytes) from the zip, otherwise the menu settings are not saved.
 All changes: [VERSIONS.md](VERSIONS.md).
 
 **Support:** MegaST is free and open source. If you enjoy it, you can support its development via
