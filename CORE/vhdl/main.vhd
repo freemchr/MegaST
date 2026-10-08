@@ -328,7 +328,7 @@ begin
    -- The MEGA65 port that acts as the ST's mouse port (menu "Mouse port"); the other one is the joystick
    mouse_port <= port2 when st_joy_swap_i = '1' else port1;
 
-   -- Amiga mouse right button: pin 9 (pot x). The framework delivers inverted pot values:
+   -- Right mouse button (Atari and Amiga mouse): pin 9 (pot x). The framework delivers inverted pot values:
    -- 255 = released (pulled up), 0 = pressed (pulled to ground)
    mouse_pot_x <= pot2_x_i when st_joy_swap_i = '1' else pot1_x_i;
    mouse_pot_y <= pot2_y_i when st_joy_swap_i = '1' else pot1_y_i;
@@ -338,7 +338,7 @@ begin
    -- emulation, so the ST's mouse port does not see their raw signals.
    quad_on   <= st_amigamouse_i and not st_mouse1351_i;
    joy_mouse <= (others => '0') when st_mouse1351_i = '1' or quad_on = '1' else
-                '0' & mouse_port_db;
+                mouse_rmb & mouse_port_db;   -- {right button, fire = left button, right, left, down, up}
    joy_stick <= port1_db when st_joy_swap_i = '1' else port2_db;
 
    -- Joystick switches bounce (see joy_lockout.vhd): 5 ms lock-out for a port used as joystick,
