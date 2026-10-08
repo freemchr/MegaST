@@ -20,6 +20,9 @@ from a backup. Core files for the R3/R3A, R4, R5 and R6. Coming from 0.4.7 or ol
 `atarist/stcfg` (99 bytes) from the zip, otherwise the menu settings are not saved.
 All changes: [VERSIONS.md](VERSIONS.md).
 
+**Support:** MegaST is free and open source. If you enjoy it, you can
+[buy me a coffee](https://buymeacoffee.com/cjf077) ☕
+
 Tested on a MEGA65 R6
 ---------------------
 
