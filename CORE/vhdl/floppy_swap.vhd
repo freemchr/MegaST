@@ -9,7 +9,7 @@
 -- both FDC drives are announced again, one after the other, with the stored values. The read-only
 -- flags are passed per FDC drive (write protection).
 --
--- eject_i (the M2M reset, which restarts the firmware and so forgets the mounted images) announces
+-- eject_i (the reset of vdrives.vhd: the firmware restarts and so forgets the mounted images) announces
 -- both FDC drives with the size 0, i.e. no disk (issue #10: the ST still read the old disk, while
 -- the menu showed none). main.vhd ejects the hard disks with it, too.
 --
@@ -26,7 +26,7 @@ use ieee.std_logic_1164.all;
 entity floppy_swap is
    port (
       clk_i            : in  std_logic;
-      eject_i          : in  std_logic;                     -- forget the images (M2M reset)
+      eject_i          : in  std_logic;                     -- forget the images (firmware restart)
       swap_i           : in  std_logic;
 
       -- virtual drives (M2M firmware): img_mounted is strobed, size and read-only are valid meanwhile

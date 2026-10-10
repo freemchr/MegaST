@@ -27,6 +27,7 @@ entity main is
       clk_ikbd_i              : in  std_logic;              --  2.005 MHz, phase aligned to clk_main_i
       reset_soft_i            : in  std_logic;
       reset_hard_i            : in  std_logic;
+      eject_i                 : in  std_logic;              -- the firmware restarts and forgets the mounted images
       pause_i                 : in  std_logic;
       init_i                  : in  std_logic;              -- clocks not stable, yet (power on reset)
 
@@ -282,6 +283,7 @@ signal port1_db       : std_logic_vector(4 downto 0);
 signal port2_db       : std_logic_vector(4 downto 0);
 signal mouse_port_db  : std_logic_vector(4 downto 0);
 signal mouse_rmb      : std_logic;
+signal rmb_swap       : std_logic := '0';
 signal mouse_pot_x    : std_logic_vector(7 downto 0);
 signal mouse_pot_y    : std_logic_vector(7 downto 0);
 
@@ -332,7 +334,18 @@ begin
    -- 255 = released (pulled up), 0 = pressed (pulled to ground)
    mouse_pot_x <= pot2_x_i when st_joy_swap_i = '1' else pot1_x_i;
    mouse_pot_y <= pot2_y_i when st_joy_swap_i = '1' else pot1_y_i;
-   mouse_rmb   <= not mouse_pot_x(7);
+
+   -- An open pin 9 reads as pressed, too (no pull-up): see rmb_guard.vhd
+   i_rmb_guard : entity work.rmb_guard
+      generic map (G_CLK_SPEED => CORE_CLK_SPEED)
+      port map (
+         clk_i    => clk_main_i,
+         disarm_i => st_joy_swap_i xor rmb_swap,
+         pin_i    => not mouse_pot_x(7),
+         rmb_o    => mouse_rmb
+      ); -- i_rmb_guard
+
+   rmb_swap <= st_joy_swap_i when rising_edge(clk_main_i);
 
    -- A 1351 mouse (mouse1351.vhd) and an Amiga mouse (quadmouse.vhd) go through the IKBD's PS/2 mouse
    -- emulation, so the ST's mouse port does not see their raw signals.
@@ -458,7 +471,7 @@ begin
          sd_buff_din     => sd_buff_din_o(15 downto 0),
          sd_buff_wr      => sd_buff_wr_i,
 
-         hd_img_mounted  => img_mounted_i(3 downto 2) or (reset_hard_i & reset_hard_i),
+         hd_img_mounted  => img_mounted_i(3 downto 2) or (eject_i & eject_i),
          hd_sd_lba       => hd_lba,
          hd_sd_rd        => sd_rd_o(3 downto 2),
          hd_sd_wr        => sd_wr_o(3 downto 2),
@@ -519,7 +532,7 @@ begin
    i_floppy_swap : entity work.floppy_swap
       port map (
          clk_i            => clk_main_i,
-         eject_i          => reset_hard_i,
+         eject_i          => eject_i,
          swap_i           => st_fd_swap_i,
          vd_mounted_i     => img_mounted_i(1 downto 0),
          vd_readonly_i    => img_readonly_i,

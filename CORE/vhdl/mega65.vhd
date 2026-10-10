@@ -544,6 +544,7 @@ begin
          clk_ikbd_i           => ikbd_clk,
          reset_soft_i         => main_reset_core_i,
          reset_hard_i         => main_reset_m2m_i,
+         eject_i              => main_vd_reset,
          pause_i              => main_pause_core_i,
          init_i               => main_rst,
 
@@ -919,7 +920,10 @@ begin
    -- the reset button), not by a reset of the Atari ST (menu item "Reset Atari ST", short press):
    -- like on MiSTer (and a real ST), the disks stay in their drives. The M2M firmware treats
    -- a reset of vdrives.vhd as "all drives unmounted", while the FDC and acsi_ctrl.sv would
-   -- continue to use the images.
+   -- continue to use the images. For the same reason main.vhd ejects all images in the core
+   -- with this reset (issue #10). Not with main_reset_m2m_i: the M2M top adds the firmware's
+   -- CSR reset to it, and the firmware holds that reset while it restores the remembered images
+   -- at the start (MNT_RESTORE), so they were ejected right away (issues #11, #12).
    i_cdc_vd_reset : xpm_cdc_sync_rst
       generic map (
          DEST_SYNC_FF   => 2,
