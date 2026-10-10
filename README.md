@@ -156,7 +156,11 @@ Usage
   Amiga mode) or a **Commodore 1351** mouse, select it first in the menu: "Controllers & ports" →
   "Mouse type" → Amiga / 1351. With the wrong mouse type, an Amiga mouse only jitters in small
   steps. "Mouse port" selects the MEGA65 port the mouse is plugged into (default: port 1); the
-  joystick goes into the other port.
+  joystick goes into the other port. The right button is read from pin 9, which has no pull-up on
+  the MEGA65, so an open pin looks like a pressed button. The core therefore ignores the right
+  button until it has seen pin 9 released (an Atari or Amiga mouse pulls it up). An adapter that
+  leaves pin 9 open (or a joystick in the mouse port) gets no right button, but it no longer holds
+  it down.
 
 Using disk images
 -----------------

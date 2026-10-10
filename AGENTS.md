@@ -76,7 +76,7 @@ Simulate first. Every hardware round trip costs the maintainer time.
 * `CORE/sim/build.sh`: Verilator simulation of the whole ST (`cd obj_dir && ./simst <tos.img>
   <frames> [prefix] [ste] [hd.img]`). It writes every 10th frame as PPM. `VFLAGS=-DBRAM_MEM` builds
   the R3 memory variant. `KEY=<col*8+row> KEY_AT=<frame>` presses a key.
-* `CORE/sim/{keyboard,tos_loader,floppy_swap,fdc_bridge}/run.sh`: GHDL unit tests.
+* `CORE/sim/{keyboard,tos_loader,floppy_swap,fdc_bridge,rmb_guard}/run.sh`: GHDL unit tests.
 * `CORE/sim/fastseek/run.sh`: firmware fast seek in the QNICE emulator.
 * `CORE/sim/mntmem/run.sh`: remembering the mounted images (`/atarist/stmount`) in the QNICE emulator.
 * `CORE/sim/acsi_write/run.sh <emutos tos.img> [delay]`: hard disk writes (64 KB, every sector checked).
