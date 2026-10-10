@@ -35,7 +35,7 @@ Tested on a MEGA65 R6
 | TOS 1.00, 1.02, 1.06, 1.62 | boot to the desktop in simulation, not tried on hardware yet |
 | Floppy disks: loading, changing disks, reset with a disk inserted, saving | works |
 | Hard disk: 4 GB `.vhd` image (MiSTer image), boot, reading files, launching programs | works |
-| Hard disk: writing files | broken up to 0.4.10 (issue #11), fixed in 0.4.11 (tested in simulation), to be confirmed |
+| Hard disk: writing files | broken up to 0.4.10, works since 0.4.11 (tester report, issue #11) |
 | MEGA65 keyboard, all keys (A fixed in 0.4.7), numeric keypad via MEGA | works |
 | Atari ST mouse, Amiga mouse (optical, incl. right button), in port 1 or port 2 | works |
 | Joystick, with debouncing for bouncing and worn switches (Suncom TAC-2) | works |
@@ -44,7 +44,7 @@ Tested on a MEGA65 R6
 | Games: Golden Axe, Great Giana Sisters, Turrican | work |
 | Cartridges, PMOD serial/MIDI/printer, Cubase dongles, Viking card, 1351 mouse, mono monitor | not tested yet |
 | HDMI "DVI mode (no sound)" with a DVI monitor | works (tester report, issue #4) |
-| R3A board (`CORE-R3.xpr`, 512 KB) | works (tester report, issue #2) |
+| R3A board (`CORE-R3.xpr`, 512 KB) | works, including hard disk images (tester reports, issue #2) |
 | R4/R5 boards (`CORE-R4.xpr`, `CORE-R5.xpr`) | not tested yet |
 
 Screenshots
@@ -235,6 +235,11 @@ drive LED is no longer yellow before switching off.
 **How do I get empty drives at the next start?** Unmount the drives with <kbd>Space</kbd> in the
 menu. Without `/atarist/stmount` on the SD card, all drives start empty anyway.
 
+**Some games of a hard disk game collection don't start.** Most hard disk versions of games need
+1 MB of ST RAM or more (512 KB is often not enough, e.g. on the R3/R3A), and some only work with
+certain TOS versions. If a game fails, try more RAM and another TOS, and compare with Hatari using
+the same image and TOS.
+
 **Can I use a folder of my PC as drive C: like in Hatari?** No, that is an emulator feature
 ("GEMDOS drive"). The core needs a hard disk image, like a real ST.
 
@@ -242,9 +247,10 @@ TOS
 ---
 
 `/atarist/tos.img` is loaded at power on. "TOS" in the menu loads another TOS image (`.img` or
-`.rom`) and restarts the ST with it (cold boot). This choice is not saved: after the next power
-cycle `tos.img` is used again, so rename your favourite TOS image to `tos.img`. STe and Mega STe
-modes need TOS 1.06 or newer (or EmuTOS).
+`.rom`) and restarts the ST with it (cold boot). With `/atarist/stmount` on the SD card (in the
+release zip), this choice is remembered and the chosen TOS is loaded again at the next start.
+Without `stmount`, `tos.img` is used again after a power cycle. STe and Mega STe modes need TOS
+1.06 or newer (or EmuTOS).
 
 **Which TOS?** EmuTOS is in the release zip only because it is free and may be distributed (Atari's
 TOS may not). It is fine for GEM programs and for a first test, but some games crash with it.
