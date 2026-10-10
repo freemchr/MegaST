@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
     top->cfg_crop = getenv("CROP") != nullptr;   // CROP=1: only the graphics area is active
     top->cfg_mono = getenv("MONO") != nullptr;   // MONO=1: SM124 monochrome monitor (71 Hz)
     top->cfg_mde60 = getenv("MONO60") != nullptr; // MONO60=1: mono 60 Hz mode
+    top->cfg_full_brd = getenv("BORDER") != nullptr; // BORDER=1: full borders
     int dump_from = getenv("DUMP_FROM") ? atoi(getenv("DUMP_FROM")) : -1;   // write every frame from this one on
     top->dio_download = 1; top->dio_strobe = 0; top->tos192k_in = 0;
     for (int i = 0; i < 4; i++) top->kbd_matrix[i] = 0xffffffff;
@@ -109,6 +110,7 @@ int main(int argc, char** argv) {
 
     // Run and dump frames
     int frame = 0, x = 0, y = 0, maxx = 0, maxy = 0;
+    int hx = 0, hfirst = 1 << 30, hlast = -1;   // pixels since hsync: first and last active pixel of the frame
     const int W = 1024, H = 640;
     std::vector<uint8_t> img(W * H * 3, 0);
     int old_vs = 0, old_hs = 0, old_as = 1;
@@ -224,9 +226,14 @@ int main(int argc, char** argv) {
                 uint8_t* p = &img[(y * W + x) * 3];
                 p[0] = top->video_r8; p[1] = top->video_g8; p[2] = top->video_b8;
             }
-            if (!top->video_hblank && !top->video_vblank) x++;
+            if (!top->video_hblank && !top->video_vblank) {
+                x++;
+                if (hx < hfirst) hfirst = hx;
+                if (hx > hlast) hlast = hx;
+            }
+            hx++;
         }
-        if (top->video_hs && !old_hs) { if (x > maxx) maxx = x; if (x > 0) y++; x = 0; lines++; }
+        if (top->video_hs && !old_hs) { if (x > maxx) maxx = x; if (x > 0) y++; x = 0; hx = 0; lines++; }
         old_hs = top->video_hs;
         if (!top->dbg_cpu_as_n && old_as) { n_bus++; last_a = top->dbg_cpu_a << 1; }
         old_as = top->dbg_cpu_as_n;
@@ -243,9 +250,10 @@ int main(int argc, char** argv) {
                    (unsigned long long)hd_reads, (unsigned long long)hd_writes,
                    top->dbg_acsi_sel, top->dbg_acsi_busy, top->dbg_acsi_state, top->dbg_hd_present,
                    top->dbg_acsi_irq, top->dbg_acsi_din, top->dbg_dma_mode, top->dbg_gpip);
-            printf("frame %d timing: %d lines, %.2f Hz\n", frame, lines, 6 * 32.083333e6 / (double)(ticks - vs_ticks));
+            printf("frame %d timing: %d lines, %.2f Hz, active pixels %d..%d after hsync\n", frame, lines,
+                   6 * 32.083333e6 / (double)(ticks - vs_ticks), hfirst, hlast);
             fflush(stdout);
-            frame++; y = 0; maxx = 0; lines = 0; vs_ticks = ticks;
+            frame++; y = 0; maxx = 0; lines = 0; vs_ticks = ticks; hfirst = 1 << 30; hlast = -1;
         }
         old_vs = top->video_vs;
     }
