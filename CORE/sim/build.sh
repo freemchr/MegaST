@@ -9,7 +9,8 @@
 #                                    run with KEY=<column*8+row> KEY_AT=<frame> to press a key,
 #                                    VFLAGS=-DBRAM_MEM: MEGA65 R3 variant with block RAM, 512 KB;
 #                                    run with MONO=1 for the SM124 monochrome monitor (71 Hz),
-#                                    DUMP_FROM=<frame> writes every frame from <frame> on)
+#                                    DUMP_FROM=<frame> writes every frame from <frame> on,
+#                                    MEM=0..5: 512 KB, 1, 2, 4, 8, 14 MB ST RAM, default 1 MB)
 #    cd obj_dir && ./simst <tos.img> <frames> [out_prefix] [ste] [hd.img]
 #
 # Every 10th frame is written as <out_prefix>_NNN.ppm (convert: python3 ../ppm2png.py in.ppm out.png)

@@ -59,7 +59,8 @@ int main(int argc, char** argv) {
     printf("TOS image: %zu bytes, os_beg = %02x%02x%02x%02x\n", tos_len, tos[8], tos[9], tos[10], tos[11]);
 
     top = new Vtb_top;
-    top->init = 1; top->reset_in = 1; top->cfg_mem = 1; top->cfg_ste = ste;
+    top->init = 1; top->reset_in = 1; top->cfg_ste = ste;
+    top->cfg_mem = getenv("MEM") ? atoi(getenv("MEM")) : 1;   // MEM=0..5: 512K, 1M, 2M, 4M, 8M, 14M
     top->cfg_crop = getenv("CROP") != nullptr;   // CROP=1: only the graphics area is active
     top->cfg_mono = getenv("MONO") != nullptr;   // MONO=1: SM124 monochrome monitor (71 Hz)
     top->cfg_mde60 = getenv("MONO60") != nullptr; // MONO60=1: mono 60 Hz mode
