@@ -3,6 +3,7 @@
 -- Menu "Keyboard as printed": digits and symbols as printed on the MEGA65 keys; a monitor checks that the
 -- ST never sees a symbol key together with the wrong Shift state (C_SETTLE).
 -- Shift + F5/F9 = F6/F10: the ST never sees F6/F10 together with Shift (issue #16).
+-- MEGA + F5 = Shift+F5, MEGA + Shift + F9 = Shift+F10: the ST never sees the key without Shift (issue #18).
 library ieee; use ieee.std_logic_1164.all;
 entity tb_keyboard is end entity;
 architecture sim of tb_keyboard is
@@ -106,6 +107,17 @@ begin
     press((0 => K_LSHIFT));
     press((K_LSHIFT, K_F9));             expect((0 => st(10, 0)), "Shift held, then F9 = F10");
     press((0 to -1 => 0));
+
+    -- MEGA + function keys (issue #18): the function key must never come without Shift
+    mon_key <= st(5, 0); mon_shift <= '0';
+    press((K_MEGA, K_F5));               expect((st(1, 5), st(5, 0)), "MEGA+F5 = Shift+F5 (F15)");
+    press((0 => K_MEGA));                expect((0 to -1 => 0), "F5 released, MEGA still held");
+    press((K_MEGA, K_F5));               expect((st(1, 5), st(5, 0)), "MEGA held, then F5 = Shift+F5");
+    press((0 to -1 => 0));
+    mon_key <= st(10, 0);
+    press((K_MEGA, K_LSHIFT));
+    press((K_MEGA, K_LSHIFT, K_F9));     expect((st(1, 5), st(10, 0)), "MEGA+Shift+F9 = Shift+F10 (F20)");
+    press((0 to -1 => 0));
     mon_key <= -1;
 
     -- keyboard as printed (the monitor watches every transition)
@@ -118,6 +130,7 @@ begin
     press((0 to -1 => 0));               -- release all keys before the monitor changes
     mon_key <= st(11, 6); mon_shift <= '1';      -- ' must not come with Shift
     press((K_LSHIFT, K_7));              expect((0 => st(11, 6)), "printed: Shift+7 = quote (ST ', Shift hidden)");
+    press((0 to -1 => 0));               -- release all keys (Shift held with + would be =)
     mon_key <= st(10, 1); mon_shift <= '0';      -- = must never come without Shift
     press((0 => K_PLUS));                expect((st(10, 1), st(1, 5)), "printed: + (ST Shift+=)");
     mon_key <= -1;

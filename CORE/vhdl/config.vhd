@@ -122,6 +122,7 @@ constant HELP_2 : string :=
    " Ctrl, Alt       Control, Alternate\n" &
    " F1,F3..F9       F1,F3..F9\n" &
    " Shift+F1..F9    F2,F4..F10\n" &
+   " MEGA+F1..F9     Shift+F1..F10\n" &
    " F11, Run/Stop   Undo\n" &
    " F13             Help\n" &
    " Inst/Del        Backspace\n" &

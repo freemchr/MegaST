@@ -20,6 +20,7 @@
 --    Caps Lock         Caps Lock            Run/Stop          Undo
 --    F1/F3/F5/F7/F9    F1/F3/F5/F7/F9       F11               Undo
 --    Shift+F1..F9      F2/F4/F6/F8/F10      F13               Help
+--    MEGA+F1..F9       Shift+F1/F3/../F9    MEGA+Shift+F1..F9 Shift+F2/F4/../F10 (F11..F20 in GFA-Basic, STOS)
 --    + - Pound         - = \                Arrow left        `
 --    @ *               [ ]                  : ; =             ; ' ISO(<>)
 --    Cursor keys       Cursor keys
@@ -298,6 +299,8 @@ begin
       variable m        : std_logic_vector(119 downto 0);
       variable shift    : boolean;
       variable fshift   : boolean;
+      variable fkey     : boolean;
+      variable mfkey    : boolean;
       variable keypad   : boolean;
       variable printed  : boolean;
       variable sym      : std_logic_vector(119 downto 0);   -- symbol keys of the "as printed" mapping
@@ -339,9 +342,11 @@ begin
 
          -- Shift + F1/F3/F5/F7/F9 means F2/F4/F6/F8/F10 (as printed on the MEGA65 keyboard):
          -- in this case the ST does not see the shift key
-         fshift := shift and (key_pressed_n(m65_f1) = '0' or key_pressed_n(m65_f3) = '0' or
-                              key_pressed_n(m65_f5) = '0' or key_pressed_n(m65_f7) = '0' or
-                              key_pressed_n(m65_f9) = '0');
+         fkey   := key_pressed_n(m65_f1) = '0' or key_pressed_n(m65_f3) = '0' or key_pressed_n(m65_f5) = '0' or
+                   key_pressed_n(m65_f7) = '0' or key_pressed_n(m65_f9) = '0';
+         fshift := shift and fkey;
+         -- MEGA + function key: the ST sees Shift + function key (F11..F20 in GFA-Basic and STOS, issue #18)
+         mfkey  := keypad and fkey;
 
          -- letters
          map_key(m, key_pressed_n(m65_a), st_a);   map_key(m, key_pressed_n(m65_b), st_b);   map_key(m, key_pressed_n(m65_c), st_c);   map_key(m, key_pressed_n(m65_d), st_d);
@@ -499,9 +504,10 @@ begin
 
          -- modifiers (MEGA + Shift + 8 / 9 are the keypad keys ( ): the ST does not see the shift key)
          -- "as printed": a symbol needs Shift (pressed or not) or no Shift (hidden)
+         -- MEGA + function key: Shift is pressed (MEGA + Shift + function key: the Shift keys as they are)
          if want_off then
             null;
-         elsif want_on and not fshift then
+         elsif (want_on and not fshift) or mfkey then
             if shift then
                map_key(m, key_pressed_n(m65_left_shift), st_lshift);
                map_key(m, key_pressed_n(m65_right_shift), st_rshift);

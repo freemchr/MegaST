@@ -122,6 +122,7 @@ Usage
   |----------------------|----------------------|
   | F1, F3, F5, F7, F9   | F1, F3, F5, F7, F9   |
   | Shift + F1 .. F9     | F2, F4, F6, F8, F10  |
+  | MEGA + F1 .. F9 (with or without Shift) | Shift + F1 .. F10 (F11 .. F20 in GFA-Basic, STOS) |
   | F11, Run/Stop        | Undo                 |
   | F13                  | Help                 |
   | Inst/Del             | Backspace            |
