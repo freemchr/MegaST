@@ -1,3 +1,21 @@
+Version 0.4.14 beta - October 10, 2026
+======================================
+
+* **Hard disk images restored at power-on were not seen by TOS (issues #11, #12).** Since 0.4.12
+  the core brings back the remembered images at power-on and after a long press of the reset
+  button, but it ejected them again at once inside the core, while the menu still listed them.
+  The eject at a restart of the firmware (0.4.10, issue #10) reacted to the firmware holding the ST
+  in reset, which it does exactly while it restores the images. "Reset Atari ST" in the menu
+  ejected the images, too. Images mounted in the menu while the ST was running were not affected.
+* **Right mouse button stuck with a mouSTer (issue #17):** pin 9 of the mouse port has no pull-up
+  on the MEGA65, so a mouSTer that leaves it open (or a joystick in the mouse port) looked like a
+  held right button, and GEM ignored left clicks on window controls. The core now ignores the
+  right button until it has seen pin 9 released. An Atari or Amiga mouse is not affected; a
+  mouSTer in Atari mode has no right button.
+
+The menu is unchanged: the 99 byte `/atarist/stcfg` of 0.4.8 to 0.4.13 stays valid, and so does the
+1536 byte `/atarist/stmount` of 0.4.12.
+
 Version 0.4.13 beta - October 9, 2026
 =====================================
 

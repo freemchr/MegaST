@@ -75,7 +75,7 @@ type WHS_RECORD_ARRAY_TYPE is array (0 to WHS_RECORDS - 1) of WHS_RECORD_TYPE;
 -- window contains the amount of pages, so each zero-terminated string can be up to 4095 bytes = 4094 characters long.
 
 constant SCR_WELCOME : string :=
-   "Atari ST/STe for MEGA65 Version 0.4.13\n" &
+   "Atari ST/STe for MEGA65 Version 0.4.14\n" &
    "\n"                           &
    "MEGA65 port by Chris Freeman\n" &
    "Report bugs at:\n" &
@@ -98,7 +98,7 @@ constant SCR_WELCOME : string :=
    "  Press Space to continue.\n";
 
 constant HELP_1 : string :=
-   "\n Atari ST/STe for MEGA65 Version 0.4.13\n\n" &
+   "\n Atari ST/STe for MEGA65 Version 0.4.14\n\n" &
    " MEGA65 port by Chris Freeman\n" &
    " github.com/freemchr/MegaST/issues\n" &
    " MiSTer port of the MiSTery core\n" &
