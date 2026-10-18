@@ -2,7 +2,8 @@
 -- the original IP on a 16 MHz clock and the converted IP on 32 MHz with CE at half rate get the same
 -- CPU accesses and the same drive (floppy_model.vhd). Every output must be identical at every 16 MHz
 -- edge. The test also checks the commands themselves: restore, seek, read sector (every byte),
--- read address, step in, force interrupt.
+-- read address, step in, force interrupt (also with no command running, issue #24).
+-- The reference is the original with the bug fixes of tools/wf1772_ce.py (--fix-only).
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -165,6 +166,7 @@ begin
          assert o_ce.intrq = '1' report "no INTRQ after " & time'image(t) severity failure;
       end procedure;
       variable st, v : std_logic_vector(7 downto 0);
+      variable t_fi  : time;
       variable errs  : natural;
       procedure read_sector(t, s, sec : natural) is
       begin
@@ -188,6 +190,13 @@ begin
       wait for 1 us;
       resetn <= '1';
       wait for 2 us;
+
+      -- force interrupt with no command running, as EmuTOS does before its drive detection (issue #24):
+      -- the controller must stay idle and take the next command (the original IP restarted the last one)
+      wr(0, x"D0");
+      rd(0, st);
+      report "force interrupt from idle: status " & to_hstring(st);
+      assert st(0) = '0' and st(7) = '0' report "force interrupt from idle: busy or motor on" severity failure;
 
       -- restore (h = 1: no spin-up wait, 6 ms step rate)
       wr(0, x"08");
@@ -232,9 +241,11 @@ begin
       side_n <= '0';
       read_sector(3, 1, 3);
 
-      -- force interrupt
+      -- force interrupt after a command: idle at once (the original IP was busy for about 7 ms)
+      t_fi := now;
       wr(0, x"D0");
       wait_not_busy(10 ms, st);
+      assert now - t_fi < 10 us report "force interrupt: still busy" severity failure;
       report "force interrupt: status " & to_hstring(st) & " at " & time'image(now);
 
       wait for 100 us;

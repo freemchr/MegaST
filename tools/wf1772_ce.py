@@ -3,7 +3,7 @@
 # advances when CE = '1', so the IP runs on the 32 MHz core clock with CE at half rate.
 # The INPORT process (RDn sampled on the falling clock edge) becomes a rising edge register
 # without CE (m65_floppy_port already synchronises RDATA).
-# Usage: wf1772_ce.py <original dir> <output dir>
+# Usage: wf1772_ce.py [--fix-only] <original dir> <output dir>  (bug fixes: FIXES below)
 import os, re, sys
 
 EDGE = re.compile(r"^(\s*)(els)?if CLK = '1' and CLK' event then\s*$", re.I)
@@ -98,12 +98,56 @@ def convert(text, name):
         i += 1
     return '\n'.join(out), n_edge, n_wait
 
+# Bug fixes, applied to the original before the conversion: (file, original text, replacement).
+# Force interrupt from idle (issue #24): IDLE started a command on CMD_WR (the bus write, combinational)
+# while CMD (the command register) still held the previous command. A force interrupt written while idle
+# therefore restarted the previous command: after a reset a restore with spin-up, busy until 6 index
+# pulses. A command written next was ignored (EmuTOS: no drive A:). IDLE now waits for the second clock
+# of the write, when CMD holds the new value.
+FIXES = [
+    ('wf1772ip_control.vhd',
+     "signal CMD_WR           : boolean;\n",
+     "signal CMD_WR           : boolean;\n"
+     "signal CMD_WR_D         : boolean; -- MegaST fix: CMD_WR one clock later (force interrupt from idle)\n"),
+    ('wf1772ip_control.vhd',
+     "                if CMD_WR = true and CMD /= x\"FF\" and CMD(7 downto 4) /= x\"D\" then\n",
+     "                -- MegaST fix: CMD_WR_D, CMD holds the new command from the second clock of the write on.\n"
+     "                if CMD_WR = true and CMD_WR_D = true and CMD /= x\"FF\" and CMD(7 downto 4) /= x\"D\" then\n"),
+    ('wf1772ip_control.vhd',
+     "    CMD_WR <= true when CSn = '0' and A1 = '0' and A0 = '0' and RWn = '0' else false; -- Command register write.\n",
+     "    CMD_WR <= true when CSn = '0' and A1 = '0' and A0 = '0' and RWn = '0' else false; -- Command register write.\n"
+     "\n"
+     "    P_CMD_WR_D: process(RESETn, CLK) -- MegaST fix: force interrupt from idle\n"
+     "    begin\n"
+     "        if RESETn = '0' then\n"
+     "            CMD_WR_D <= false;\n"
+     "        elsif CLK = '1' and CLK' event then\n"
+     "            CMD_WR_D <= CMD_WR;\n"
+     "        end if;\n"
+     "    end process P_CMD_WR_D;\n"),
+]
+
+def fix(text, name):
+    for f, old, new in FIXES:
+        if f == name:
+            assert text.count(old) == 1, (name, old)
+            text = text.replace(old, new)
+    return text
+
+# --fix-only: only the bug fixes, no clock enable (the reference of the equivalence test)
+fix_only = sys.argv[1] == '--fix-only'
+if fix_only:
+    del sys.argv[1]
 src, dst = sys.argv[1], sys.argv[2]
 os.makedirs(dst, exist_ok=True)
 for f in sorted(os.listdir(src)):
     if not f.endswith('.vhd') or f == 'wf1772ip_top.vhd':
         continue
     t = open(os.path.join(src, f), encoding='latin-1').read().replace('\r', '')
+    t = fix(t, f)
+    if fix_only:
+        open(os.path.join(dst, f), 'w', encoding='latin-1').write(t)
+        continue
     t, ne, nw = convert(t, f)
     if ne or nw or 'CE' in t:
         t = t.replace('\n', '\n', 0)

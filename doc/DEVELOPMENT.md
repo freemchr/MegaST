@@ -25,7 +25,7 @@ How the port works
 | `CORE/vhdl/floppy/m65_floppy_port.vhd` | Internal 3.5" floppy drive: owns the 15 drive pins, synchronisers, RDATA glitch filter and flux pulse, step pulse stretcher, write interlock (`G_WRITE_ENABLE`), motor watchdog. Reusable by other M2M cores |
 | `CORE/vhdl/floppy/floppy_probe.vhd` | Bring-up probe for the floppy drive (phase 0 of `doc/real-floppy.md`): motor/select/step commands and index, flux and step statistics through JTAG USER4 (`tools/probe4.tcl`) |
 | `CORE/verilog/wd1772_m65.v` | WD1772 for the internal floppy drive: WF1772IP behind the fdc1772 CPU interface, clock enable at half rate, short DMA selects stretched over two enabled edges. `atarist_m65.sv` routes all FDC accesses to it with the menu item "Real floppy drive as A:" (drive B: is then absent) |
-| `CORE/vhdl/floppy/wf1772ip/` | WF1772IP, a complete WD1772 (Suska, LGPL), converted to a clock enable by `tools/wf1772_ce.py` (origin and known differences in its `README.md`); `orig/` is the unmodified source. Used by `wd1772_m65.v`; `CORE/sim/build.sh` converts it to Verilog with `ghdl --synth` for Verilator |
+| `CORE/vhdl/floppy/wf1772ip/` | WF1772IP, a complete WD1772 (Suska, LGPL), converted to a clock enable by `tools/wf1772_ce.py`, which also applies the bug fixes (origin, fixes and known differences in its `README.md`); `orig/` is the unmodified source. Used by `wd1772_m65.v`; `CORE/sim/build.sh` converts it to Verilog with `ghdl --synth` for Verilator |
 | `CORE/vhdl/rmb_guard.vhd` | Right mouse button on pin 9: ignored until the pin was seen released (no pull-up on the MEGA65, an open pin reads as pressed); click mode for the Atari mouse (a press counts 200 ms, the release is not visible) |
 | `CORE/vhdl/mouse1351.vhd` | Commodore 1351 mouse to the IKBD's PS/2 mouse emulation |
 | `CORE/vhdl/fdc_bridge.vhd` | Connects the M2M virtual drives (8 bit) to the ST's FDC and ACSI controller (16 bit MiSTer "WIDE" interface) |
@@ -91,10 +91,10 @@ simulation):
   Verilator simulation bypasses it), the right mouse button guard and the internal floppy drive port
   and probe (with a simple drive model: step timing, index period, flux histogram, glitch filter, write
   interlock, motor watchdog)
-* `CORE/sim/real_floppy/run_wf1772.sh`: the WF1772IP clock enable conversion: the original IP on 16 MHz
+* `CORE/sim/real_floppy/run_wf1772.sh`: the WF1772IP clock enable conversion: the original IP (with the bug fixes) on 16 MHz
   and the converted one on 32 MHz side by side on a flux level drive model (`floppy_model.vhd`, ST MFM
   tracks with CRCs); every output identical at every 16 MHz edge, restore, seek, read sector (every byte),
-  read address, step, side 1, force interrupt (about 4 minutes)
+  read address, step, side 1, force interrupt (also with no command running, issue #24) (about 4 minutes)
 * `CORE/sim/fastseek/run.sh`: the fast seek of the firmware in the QNICE emulator (FAT32 image
   with fragmented files, compared with the FAT32 library)
 * `CORE/sim/mntmem/run.sh`: remembering the mounted images (`M2M/rom/mntmem.asm`) in the QNICE

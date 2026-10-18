@@ -178,6 +178,7 @@ signal BUSY_I           : std_logic;
 signal DATA_WR          : boolean;
 signal DATA_RD          : boolean;
 signal CMD_WR           : boolean;
+signal CMD_WR_D         : boolean; -- MegaST fix: CMD_WR one clock later (force interrupt from idle)
 signal STAT_RD          : boolean;
 signal DELAY            : boolean;
 signal DRQ_I            : std_logic;
@@ -224,7 +225,8 @@ begin
             when IDLE =>
                 -- The write access to the command register indicates a new command.
                 -- Any command received (type1, -2 or -3 but not type4):
-                if CMD_WR = true and CMD /= x"FF" and CMD(7 downto 4) /= x"D" then
+                -- MegaST fix: CMD_WR_D, CMD holds the new command from the second clock of the write on.
+                if CMD_WR = true and CMD_WR_D = true and CMD /= x"FF" and CMD(7 downto 4) /= x"D" then
                     NEXT_CMD_STATE <= INIT;
                 else
                     NEXT_CMD_STATE <= IDLE; -- No CMD detected.
@@ -1429,6 +1431,17 @@ begin
     end process P_CRC_ERR;
 
     CMD_WR <= true when CSn = '0' and A1 = '0' and A0 = '0' and RWn = '0' else false; -- Command register write.
+
+    P_CMD_WR_D: process(RESETn, CLK) -- MegaST fix: force interrupt from idle
+    begin
+        if RESETn = '0' then
+            CMD_WR_D <= false;
+        elsif CLK = '1' and CLK' event then
+            if CE = '1' then -- MegaST: clock enable
+            CMD_WR_D <= CMD_WR;
+            end if; -- MegaST: clock enable
+        end if;
+    end process P_CMD_WR_D;
     STAT_RD <= true when CSn = '0' and A1 = '0' and A0 = '0' and RWn = '1' else false; -- Status register read.
     DATA_WR <= true when CSn = '0' and A1 = '1' and A0 = '1' and RWn = '0' else false; -- Data register write.
     DATA_RD <= true when CSn = '0' and A1 = '1' and A0 = '1' and RWn = '1' else false; -- Data register read.
