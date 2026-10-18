@@ -1,3 +1,18 @@
+Version 1.1.1 - October 18, 2026
+================================
+
+* **EmuTOS found no floppy drive with "Real floppy drive as A:" (issue #24):** the desktop showed
+  no drive icons. EmuTOS checks at start-up whether a drive is connected: it stops the floppy
+  controller ("force interrupt") and moves the head to track 0. The controller (WF1772IP) had a
+  bug: a "force interrupt" while it was idle restarted its previous command, which then waited
+  for the disk to spin up, and it ignored the next command. So EmuTOS saw no drive. Atari TOS
+  showed the icons anyway, because its desktop always shows A: and B:. Fixed in the controller.
+  Drive B: stays absent while the real drive is on (as before).
+* Verified in simulation (EmuTOS 1.4 now shows DISK A on the desktop, TOS 2.06 boots as before);
+  not yet tried on the MEGA65 hardware. Please report in issue #24.
+
+The settings file stays the same: the 104 byte `/atarist/stcfg` of 1.1 is still valid.
+
 Version 1.1 - October 16, 2026
 ==============================
 

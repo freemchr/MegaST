@@ -16,13 +16,15 @@ runs games and GEM programs from floppy and hard disk images. Download the core 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
-**Latest version: [1.1](https://github.com/freemchr/MegaST/releases/tag/v1.1)**
-(October 16, 2026): **the MEGA65's internal floppy drive** works as the ST's drive A: (read only,
-issue #15, see [Real floppy drive](#real-floppy-drive)). Original ST disks, including copy
+**Latest version: [1.1.1](https://github.com/freemchr/MegaST/releases/tag/v1.1.1)**
+(October 18, 2026): fixes the real floppy drive with EmuTOS (no drive icons, issue #24; tested
+in simulation, please report how it works on your MEGA65). Since 1.1 (October 16, 2026) **the
+MEGA65's internal floppy drive** works as the ST's drive A: (read only, issue #15, see
+[Real floppy drive](#real-floppy-drive)). Original ST disks, including copy
 protected games with 10 sectors and 82 tracks, are read as on a real ST. Core files for the
 R3/R3A, R4, R5 and R6.
-**Copy the new `atarist/stcfg` (104 bytes) from the zip**, otherwise the menu settings are not
-saved. **All versions up to 0.4.10 damage hard disk images when writing** (issue #11): if you
+**Coming from 1.0 or older: copy the new `atarist/stcfg` (104 bytes) from the zip**, otherwise
+the menu settings are not saved (from 1.1 on, keep your file). **All versions up to 0.4.10 damage hard disk images when writing** (issue #11): if you
 wrote to an image with one of them, restore it from a backup.
 
 **Support:** MegaST is free and open source. If you enjoy it, you can support its development via
@@ -50,6 +52,7 @@ Tested on a MEGA65 R6
 | VGA scanlines, full borders | works |
 | HDMI picture centred, not cut off on the right (576p, 720x480, 640x480) | works (since 1.0) |
 | Internal floppy drive as A: (original Jim Power disk: boot, game) | works (since 1.1); R3-R5 not tested with the drive |
+| Internal floppy drive with EmuTOS (drive A: on the desktop) | no drive icons in 1.1 (issue #24); fixed in 1.1.1, verified in simulation, not yet tried on hardware |
 | Games: Golden Axe, Great Giana Sisters, Turrican | work |
 | Games: Buggy Boy, Goldrunner, Goldrunner II, The Hitchhiker's Guide to the Galaxy, Lemmings | work (tester report, issue #21) |
 | Cartridges, PMOD serial/MIDI/printer, Cubase dongles, Viking card, mono monitor | not tested yet |
@@ -355,7 +358,8 @@ Real floppy drive
 
 Since 1.1 the ST can use the MEGA65's internal 3.5" drive as drive A:. Switch on "Real floppy
 drive as A:" in "System settings" and choose "Reset Atari ST". Drive A: is then the disk in the
-MEGA65's drive; drive B: and the floppy images are not used until you switch it off again.
+MEGA65's drive; drive B: and the floppy images are not used until you switch it off again. With
+EmuTOS this needs 1.1.1 or newer (1.1 showed no drive icons, issue #24).
 Original ST disks are read as on a real ST: the core has a complete WD1772 floppy controller
 (WF1772IP by Wolfgang Förster), so copy protections and formats with 10 or 11 sectors and more
 than 80 tracks work.
