@@ -8,8 +8,8 @@ Version 1.1.1 - October 18, 2026
   for the disk to spin up, and it ignored the next command. So EmuTOS saw no drive. Atari TOS
   showed the icons anyway, because its desktop always shows A: and B:. Fixed in the controller.
   Drive B: stays absent while the real drive is on (as before).
-* Verified in simulation (EmuTOS 1.4 now shows DISK A on the desktop, TOS 2.06 boots as before);
-  not yet tried on the MEGA65 hardware. Please report in issue #24.
+* Tested on an R6 (EmuTOS 1.4 shows DISK A on the desktop) and in simulation (TOS 2.06 boots as
+  before).
 
 The settings file stays the same: the 104 byte `/atarist/stcfg` of 1.1 is still valid.
 

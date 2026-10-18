@@ -18,9 +18,8 @@ on the MEGA65. Please report problems and successes in the
 
 **Latest version: [1.1.1](https://github.com/freemchr/MegaST/releases/tag/v1.1.1)**
 (October 18, 2026): fixes the real floppy drive with EmuTOS (no drive icons, issue #24; tested
-in simulation, please report how it works on your MEGA65). Since 1.1 (October 16, 2026) **the
-MEGA65's internal floppy drive** works as the ST's drive A: (read only, issue #15, see
-[Real floppy drive](#real-floppy-drive)). Original ST disks, including copy
+on an R6). Since 1.1 (October 16, 2026) **the MEGA65's internal floppy drive** works as the ST's
+drive A: (read only, issue #15, see [Real floppy drive](#real-floppy-drive)). Original ST disks, including copy
 protected games with 10 sectors and 82 tracks, are read as on a real ST. Core files for the
 R3/R3A, R4, R5 and R6.
 **Coming from 1.0 or older: copy the new `atarist/stcfg` (104 bytes) from the zip**, otherwise
@@ -52,7 +51,7 @@ Tested on a MEGA65 R6
 | VGA scanlines, full borders | works |
 | HDMI picture centred, not cut off on the right (576p, 720x480, 640x480) | works (since 1.0) |
 | Internal floppy drive as A: (original Jim Power disk: boot, game) | works (since 1.1); R3-R5 not tested with the drive |
-| Internal floppy drive with EmuTOS (drive A: on the desktop) | no drive icons in 1.1 (issue #24); fixed in 1.1.1, verified in simulation, not yet tried on hardware |
+| Internal floppy drive with EmuTOS (drive A: on the desktop) | works since 1.1.1 (no drive icons in 1.1, issue #24); R3-R5 not tested with the drive |
 | Games: Golden Axe, Great Giana Sisters, Turrican | work |
 | Games: Buggy Boy, Goldrunner, Goldrunner II, The Hitchhiker's Guide to the Galaxy, Lemmings | work (tester report, issue #21) |
 | Cartridges, PMOD serial/MIDI/printer, Cubase dongles, Viking card, mono monitor | not tested yet |
