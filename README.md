@@ -16,10 +16,11 @@ runs games and GEM programs from floppy and hard disk images. Download the core 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
-**Latest version: [1.1.1](https://github.com/freemchr/MegaST/releases/tag/v1.1.1)**
-(October 18, 2026): fixes the real floppy drive with EmuTOS (no drive icons, issue #24; tested
-on an R6). Since 1.1 (October 16, 2026) **the MEGA65's internal floppy drive** works as the ST's
-drive A: (read only, issue #15, see [Real floppy drive](#real-floppy-drive)). Original ST disks, including copy
+**Latest version: [1.1.2](https://github.com/freemchr/MegaST/releases/tag/v1.1.2)**
+(October 19, 2026): the reset no longer takes 5 to 10 seconds longer with the real floppy drive
+(tested on an R6). 1.1.1 fixed the real floppy drive with EmuTOS (no drive icons, issue #24).
+Since 1.1 (October 16, 2026) **the MEGA65's internal floppy drive** works as the ST's drive A:
+(read only, issue #15, see [Real floppy drive](#real-floppy-drive)). Original ST disks, including copy
 protected games with 10 sectors and 82 tracks, are read as on a real ST. Core files for the
 R3/R3A, R4, R5 and R6.
 **Coming from 1.0 or older: copy the new `atarist/stcfg` (104 bytes) from the zip**, otherwise
@@ -287,6 +288,11 @@ release zip), this choice is remembered and the chosen TOS is loaded again at th
 Without `stmount`, `tos.img` is used again after a power cycle. STe and Mega STe modes need TOS
 1.06 or newer (or EmuTOS).
 
+**Mega STe speed:** like a real Mega STE, the Mega STe mode starts at 8 MHz with the cache off; TOS
+2.06 does not switch it. Set 16 MHz and the cache in the XControl "General" panel (or with a speed
+utility). "STEroids" always runs at full speed and has no speed setting; tools that only know
+the real Atari models cannot measure it.
+
 **Which TOS?** EmuTOS is in the release zip only because it is free and may be distributed (Atari's
 TOS may not). It is fine for GEM programs and for a first test, but some games crash with it.
 **For games, use a real Atari TOS:** TOS 1.02 or 1.04 for the ST (some games only run reliably
@@ -359,6 +365,8 @@ Since 1.1 the ST can use the MEGA65's internal 3.5" drive as drive A:. Switch on
 drive as A:" in "System settings" and choose "Reset Atari ST". Drive A: is then the disk in the
 MEGA65's drive; drive B: and the floppy images are not used until you switch it off again. With
 EmuTOS this needs 1.1.1 or newer (1.1 showed no drive icons, issue #24).
+Up to 1.1.1 a reset took 5 to 10 seconds longer while the real drive was on (TOS waited for the
+missing drive B:); fixed in 1.1.2. With no disk in the drive, TOS still waits a moment for drive A:.
 Original ST disks are read as on a real ST: the core has a complete WD1772 floppy controller
 (WF1772IP by Wolfgang Förster), so copy protections and formats with 10 or 11 sectors and more
 than 80 tracks work.

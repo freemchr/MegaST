@@ -16,6 +16,13 @@
 //   runs, the CPU reads the shadow registers and a busy status, and like a busy WD1772 the controller ignores
 //   everything else but "force interrupt" (a loader that times out and writes the read command again just
 //   waits on).
+// * Absent drive (absent = 1: drive B: is selected, which is not connected when the internal drive is A:):
+//   a type I command (restore, seek, step) ends at once with the status the WD1772 gets on a drive that
+//   is not there: a restore or a verify ends with a seek error, track 0 is never reported. The WD1772 would
+//   step for 255 x 6 ms at TOS's step rate, longer than the 1.5 s timeout of TOS. TOS 2.06 sends drive B
+//   7 restore and seek commands at every reset, so the reset took up to 10 s longer. The result for TOS
+//   (no drive B) stays the same. Other commands go to
+//   the IP as before (an own access, like a "force interrupt" during a buffered read).
 //
 // This machine is based on AtariST_MiSTer
 // Powered by MiSTer2MEGA65
@@ -44,6 +51,7 @@ module wd1772_m65 (
 	input        wprot,
 	input        side,         // 1 = side 1 (only for the command log)
 	input        retry,        // 1 = repeat failed sector reads internally (see above)
+	input        absent,       // 1 = the selected drive is not connected (see above)
 
 	// debugging (JTAG probe in mega65.vhd): log of the last 256 commands, entry dbg_idx, see below
 	input  [7:0] dbg_idx,
@@ -74,7 +82,14 @@ reg  fwd_l     = 1'b0;
 reg  fi_pend   = 1'b0;
 reg  [7:0] fi_cmd;
 wire cmd_wr    = cpu_sel & ~cpu_rw & cpu_addr == 2'd0;
-wire cpu_fwd   = cpu_sel & (sel_d ? fwd_l : mode == M_IDLE);
+wire cpu_fwd   = cpu_sel & (sel_d ? fwd_l : mode == M_IDLE & ~(absent & cmd_wr));
+// a command to an absent drive (not forwarded): a type I command is answered here (ab_st), others are
+// written to the IP by an own access (fi_pend)
+wire ab_wr     = cmd_wr & ~sel_d & absent & mode == M_IDLE;
+reg  ab_valid  = 1'b0;                 // the status register shows ab_st
+reg  ab_go     = 1'b0;                 // INTRQ at the end of the CPU's write
+reg  ab_irq    = 1'b0;
+reg  [7:0] ab_st;
 
 // the buffered read's own accesses to the IP (same timing as a CPU access: 4 cycles)
 reg       acc_go = 1'b0;               // start an access (one cycle)
@@ -164,7 +179,23 @@ always @(posedge clk_32) begin
 	if (cool != 3'd0) cool <= cool - 3'd1;
 	if (ip_irq & ~ip_irq_d) ip_done <= 1'b1;
 	// the CPU clears INTRQ by reading the status or writing a command
-	if (cpu_sel & cpu_addr == 2'd0) st_irq <= 1'b0;
+	if (cpu_sel & cpu_addr == 2'd0) begin st_irq <= 1'b0; ab_irq <= 1'b0; end
+
+	// absent drive: a type I command ends at once (status: motor, spin-up done, seek error after a restore
+	// or a verify); the status stays until the next command reaches the IP
+	if (ab_wr & ~cpu_din[7]) begin
+		ab_valid <= 1'b1;
+		ab_go    <= 1'b1;
+		ab_st    <= { motor, 2'b01, cpu_din[7:4] == 4'h0 | cpu_din[2], 4'b0000 };
+	end else if (ab_wr) begin
+		fi_pend  <= 1'b1;
+		fi_cmd   <= cpu_din;
+	end
+	if (ab_go & ~cpu_sel) begin
+		ab_go    <= 1'b0;
+		ab_irq   <= 1'b1;
+	end
+	if ((cpu_fwd & cmd_wr) | (acc_go & ~acc_rw & acc_addr == 2'd0)) ab_valid <= 1'b0;
 
 	case (mode)
 	M_IDLE: begin
@@ -248,6 +279,11 @@ always @(posedge clk_32) begin
 		fi_pend  <= ~reset;
 		fi_cmd   <= cpu_din;
 	end
+	if (reset) begin
+		ab_valid <= 1'b0;
+		ab_go    <= 1'b0;
+		ab_irq   <= 1'b0;
+	end
 end
 
 // the CPU side: during a buffered read the shim answers, otherwise the IP
@@ -258,9 +294,9 @@ always @(*) case (cpu_addr)
 	2'd2:    shim_dout = sh_sec;
 	default: shim_dout = mode == M_DLV ? buf_q : sh_data;
 endcase
-assign cpu_dout = mode == M_IDLE ? ip_dout : shim_dout;
+assign cpu_dout = mode == M_IDLE ? (ab_valid & cpu_addr == 2'd0 ? ab_st : ip_dout) : shim_dout;
 assign drq      = mode == M_IDLE ? ip_drq : st_drq;
-assign irq      = mode == M_IDLE ? ip_irq | st_irq : 1'b0;
+assign irq      = mode == M_IDLE ? ip_irq | st_irq | ab_irq : 1'b0;
 
 // Command log for the JTAG probe. An entry is written when a command ends (INTRQ) and updated with the
 // first status the CPU reads after it. Entry bits: 7..0 command, 15..8 track (shadow of the track

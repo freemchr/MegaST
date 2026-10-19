@@ -1151,6 +1151,7 @@ wd1772_m65 wd1772_m65 (
 	.wprot    ( rfd_wprot                     ),
 	.side     ( rfd_side                      ),
 	.retry    ( cfg_fdc_retry                 ),
+	.absent   ( ~floppy_sel[1] & floppy_sel[0] ),   // drive B: (not connected)
 	.dbg_idx  ( dbg_fdc_idx                   ),
 	.dbg_entry( dbg_fdc_entry                 ),
 	.dbg_count( dbg_fdc_count                 )

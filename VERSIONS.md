@@ -1,3 +1,18 @@
+Version 1.1.2 - October 19, 2026
+================================
+
+* **Reset took 5 to 10 seconds longer with "Real floppy drive as A:"** (tester report). Drive B:
+  is not connected while the real drive is on. At every reset TOS checks whether drive B: is
+  there (TOS 2.06: 7 commands that move the head to track 0). On a drive that is not there, the
+  floppy controller steps for up to 1.5 seconds per command looking for track 0, and TOS waited
+  for each one until its timeout. The controller now answers these commands for drive B: at
+  once, with the result of a missing drive. TOS still sees no drive B: (as before), just without
+  the wait. With an empty drive A: TOS still waits a moment for drive A:, as on a real ST.
+* Tested on an R6 and in simulation (TOS 1.04, TOS 2.06 and EmuTOS boot from the real drive and
+  find no drive B:).
+
+The settings file stays the same: the 104 byte `/atarist/stcfg` of 1.1 is still valid.
+
 Version 1.1.1 - October 18, 2026
 ================================
 
