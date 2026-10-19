@@ -792,8 +792,10 @@ begin
    qnice_ascal_polyphase_o    <= qnice_osm_control_i(C_MENU_CRT_EMULATION);
 
    -- ascal triple-buffering
-   -- @TODO: Right now, the M2M framework only supports OFF, so do not touch until the framework is upgraded
-   qnice_ascal_triplebuf_o    <= '0';
+   -- MegaST: on. The mono mode runs at 71 Hz and HDMI at 50/60 Hz; with a single buffer, ascal reads
+   -- frames that are half old, half new (tearing). The frame buffer is 1 MB (VGA_DX * VGA_DY * 3,
+   -- rounded up), so the three buffers use 3 MB of the 4 MB that C_HMAP_M2M reserves in HyperRAM.
+   qnice_ascal_triplebuf_o    <= '1';
 
    -- Joystick ports are swapped via the Atari ST's own menu item (see main.vhd)
    qnice_flip_joyports_o      <= '0';
