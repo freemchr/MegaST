@@ -26,7 +26,9 @@ entity digital_pipeline is
       G_VGA_DY               : natural;
       G_FONT_FILE            : string;
       G_FONT_DX              : natural;
-      G_FONT_DY              : natural
+      G_FONT_DY              : natural;
+      -- MegaST: ascal framebuffer format in HyperRAM: 00=16bpp 565, 01=24bpp (M2M default)
+      G_ASCAL_FORMAT         : std_logic_vector(1 downto 0) := "01"
    );
    port (
       -- Input from Core (video and audio)
@@ -401,7 +403,7 @@ begin
          vmax              => hdmi_vmax,                    -- input
 
          -- Scaler format. 00=16bpp 565, 01=24bpp 10=32bpp
-         format            => "01",                         -- input: 24bpp
+         format            => unsigned(G_ASCAL_FORMAT),     -- input: MegaST: generic (M2M: "01" = 24bpp)
 
          -- Polyphase filter coefficients (not used by us)
          poly_clk          => qnice_poly_clk_i,             -- input

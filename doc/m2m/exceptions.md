@@ -150,6 +150,16 @@ than the 4:3 area of 576p (720), 720x480 (720) and 640x480 (640). Without downsc
 input pixel per output pixel, so it cut off the right part of the line: the picture looked shifted to the right
 (left border wide, right border narrow), only 800x600 and 720p were right. Generic, a candidate for upstream.
 
+### HDMI: 16 bpp scaler frame buffer
+
+`M2M/vhdl/av_pipeline/digital_pipeline.vhd`, `av_pipeline.vhd`, `framework.vhd`: the pixel format of
+`ascal`'s frame buffer in HyperRAM is the generic `G_ASCAL_FORMAT` (default `"01"` = 24 bpp, as in M2M);
+`framework.vhd` passes `ASCAL_FORMAT` from `globals.vhd`. MegaST uses `"00"` (16 bpp, RGB 565). The ST
+monochrome mode writes 640x400 at 71 Hz into the frame buffer (55 MB/s at 24 bpp); at 720p ascal also has
+to read every line within a 720p line period. With 24 bpp, the HyperRAM could not keep up: the
+desktop flickered in columns at 720p (fewer at 50 Hz), while 576p was stable. 16 bpp needs a third
+less bandwidth and loses nothing visible for the ST's colours. Generic, a candidate for upstream.
+
 ### JTAG probe of the QNICE CPU bus
 
 `M2M/vhdl/QNICE/qnice.vhd`: a `BSCANE2` (USER1) returns a 64 bit snapshot of the QNICE CPU bus, for

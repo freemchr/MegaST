@@ -63,6 +63,12 @@ constant QNICE_CLK_SPEED      : natural := 50_000_000;   -- a change here has de
 constant VGA_DX               : natural := 640;
 constant VGA_DY               : natural := 400;
 
+--    ASCAL_FORMAT  pixel format of the HDMI scaler's frame buffer in HyperRAM: 00 = 16 bpp (RGB 565), 01 = 24 bpp.
+--    16 bpp needs a third less HyperRAM bandwidth and loses nothing visible (the ST has at most 4 bits per colour,
+--    a 5 or 6 bit value differs from it by at most 4/255):
+--    with 24 bpp, the 71 Hz monochrome mode at 720p flickered in columns (ascal's line reads came too late).
+constant ASCAL_FORMAT         : std_logic_vector(1 downto 0) := "00";
+
 --    FONT_*  size of one OSM character
 constant FONT_FILE            : string  := "../font/Anikki-16x16-m2m.rom";
 constant FONT_DX              : natural := 16;

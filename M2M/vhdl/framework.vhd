@@ -870,7 +870,8 @@ begin
          G_VGA_DY                => VGA_DY,
          G_FONT_FILE             => FONT_FILE,
          G_FONT_DX               => FONT_DX,
-         G_FONT_DY               => FONT_DY
+         G_FONT_DY               => FONT_DY,
+         G_ASCAL_FORMAT          => ASCAL_FORMAT          -- MegaST: globals.vhd
       )
       port map (
          -- Input from Core
