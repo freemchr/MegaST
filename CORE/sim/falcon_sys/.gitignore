@@ -1,0 +1,4 @@
+obj_dir/
+rtl/
+build.log
+*.hex
