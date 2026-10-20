@@ -76,7 +76,7 @@ Simulate first. Every hardware round trip costs the maintainer time.
 * `CORE/sim/build.sh`: Verilator simulation of the whole ST (`cd obj_dir && ./simst <tos.img>
   <frames> [prefix] [ste] [hd.img]`). It writes every 10th frame as PPM. `VFLAGS=-DBRAM_MEM` builds
   the R3 memory variant. `KEY=<col*8+row> KEY_AT=<frame>` presses a key, `MEM=0..5` sets
-  the ST RAM (512 KB to 14 MB, default 1 MB). `RFLOPPY=<.st>` puts the image into a flux level model
+  the ST RAM (512 KB to 14 MB, default 1 MB), `MSTE=1` the Mega STe (with `ste`: STEroids). `RFLOPPY=<.st>` puts the image into a flux level model
   of the internal drive (menu "Real floppy drive as A:"; `VFLAGS=-DFDC_TRACE` logs the FDC accesses).
   Needs Verilator and GHDL from the OSS CAD Suite (`~/opt/oss-cad-suite/bin` on this machine).
 * `CORE/sim/{keyboard,tos_loader,floppy_swap,fdc_bridge,rmb_guard,real_floppy}/run.sh`: GHDL unit tests.

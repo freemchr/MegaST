@@ -1,3 +1,20 @@
+Version 1.1.3 - October 21, 2026
+================================
+
+* **The monochrome mode flickered on HDMI at 720p** (tester report and videos): small columns of the
+  desktop pattern flickered at 720p 50 and 60 Hz, while 576p was stable. The scaler that converts
+  the ST picture to the HDMI resolution keeps its frame buffer in the HyperRAM, and with 24 bits
+  per pixel the HyperRAM could not deliver the lines in time. The frame buffer now uses 16 bits
+  per pixel (the ST has at most 4096 colours, so nothing is lost) and three buffers, so the
+  scaler never reads a frame that is half old and half new. Confirmed fixed by the tester.
+* **STEroids: the picture was cut off on the left** (tester report): in the monochrome mode the
+  first pixels of every line were missing (half of the first letter). In the STEroids mode, and
+  in the Mega STe mode with the cache on, the video data comes out a few pixels earlier; the
+  colour modes were shifted too. The picture is now in its place, in simulation exactly as in
+  the STe mode.
+
+The settings file stays the same: the 104 byte `/atarist/stcfg` of 1.1 is still valid.
+
 Version 1.1.2 - October 19, 2026
 ================================
 

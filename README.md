@@ -16,9 +16,10 @@ runs games and GEM programs from floppy and hard disk images. Download the core 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
-**Latest version: [1.1.2](https://github.com/freemchr/MegaST/releases/tag/v1.1.2)**
-(October 19, 2026): the reset no longer takes 5 to 10 seconds longer with the real floppy drive
-(tested on an R6). 1.1.1 fixed the real floppy drive with EmuTOS (no drive icons, issue #24).
+**Latest version: [1.1.3](https://github.com/freemchr/MegaST/releases/tag/v1.1.3)**
+(October 21, 2026): the monochrome mode no longer flickers on HDMI at 720p (confirmed by a
+tester), and the STEroids picture is no longer cut off on the left. 1.1.2 removed the reset delay
+with the real floppy drive, 1.1.1 fixed the real floppy drive with EmuTOS (issue #24).
 Since 1.1 (October 16, 2026) **the MEGA65's internal floppy drive** works as the ST's drive A:
 (read only, issue #15, see [Real floppy drive](#real-floppy-drive)). Original ST disks, including copy
 protected games with 10 sectors and 82 tracks, are read as on a real ST. Core files for the
@@ -418,9 +419,9 @@ Video
   that mode. "Mono 60 Hz" adds blank lines to get ~60 Hz (same 35.7 kHz line rate).
 * **HDMI and the 71 Hz mono mode:** the HDMI output always runs at the HDMI mode's rate
   (50 or 60 Hz). `ascal` writes the 71 Hz frames into its frame buffer and reads them at the
-  output rate, so some frames are dropped (about 1 in 6 at 60 Hz), and fast scrolling can show a
-  tear line (the framework only supports single buffering). For smooth motion, enable "Mono 60 Hz"
-  and use a 60 Hz HDMI mode.
+  output rate, so some frames are dropped (about 1 in 6 at 60 Hz). Since 1.1.3 the frame buffer has
+  16 bits per pixel and three buffers: no flicker at 720p and no tear line. For smooth motion,
+  enable "Mono 60 Hz" and use a 60 Hz HDMI mode.
 
 Viking/SM194 card
 -----------------
