@@ -1,6 +1,7 @@
 // Strict behavioral model of the IS42S16320F SDRAM for the Falcon SDRAM adapter
-// (falcon_sdram.v): burst length 4 for reads and writes, CAS latency 2, auto
-// precharge, DQM per beat, and checks of the timing the adapter must keep
+// (falcon_sdram.v): burst length 4 for reads, single writes (mode 0x222, as
+// sdram_m65.v uses it), CAS latency 2, auto precharge, DQM per write, and
+// checks of the timing the adapter must keep
 // (in clocks of 10.4 ns, the -7 speed grade at 96 MHz):
 //   tRCD 2 (ACTIVE -> READ/WRITE), tRAS 5 (ACTIVE -> precharge), tRP 2,
 //   tWR 2 (last write beat -> precharge), tRFC 6, refresh at least every 7.8 us,
@@ -82,7 +83,7 @@ module sdram_strict (
     case (cmd)
       CMD_MODE: begin
         mode_set = 1;
-        if (a != 13'h022) err("unexpected mode register");
+        if (a != 13'h222) err("unexpected mode register");
       end
       CMD_PRECHARGE: begin
         if (!a[10]) err("precharge of one bank");
@@ -118,16 +119,13 @@ module sdram_strict (
       CMD_WRITE: begin
         if (!open[ba]) err("WRITE on a closed bank");
         if (cyc - t_act[ba] < T_RCD) err("WRITE before tRCD");
-        if (a[1:0] != 0) err("WRITE not at a 4-beat boundary");
         w_addr = {ba, row[ba][10:0], a[9:0]};
         if (!fpga_drives) err("WRITE without data");
         if (!dqml) mem[w_addr][7:0]  = dq[7:0];
         if (!dqmh) mem[w_addr][15:8] = dq[15:8];
-        w_addr = {w_addr[22:2], w_addr[1:0] + 2'd1};
-        w_left = 3;
-        if (a[10]) begin   // auto precharge: tWR after the last beat
-          if (cyc + 3 + T_WR - t_act[ba] < T_RAS) err("tRAS violated (write)");
-          open[ba] = 0; t_idle[ba] = cyc + 3 + T_WR + T_RP + 1;
+        if (a[10]) begin   // auto precharge: tWR after the (single) write
+          if (cyc + T_WR - t_act[ba] < T_RAS) err("tRAS violated (write)");
+          open[ba] = 0; t_idle[ba] = cyc + T_WR + T_RP + 1;
         end
       end
       default: ;

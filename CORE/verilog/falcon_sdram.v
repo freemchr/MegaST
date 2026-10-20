@@ -10,7 +10,10 @@
 //
 // The MEGA65 R4/R5/R6 SDRAM is an IS42S16320F (32M x 16). A 64-bit word is a
 // burst of four 16-bit beats (BL=4) in one row, a 4-word read four READ
-// commands back to back (no gap in the data). Every access opens its row and
+// commands back to back (no gap in the data). The mode register is the same as
+// in sdram_m65.v (BL=4 reads, single writes), so the ST and the Falcon can take
+// turns without reprogramming it: a 64-bit write is four WRITE commands in a
+// row, one per beat, each with its byte masks. Every access opens its row and
 // closes it with auto precharge, so all banks are idle between commands and a
 // refresh can always go in. Address: 64-bit word address a[20:0] (16 MB):
 // column {a[7:0], 2'b00}, bank a[9:8], row a[20:10].
@@ -51,7 +54,7 @@ module falcon_sdram (
 );
 
 localparam CAS_LATENCY = 3'd2;
-localparam MODE        = {3'b000, 1'b0 /* write bursts */, 2'b00, CAS_LATENCY, 1'b0 /* sequential */, 3'b010 /* BL=4 */};
+localparam MODE        = {3'b000, 1'b1 /* single writes */, 2'b00, CAS_LATENCY, 1'b0 /* sequential */, 3'b010 /* BL=4 */};
 
 localparam CMD_NOP          = 4'b0111;
 localparam CMD_ACTIVE       = 4'b0011;
@@ -220,11 +223,9 @@ always @(posedge clk_96) begin
 		end
 
 	S_WRITE: begin
-		// one WRITE, data and byte masks in the cycles of the burst
-		if (word == 2'd0) begin
-			sd_cmd  <= CMD_WRITE;
-			sd_addr <= {2'b00, 1'b1, c_addr[7:0], 2'b00};   // auto precharge
-		end
+		// four single WRITEs, the last one with auto precharge
+		sd_cmd  <= CMD_WRITE;
+		sd_addr <= {2'b00, word == 2'd3, c_addr[7:0], word};
 		sd_dout <= c_din[16 * word +: 16];
 		sd_doe  <= 16'hFFFF;
 		sd_dqm  <= ~c_be[2 * word +: 2];
