@@ -16,14 +16,15 @@ module sdram_strict (
   localparam CL = 2, T_RCD = 2, T_RAS = 5, T_RP = 2, T_WR = 2, T_RFC = 6, T_REF = 750;
 
   reg [15:0] mem [0:(1<<23)-1];   // {ba, row[10:0], col[9:0]}: 16 MB
-  integer    errors = 0, cyc = 0, last_ref = -1, refs = 0;
+  integer    errors = 0, refs = 0;
+  longint    cyc = 0, last_ref = -1;   // 64 bit: a 32-bit count wraps after 22 s at 96 MHz
   reg        mode_set = 0;
 
   // per bank: open row, time of ACTIVE, time from which it is idle again
   reg [12:0] row [0:3];
   reg        open [0:3];
-  integer    t_act [0:3], t_idle [0:3];
-  integer    t_ref_done = 0;
+  longint    t_act [0:3], t_idle [0:3];
+  longint    t_ref_done = 0;
 
   // read data pipeline: slot = cycle number mod 16
   reg        o_valid [0:15];
