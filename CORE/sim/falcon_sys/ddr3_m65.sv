@@ -35,7 +35,7 @@ wire        sd_cs, sd_we, sd_ras, sd_cas, sd_clk;
 reg  [3:0] init_cnt = 4'd0;
 always @(posedge clk) if (init_cnt != 4'd15) init_cnt <= init_cnt + 4'd1;
 
-falcon_sdram adapter
+falcon_sdram_pins adapter
 (
 	.init(init_cnt != 4'd15), .clk_32(clk), .clk_96(clk_96),
 	.busy(DDRAM_BUSY), .burstcnt(DDRAM_BURSTCNT[2:0]), .addr(DDRAM_ADDR[20:0]),
@@ -49,7 +49,7 @@ sdram_strict sdram
 (
 	.clk(sd_clk), .cs_n(sd_cs), .ras_n(sd_ras), .cas_n(sd_cas), .we_n(sd_we),
 	.ba(sd_ba), .a(sd_addr), .dqml(sd_dqm[0]), .dqmh(sd_dqm[1]), .dq(sd_data),
-	.fpga_drives(adapter.sd_doe[0])
+	.fpga_drives(adapter.sd_doe)
 );
 
 // 16-bit SDRAM word k (0..3) of the 64-bit word q, as falcon_sdram.v maps it

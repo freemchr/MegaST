@@ -23,6 +23,6 @@ verilator --cc --exe --build -j 16 -O3 --x-assign fast --x-initial fast \
 	-Wno-INITIALDLY -Wno-BLKANDNBLK -Wno-LATCH \
 	--top-module tb_top -Mdir obj_dir +define+FALCON_NO_FPU \
 	-I$R/AP68030/rtl -I$R/AP68030/rtl/core -I$F -I$F/dsp \
-	tb_top.sv ddr3_m65.sv ../../verilog/falcon_sdram.v ../falcon_sdram/sdram_strict.v ../sim_stubs.v \
+	tb_top.sv ddr3_m65.sv ../../verilog/falcon_sdram.v ../../verilog/falcon_sdram_pins.v ../falcon_sdram/sdram_strict.v ../sim_stubs.v \
 	$R/AP68030/rtl/*.v $SRCS sim_main.cpp
 echo "Done: obj_dir/Vtb_top"

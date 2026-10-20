@@ -24,7 +24,7 @@ module tb;
   wire  [1:0] sd_dqm, sd_ba;
   wire        sd_cs, sd_we, sd_ras, sd_cas, sd_clk;
 
-  falcon_sdram dut (
+  falcon_sdram_pins dut (
     .init(init), .clk_32(clk_32), .clk_96(clk_96),
     .busy(busy), .burstcnt(burstcnt), .addr(addr), .dout(dout), .dout_ready(dout_ready),
     .rd(rd), .din(din), .be(be), .we(we),
@@ -35,7 +35,7 @@ module tb;
   sdram_strict sdram (
     .clk(sd_clk), .cs_n(sd_cs), .ras_n(sd_ras), .cas_n(sd_cas), .we_n(sd_we),
     .ba(sd_ba), .a(sd_addr), .dqml(sd_dqm[0]), .dqmh(sd_dqm[1]), .dq(sd_data),
-    .fpga_drives(dut.sd_doe[0])
+    .fpga_drives(dut.sd_doe)
   );
 
   // reference memory (only the addresses the test uses)

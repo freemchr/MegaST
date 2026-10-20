@@ -19,14 +19,21 @@
 // column {a[7:0], 2'b00}, bank a[9:8], row a[20:10].
 //
 // Clocks: the Falcon side runs at clk_32, the SDRAM at clk_96 (same MMCM,
-// rising edges aligned). Pins, SDRAM clock (inverted clk_96 via ODDR), read
-// latency and the initialization are the same as in sdram_m65.v, which is
-// tested on the hardware.
+// rising edges aligned).
+//
+// No pins here: the SDRAM pins of the core belong to sdram_m65.v (the ST). In
+// the Falcon mode its pin registers (in the IOBs) load the sd_*_o signals of
+// this module instead of its own, and sd_din_i is its input register. So the
+// commands reach the pins one clk_96 cycle later than in sdram_m65.v, and beat
+// 0 of a READ is in sd_din_i 5 cycles after this module issued it. Pin timing,
+// SDRAM clock and the initialization (start_i: sdram_m65.v has initialized the
+// SDRAM) are those of sdram_m65.v, tested on the hardware. falcon_sdram_pins.v
+// adds the same register stage and the pins for the simulations.
 //
 // MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
 
 module falcon_sdram (
-	input             init,       // FPGA configuration done: (re)initialize the SDRAM
+	input             start_i,    // 1: the SDRAM is initialized and this controller owns it
 	input             clk_32,
 	input             clk_96,
 
@@ -41,28 +48,21 @@ module falcon_sdram (
 	input       [7:0] be,
 	input             we,
 
-	// SDRAM
-	inout      [15:0] sd_data,
-	(* IOB = "TRUE" *) output reg [12:0] sd_addr,
-	(* IOB = "TRUE" *) output reg  [1:0] sd_dqm,
-	(* IOB = "TRUE" *) output reg  [1:0] sd_ba,
-	output            sd_cs,
-	output            sd_we,
-	output            sd_ras,
-	output            sd_cas,
-	output            sd_clk
+	// SDRAM, through the pin registers of sdram_m65.v
+	output reg  [3:0] sd_cmd_o,   // {CS#, RAS#, CAS#, WE#}
+	output reg [12:0] sd_addr_o,
+	output reg  [1:0] sd_ba_o,
+	output reg  [1:0] sd_dqm_o,
+	output reg [15:0] sd_dout_o,
+	output reg        sd_doe_o,
+	input      [15:0] sd_din_i    // the pin input register
 );
-
-localparam CAS_LATENCY = 3'd2;
-localparam MODE        = {3'b000, 1'b1 /* single writes */, 2'b00, CAS_LATENCY, 1'b0 /* sequential */, 3'b010 /* BL=4 */};
 
 localparam CMD_NOP          = 4'b0111;
 localparam CMD_ACTIVE       = 4'b0011;
 localparam CMD_READ         = 4'b0101;
 localparam CMD_WRITE        = 4'b0100;
-localparam CMD_PRECHARGE    = 4'b0010;
 localparam CMD_AUTO_REFRESH = 4'b0001;
-localparam CMD_LOAD_MODE    = 4'b0000;
 
 // ---------------------------------------------------------------------
 // Falcon side (clk_32)
@@ -78,7 +78,7 @@ reg  [7:0] c_be;
 
 reg        s_ready = 1'b0;      // SDRAM initialized (clk_96)
 reg        s_done = 1'b0;       // toggles when a command is finished (clk_96)
-reg [63:0] s_buf[0:3];            // read words for the Falcon side (clk_96 writes)
+reg [63:0] s_buf[0:3];          // read words for the Falcon side (clk_96 writes)
 reg  [2:0] s_wr = 3'd0;         // words written into s_buf (clk_96)
 reg  [2:0] c_rd = 3'd0;         // words given to the Falcon (clk_32)
 
@@ -107,23 +107,6 @@ end
 // SDRAM side (clk_96)
 // ---------------------------------------------------------------------
 
-(* IOB = "TRUE" *) reg [3:0]  sd_cmd = CMD_NOP;
-(* IOB = "TRUE" *) reg [15:0] sd_dout;
-(* IOB = "TRUE" *) reg [15:0] sd_doe;
-(* IOB = "TRUE" *) reg [15:0] sd_din;
-
-assign sd_cs  = sd_cmd[3];
-assign sd_ras = sd_cmd[2];
-assign sd_cas = sd_cmd[1];
-assign sd_we  = sd_cmd[0];
-
-genvar gi;
-generate
-	for (gi = 0; gi < 16; gi = gi + 1) begin : g_dq
-		assign sd_data[gi] = sd_doe[gi] ? sd_dout[gi] : 1'bZ;
-	end
-endgenerate
-
 localparam S_INIT = 3'd0, S_IDLE = 3'd1, S_ACT = 3'd2, S_READ = 3'd3, S_WRITE = 3'd4, S_WAIT = 3'd5;
 
 reg  [2:0] st = S_INIT;
@@ -133,7 +116,7 @@ reg  [9:0] ref_cnt;             // cycles since the last refresh
 reg        s_tog = 1'b0;        // last command seen
 reg  [1:0] word;                // word (READ) or beat (WRITE) of the command
 
-// read data capture: beat 0 of a READ is in sd_din 4 cycles after the command
+// read data capture: beat 0 of a READ is in sd_din_i 5 cycles after the command
 reg  [2:0] cap_delay = 3'd0;
 reg  [4:0] cap_left = 5'd0;     // beats still to come
 reg  [1:0] cap_beat;
@@ -144,10 +127,9 @@ wire       last = !c_four || word == 2'd3;   // the READ now is the last one
 wire [12:0] c_row = {2'b00, c_addr[20:10]};
 
 always @(posedge clk_96) begin
-	sd_din <= sd_data;
-	sd_cmd <= CMD_NOP;
-	sd_doe <= 16'h0000;
-	sd_dqm <= 2'b00;
+	sd_cmd_o <= CMD_NOP;
+	sd_doe_o <= 1'b0;
+	sd_dqm_o <= 2'b00;
 	if (ref_cnt != 10'h3ff) ref_cnt <= ref_cnt + 10'd1;
 
 	// collect the read beats into 64-bit words
@@ -155,47 +137,38 @@ always @(posedge clk_96) begin
 	else if (cap_left != 0) begin
 		cap_left <= cap_left - 5'd1;
 		cap_beat <= cap_beat + 2'd1;
-		cap_sr   <= {sd_din, cap_sr[47:16]};
+		cap_sr   <= {sd_din_i, cap_sr[47:16]};
 		if (cap_beat == 2'd3) begin
-			s_buf[s_wr[1:0]] <= {sd_din, cap_sr};
+			s_buf[s_wr[1:0]] <= {sd_din_i, cap_sr};
 			s_wr <= s_wr + 3'd1;
 		end
 	end
 
-	if (init) begin
+	if (!start_i) begin
 		st       <= S_INIT;
 		init_cnt <= 15'd0;
 		s_ready  <= 1'b0;
 	end
 	else case (st)
-	// >200 us stable clock, PRECHARGE ALL, 8 x AUTO REFRESH, LOAD MODE
+	// sdram_m65.v has initialized the SDRAM (same mode register); its last command may still run
 	S_INIT: begin
 		init_cnt <= init_cnt + 15'd1;
-		sd_ba    <= 2'b00;
-		sd_addr  <= 13'b0010000000000;  // A10: all banks
-		case (init_cnt)
-			15'd20000: sd_cmd <= CMD_PRECHARGE;
-			15'd20004, 15'd20012, 15'd20020, 15'd20028,
-			15'd20036, 15'd20044, 15'd20052, 15'd20060: sd_cmd <= CMD_AUTO_REFRESH;
-			15'd20068: begin sd_cmd <= CMD_LOAD_MODE; sd_addr <= MODE; end
-			15'd20072: begin st <= S_IDLE; s_ready <= 1'b1; ref_cnt <= 10'd0; end
-			default: ;
-		endcase
+		if (init_cnt == 15'd15) begin st <= S_IDLE; s_ready <= 1'b1; ref_cnt <= 10'd0; end
 	end
 
 	S_IDLE:
 		// refresh every 7.3 us (8192 rows in 64 ms: 7.8 us)
 		if (ref_cnt >= 10'd700) begin
-			sd_cmd   <= CMD_AUTO_REFRESH;
+			sd_cmd_o   <= CMD_AUTO_REFRESH;
 			ref_cnt  <= 10'd0;
 			wait_cnt <= 5'd7;              // tRFC 60 ns
 			st       <= S_WAIT;
 		end
 		else if (c_tog != s_tog) begin
 			s_tog    <= c_tog;
-			sd_cmd   <= CMD_ACTIVE;
-			sd_ba    <= c_bank;
-			sd_addr  <= c_row;
+			sd_cmd_o   <= CMD_ACTIVE;
+			sd_ba_o    <= c_bank;
+			sd_addr_o  <= c_row;
 			word     <= 2'd0;
 			wait_cnt <= 5'd0;              // READ/WRITE in the next but one cycle (tRCD 20 ns)
 			st       <= S_ACT;
@@ -207,28 +180,28 @@ always @(posedge clk_96) begin
 	S_READ:
 		if (wait_cnt != 0) wait_cnt <= wait_cnt - 5'd1;
 		else begin
-			sd_cmd  <= CMD_READ;
-			sd_addr <= {2'b00, last, c_addr[7:2], c_four ? word : c_addr[1:0], 2'b00};   // A10: auto precharge
+			sd_cmd_o  <= CMD_READ;
+			sd_addr_o <= {2'b00, last, c_addr[7:2], c_four ? word : c_addr[1:0], 2'b00};   // A10: auto precharge
 			if (word == 2'd0) begin
-				cap_delay <= 3'd3;
+				cap_delay <= 3'd4;
 				cap_left  <= c_four ? 5'd16 : 5'd4;
 				cap_beat  <= 2'd0;
 			end
 			word     <= word + 2'd1;
 			wait_cnt <= 5'd3;              // next READ 4 cycles later: no gap in the data
 			if (last) begin
-				wait_cnt <= 5'd8;          // last beat in sd_din after 7 cycles, precharge done after 6
+				wait_cnt <= 5'd9;          // last beat in sd_din_i after 8 cycles, precharge done after 7
 				st       <= S_WAIT;
 			end
 		end
 
 	S_WRITE: begin
 		// four single WRITEs, the last one with auto precharge
-		sd_cmd  <= CMD_WRITE;
-		sd_addr <= {2'b00, word == 2'd3, c_addr[7:0], word};
-		sd_dout <= c_din[16 * word +: 16];
-		sd_doe  <= 16'hFFFF;
-		sd_dqm  <= ~c_be[2 * word +: 2];
+		sd_cmd_o  <= CMD_WRITE;
+		sd_addr_o <= {2'b00, word == 2'd3, c_addr[7:0], word};
+		sd_dout_o <= c_din[16 * word +: 16];
+		sd_doe_o  <= 1'b1;
+		sd_dqm_o  <= ~c_be[2 * word +: 2];
 		word    <= word + 2'd1;
 		if (word == 2'd3) begin
 			wait_cnt <= 5'd5;              // tWR 2 cycles, then tRP 20 ns
@@ -246,20 +219,5 @@ always @(posedge clk_96) begin
 	default: st <= S_IDLE;
 	endcase
 end
-
-// SDRAM clock = inverted clk_96 (as in sdram_m65.v)
-ODDR #(
-	.DDR_CLK_EDGE("SAME_EDGE"),
-	.INIT(1'b0),
-	.SRTYPE("SYNC")
-) sdramclk_ddr (
-	.Q(sd_clk),
-	.C(clk_96),
-	.CE(1'b1),
-	.D1(1'b0),
-	.D2(1'b1),
-	.R(1'b0),
-	.S(1'b0)
-);
 
 endmodule
