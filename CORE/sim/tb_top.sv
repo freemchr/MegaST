@@ -7,6 +7,7 @@ module tb_top (
   input         reset_in,
   input   [2:0] cfg_mem,
   input         cfg_ste,
+  input         cfg_mste,      // 1 = Mega STe; with cfg_ste: STEroids
   input         dio_download,
   input  [23:1] dio_addr,
   input  [15:0] dio_data,
@@ -181,7 +182,7 @@ module tb_top (
   atarist_m65 dut (
 `endif
     .clk_32(clk_32), .clk_96(clk_96), .clk_2(clk_2), .init(init), .reset_in(reset_in),
-    .cfg_mem(cfg_mem), .cfg_ste(cfg_ste), .cfg_mste(1'b0), .cfg_blitter(1'b0), .cfg_mono(cfg_mono),
+    .cfg_mem(cfg_mem), .cfg_ste(cfg_ste), .cfg_mste(cfg_mste), .cfg_blitter(1'b0), .cfg_mono(cfg_mono),
     .cfg_psg_stereo(1'b0), .cfg_narrow_brd(~cfg_full_brd), .cfg_mde60(cfg_mde60), .cfg_fdc_wp(2'b00),
     .cfg_viking(cfg_viking), .cfg_ste_pads(1'b0), .cfg_cubase(1'b0), .cfg_crop(cfg_crop),
     .rtc({1'b0, 8'h40, 8'h01, 8'h26, 8'h09, 8'h28, 8'h14, 8'h35, 8'h07}),  // Mon 2026-09-28 14:35:07 .cart_loaded(cart_loaded),

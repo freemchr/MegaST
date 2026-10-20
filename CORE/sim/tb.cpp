@@ -204,6 +204,7 @@ int main(int argc, char** argv) {
     top->init = 1; top->reset_in = 1; top->cfg_ste = ste;
     top->cfg_mem = getenv("MEM") ? atoi(getenv("MEM")) : 1;   // MEM=0..5: 512K, 1M, 2M, 4M, 8M, 14M
     top->cfg_crop = getenv("CROP") != nullptr;   // CROP=1: only the graphics area is active
+    top->cfg_mste = getenv("MSTE") != nullptr;   // MSTE=1: Mega STe; with ste=1: STEroids
     top->cfg_mono = getenv("MONO") != nullptr;   // MONO=1: SM124 monochrome monitor (71 Hz)
     top->cfg_mde60 = getenv("MONO60") != nullptr; // MONO60=1: mono 60 Hz mode
     top->cfg_full_brd = getenv("BORDER") != nullptr; // BORDER=1: full borders

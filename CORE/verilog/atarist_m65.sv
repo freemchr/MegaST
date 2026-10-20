@@ -246,6 +246,16 @@ end
 // MEGA65: register the video signals and create a constant pixel clock enable:
 // 16 MHz in the color modes (low res pixels are doubled horizontally, med res
 // is native) and 32 MHz in the 71 Hz monochrome mode and in the Viking mode.
+// MEGA65: with the turbo bus timing (STEroids, Mega STe cache) the shifter
+// puts the pixels out earlier after hsync: 5 clk_32 cycles in mono, 7 in the
+// color modes; delay them, else the 71 Hz mono picture loses its first pixels
+// on the left.
+reg [12:0] pix_dly[7];
+always @(posedge clk_32) pix_dly <= '{{r, g, b, pix_active}, pix_dly[0], pix_dly[1], pix_dly[2], pix_dly[3], pix_dly[4], pix_dly[5]};
+wire [3:0] pix_r, pix_g, pix_b;
+wire       pix_act;
+assign {pix_r, pix_g, pix_b, pix_act} = !turbo_bus ? {r, g, b, pix_active} : mono ? pix_dly[4] : pix_dly[6];
+
 reg [7:0] vid_r, vid_g, vid_b;
 reg       vid_hs, vid_vs, vid_hbl, vid_vbl;
 reg       vid_ce16;
@@ -263,12 +273,12 @@ always @(posedge clk_32) begin
 		vid_hbl  <= viking_s_hbl;
 		vid_vbl  <= viking_s_vbl;
 	end else begin
-		vid_r    <= {r, r};
-		vid_g    <= {g, g};
-		vid_b    <= {b, b};
+		vid_r    <= {pix_r, pix_r};
+		vid_g    <= {pix_g, pix_g};
+		vid_b    <= {pix_b, pix_b};
 		vid_hs   <= ~hsync_n_l;
 		vid_vs   <= ~vsync_n_l;
-		vid_hbl  <= hblank_gen | (cfg_crop & ~pix_active);
+		vid_hbl  <= hblank_gen | (cfg_crop & ~pix_act);
 		vid_vbl  <= vblank_gen | (cfg_crop & crop_vbl);
 	end
 end
