@@ -8,6 +8,8 @@
 //   - the bidirectional data bus uses explicit output/enable registers so that
 //     Vivado can pack all SDRAM I/O registers into the IOBs
 //   - the MEGA65 has dedicated DQM pins (MiSTer shares them with A11/A12)
+//   - ext_en: the Falcon machine (falcon_sdram.v) drives the pin registers;
+//     the ST is held in reset then
 //
 // The MEGA65 R4/R5/R6 SDRAM is an IS42S16320F (32M x 16, 13 row, 10 column
 // address bits). The MiSTer mapping (12 row, 9 column bits) is kept, i.e.
@@ -45,7 +47,18 @@ module sdram_m65 (
 
 	input             rom_oe,
 	input [23:0]      rom_addr,
-	output reg [15:0] rom_dout
+	output reg [15:0] rom_dout,
+
+	// MEGA65: the Falcon controller (falcon_sdram.v) uses the pins while ext_en is 1
+	input             ext_en,
+	input       [3:0] ext_cmd,    // {CS#, RAS#, CAS#, WE#}
+	input      [12:0] ext_addr,
+	input       [1:0] ext_ba,
+	input       [1:0] ext_dqm,
+	input      [15:0] ext_dout,
+	input             ext_doe,
+	output     [15:0] ext_din,    // the pin input register
+	output            ext_ready   // the SDRAM is initialized (the Falcon controller may start)
 );
 
 localparam RASCAS_DELAY   = 3'd2;   // tRCD=20ns -> 2 cycles@96MHz
@@ -88,6 +101,8 @@ end
 // MEGA65: the counter was extended to 11 bits, so that the SDRAM sees a
 // stable clock for >200us before the initialization sequence starts
 reg [10:0] reset = 11'h7ff;
+assign ext_ready = (reset == 0);
+
 always @(posedge clk_96 or posedge init) begin
 	if(init)	reset <= 11'h7ff;
 	else if((t == STATE_LAST) && (reset != 0))
@@ -126,6 +141,8 @@ generate
 		assign sd_data[gi] = sd_doe[gi] ? sd_dout[gi] : 1'bZ;
 	end
 endgenerate
+
+assign ext_din = sd_din;
 
 // 4 byte read burst goes through four addresses
 reg [1:0] burst_addr;
@@ -238,6 +255,16 @@ always @(posedge clk_96) begin
 				end
 			end
 		end
+	end
+
+	// MEGA65: the Falcon owns the pins (the ST's commands are dropped)
+	if (ext_en) begin
+		sd_cmd  <= ext_cmd;
+		sd_addr <= ext_addr;
+		sd_ba   <= ext_ba;
+		sd_dqm  <= ext_dqm;
+		sd_dout <= ext_dout;
+		sd_doe  <= {16{ext_doe}};
 	end
 end
 

@@ -171,6 +171,17 @@ module atarist_m65
 	output        sdram_dqml,
 	output        sdram_dqmh,
 	inout  [15:0] sdram_dq,
+	// MEGA65: the Falcon (falcon_sdram.v) uses the SDRAM pins through sdram_m65.v while
+	// sdram_ext_en is 1 (the ST is held in reset then)
+	input         sdram_ext_en,
+	input   [3:0] sdram_ext_cmd,
+	input  [12:0] sdram_ext_a,
+	input   [1:0] sdram_ext_ba,
+	input   [1:0] sdram_ext_dqm,
+	input  [15:0] sdram_ext_dout,
+	input         sdram_ext_doe,
+	output [15:0] sdram_ext_din,
+	output        sdram_ext_ready,
 
 	// debugging (JTAG probe in mega65.vhd): the last 4 bytes the CPU read from the keyboard ACIA's
 	// data register, the newest one in bits 7..0
@@ -1346,6 +1357,8 @@ if (BRAM_MEM) begin : g_bram
 	assign sdram_dqml  = 1'b0;
 	assign sdram_dqmh  = 1'b0;
 	assign sdram_dq    = 16'hZZZZ;
+	assign sdram_ext_din = 16'h0000;
+	assign sdram_ext_ready = 1'b0;
 
 	bram_m65 bram (
 		.clk_96        ( clk_96                   ),
@@ -1397,7 +1410,18 @@ end else begin : g_sdram
 		// ROM access port
 		.rom_oe        ( ~rom_n                   ),
 		.rom_addr      ( { 1'b0, rom_a }          ),
-		.rom_dout      ( rom_data_out             )
+		.rom_dout      ( rom_data_out             ),
+
+		// the Falcon
+		.ext_en        ( sdram_ext_en             ),
+		.ext_cmd       ( sdram_ext_cmd            ),
+		.ext_addr      ( sdram_ext_a              ),
+		.ext_ba        ( sdram_ext_ba             ),
+		.ext_dqm       ( sdram_ext_dqm            ),
+		.ext_dout      ( sdram_ext_dout           ),
+		.ext_doe       ( sdram_ext_doe            ),
+		.ext_din       ( sdram_ext_din            ),
+		.ext_ready     ( sdram_ext_ready          )
 	);
 end
 endgenerate

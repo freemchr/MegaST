@@ -205,6 +205,8 @@ module tb_top (
     .sdram_clk(sdram_clk), .sdram_cke(sdram_cke), .sdram_ras_n(sdram_ras_n), .sdram_cas_n(sdram_cas_n),
     .sdram_we_n(sdram_we_n), .sdram_cs_n(sdram_cs_n), .sdram_ba(sdram_ba), .sdram_a(sdram_a),
     .sdram_dqml(sdram_dqml), .sdram_dqmh(sdram_dqmh), .sdram_dq(sdram_dq),
+    .sdram_ext_en(1'b0), .sdram_ext_cmd(4'b0111), .sdram_ext_a(13'd0), .sdram_ext_ba(2'b00), .sdram_ext_dqm(2'b00),
+    .sdram_ext_dout(16'd0), .sdram_ext_doe(1'b0), .sdram_ext_din(), .sdram_ext_ready(),
     .dbg_fdc_idx(fdc_log_idx), .dbg_fdc_entry(fdc_log_entry), .dbg_fdc_count(fdc_log_count)
   );
 
