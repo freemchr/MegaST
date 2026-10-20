@@ -7,9 +7,9 @@ cd "$(dirname "$0")"
 R=../../Falcon_MiSTer/rtl
 F=$R/falcon
 V=../../verilog
-mkdir -p rtl/falcon
-ln -sf ../../$F/falcon_psg_vol.mem rtl/falcon/falcon_psg_vol.mem
-ln -sf ../../$F/falcon_optbl.mem rtl/falcon/falcon_optbl.mem
+# the .mem tables ($readmemb with the file name only) are read from the directory the test runs in
+ln -sf $F/falcon_psg_vol.mem falcon_psg_vol.mem
+ln -sf $F/falcon_optbl.mem falcon_optbl.mem
 verilator --cc --exe --build -j 16 -O3 --x-assign fast --x-initial fast \
 	-Wno-fatal -Wno-WIDTH -Wno-CASEINCOMPLETE -Wno-PINMISSING -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN -Wno-UNOPTFLAT \
 	-Wno-INITIALDLY -Wno-BLKANDNBLK -Wno-LATCH \

@@ -362,7 +362,7 @@ constant OPTM_ITEMS        : string :=
    " Atari STe\n"                 &   -- 13
    " Mega STe (16 MHz)\n"         &   -- 14
    " STEroids (turbo)\n"          &   -- 15
-   "\n"                           &   -- 16
+   " Falcon030 (R4-R6, test)\n"   &   -- 16
    " Back to main menu\n"         &   -- 17
    " Memory: %s\n"                &   -- 18
    " Memory\n"                    &   -- 19
@@ -513,7 +513,7 @@ constant OPTM_GROUPS       : OPTM_GTYPE := (
                                              OPTM_G_Machine,                                           -- 13 Atari STe
                                              OPTM_G_Machine,                                           -- 14 Mega STe (16 MHz)
                                              OPTM_G_Machine,                                           -- 15 STEroids (turbo)
-                                             OPTM_G_LINE,                                              -- 16
+                                             OPTM_G_Machine,                                           -- 16 Falcon030 (R4-R6, test)
                                              OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 17 Back to main menu
                                              OPTM_G_SUBMENU,                                           -- 18 Memory: %s
                                              OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 19 Memory

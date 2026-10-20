@@ -57,7 +57,7 @@ entity tos_loader is
       qnice_cart_ce_i   : in  std_logic;   -- cartridge device
       qnice_tosm_ce_i   : in  std_logic;   -- TOS device (manual load)
       qnice_we_i        : in  std_logic;
-      qnice_sys_cfg_i   : in  std_logic_vector(9 downto 0) := (others => '0');   -- system type and memory size menu bits
+      qnice_sys_cfg_i   : in  std_logic_vector(10 downto 0) := (others => '0');  -- system type and memory size menu bits
       qnice_wait_o      : out std_logic;
       qnice_csr_data_o  : out std_logic_vector(15 downto 0);   -- cartridge and manual TOS device
 
@@ -126,7 +126,7 @@ architecture synthesis of tos_loader is
    signal qnice_clr_count   : natural range 0 to C_CLR_WORDS := 0;
 
    -- system type or memory size changed: cold boot (core in reset until the system variables are cleared)
-   signal qnice_sys_cfg_d   : std_logic_vector(9 downto 0) := (others => '0');
+   signal qnice_sys_cfg_d   : std_logic_vector(10 downto 0) := (others => '0');
    signal qnice_cold        : std_logic := '0';
    signal qnice_hold        : std_logic;   -- keep the core in reset
 

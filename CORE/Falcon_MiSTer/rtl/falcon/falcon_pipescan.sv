@@ -36,7 +36,7 @@
 //  queue unseen ends the scan until the next refill.
 //============================================================================
 
-module falcon_pipescan #(parameter OPTBL_MEM = "rtl/falcon/falcon_optbl.mem")
+module falcon_pipescan #(parameter OPTBL_MEM = "falcon_optbl.mem")   // MEGA65: file name only (Vivado finds project files by name)
 (
 	input             clk,
 	input             ce,          // the processor's clock enable: the scan runs on its clocks

@@ -19,7 +19,7 @@ architecture sim of tb_tos_loader is
   signal t192, cl, cld, tld : std_logic;
   signal ce_auto, ce_man : std_logic;
   signal done : boolean := false;
-  signal memcfg : std_logic_vector(9 downto 0) := "0000000000";
+  signal memcfg : std_logic_vector(10 downto 0) := "00000000000";
   constant N : integer := 4096;   -- bytes
 begin
   qclk <= not qclk after 10 ns when not done;      -- 50 MHz
@@ -86,7 +86,7 @@ begin
     if MEMCHG then
       for k in 1 to 20 loop wait until rising_edge(qclk); end loop;
       assert tld = '0' report "core in reset before the memory change" severity failure;
-      memcfg <= "0000000100";   -- e.g. 512 KB -> 2 MB
+      memcfg <= "00000000100";   -- e.g. 512 KB -> 2 MB
       wait;
     end if;
     if MANUAL then

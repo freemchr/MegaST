@@ -58,6 +58,7 @@ entity main is
       st_cubase_i             : in  std_logic;              -- Cubase 2/3 dongle in the cartridge port
       st_kbd_print_i          : in  std_logic;              -- keyboard: symbols as printed on the MEGA65 keys
       st_kbd_uk_i             : in  std_logic;              -- ... for a UK TOS (else US)
+      falcon_i                : in  std_logic;              -- the Falcon030 runs instead of the ST (R4-R6 only)
 
       -- MEGA65 real time clock (M2M format), used by the Mega ST RTC (rp5c15_m65.sv)
       rtc_i                   : in  std_logic_vector(64 downto 0);
@@ -282,6 +283,15 @@ component atarist_m65 is
       sdram_dqml      : out   std_logic;
       sdram_dqmh      : out   std_logic;
       sdram_dq        : inout std_logic_vector(15 downto 0);
+      sdram_ext_en    : in    std_logic;
+      sdram_ext_cmd   : in    std_logic_vector(3 downto 0);
+      sdram_ext_a     : in    std_logic_vector(12 downto 0);
+      sdram_ext_ba    : in    std_logic_vector(1 downto 0);
+      sdram_ext_dqm   : in    std_logic_vector(1 downto 0);
+      sdram_ext_dout  : in    std_logic_vector(15 downto 0);
+      sdram_ext_doe   : in    std_logic;
+      sdram_ext_din   : out   std_logic_vector(15 downto 0);
+      sdram_ext_ready : out   std_logic;
       dbg_kbd_bytes   : out   std_logic_vector(31 downto 0);
       dbg_fdc_idx     : in    std_logic_vector(7 downto 0);
       dbg_fdc_entry   : out   std_logic_vector(55 downto 0);
@@ -289,7 +299,106 @@ component atarist_m65 is
    );
 end component atarist_m65;
 
+component falcon_m65 is
+   generic (
+      CLK_HZ          : natural := 32083333
+   );
+   port (
+      clk_32          : in    std_logic;
+      clk_96          : in    std_logic;
+      reset           : in    std_logic;
+      cold_reset      : in    std_logic;
+      por             : in    std_logic;
+      ram_mb          : in    std_logic_vector(3 downto 0);
+      monitor         : in    std_logic_vector(1 downto 0);
+      cpu_turbo       : in    std_logic;
+      dio_addr        : in    std_logic_vector(23 downto 1);
+      dio_data        : in    std_logic_vector(15 downto 0);
+      dio_strobe      : in    std_logic;
+      dio_strobe_ack  : out   std_logic;
+      kbd_matrix_n    : in    std_logic_vector(119 downto 0);
+      ps2_mouse       : in    std_logic_vector(24 downto 0);
+      joy0            : in    std_logic_vector(31 downto 0);
+      joy1            : in    std_logic_vector(31 downto 0);
+      rtc             : in    std_logic_vector(64 downto 0);
+      img_mounted     : in    std_logic_vector(3 downto 0);
+      img_readonly    : in    std_logic;
+      img_size        : in    std_logic_vector(31 downto 0);
+      sd_lba          : out   std_logic_vector(127 downto 0);
+      sd_rd           : out   std_logic_vector(3 downto 0);
+      sd_wr           : out   std_logic_vector(3 downto 0);
+      sd_ack          : in    std_logic_vector(3 downto 0);
+      sd_buff_addr    : in    std_logic_vector(7 downto 0);
+      sd_buff_dout    : in    std_logic_vector(15 downto 0);
+      sd_buff_din     : out   std_logic_vector(63 downto 0);
+      sd_buff_wr      : in    std_logic;
+      r               : out   std_logic_vector(7 downto 0);
+      g               : out   std_logic_vector(7 downto 0);
+      b               : out   std_logic_vector(7 downto 0);
+      hsync           : out   std_logic;
+      vsync           : out   std_logic;
+      hblank          : out   std_logic;
+      vblank          : out   std_logic;
+      ce_pix          : out   std_logic;
+      audio_l         : out   std_logic_vector(15 downto 0);
+      audio_r         : out   std_logic_vector(15 downto 0);
+      fdd_led         : out   std_logic;
+      hdd_led         : out   std_logic;
+      sdram_start     : in    std_logic;
+      sd_cmd_o        : out   std_logic_vector(3 downto 0);
+      sd_addr_o       : out   std_logic_vector(12 downto 0);
+      sd_ba_o         : out   std_logic_vector(1 downto 0);
+      sd_dqm_o        : out   std_logic_vector(1 downto 0);
+      sd_dout_o       : out   std_logic_vector(15 downto 0);
+      sd_doe_o        : out   std_logic;
+      sd_din_i        : in    std_logic_vector(15 downto 0)
+   );
+end component falcon_m65;
+
 signal reset_core     : std_logic;
+signal reset_st       : std_logic;
+
+-- ST side of the shared outputs (main.vhd selects the ST's or the Falcon's)
+signal st_dio_ack     : std_logic;
+signal st_dio_strobe  : std_logic := '0';
+signal st_sd_lba      : std_logic_vector(127 downto 0);
+signal st_sd_rd       : std_logic_vector(3 downto 0);
+signal st_sd_wr       : std_logic_vector(3 downto 0);
+signal st_sd_buff_din : std_logic_vector(63 downto 0);
+signal st_floppy_led  : std_logic;
+signal st_hd_led      : std_logic;
+signal st_r, st_g, st_b : std_logic_vector(7 downto 0);
+signal st_hs, st_vs, st_hblank, st_vblank, st_ce, st_31khz : std_logic;
+
+-- Falcon030 (falcon_m65.sv): runs while falcon_i is 1, the ST is held in reset then and the
+-- Falcon's SDRAM controller drives the pin registers of sdram_m65.v
+signal falcon         : std_logic := '0';                -- falcon_i, registered
+signal f_dio_ack      : std_logic;
+signal f_dio_strobe   : std_logic := '0';
+signal f_sd_lba       : std_logic_vector(127 downto 0);
+signal f_sd_rd        : std_logic_vector(3 downto 0);
+signal f_sd_wr        : std_logic_vector(3 downto 0);
+signal f_sd_buff_din  : std_logic_vector(63 downto 0);
+signal f_fdd_led      : std_logic;
+signal f_hdd_led      : std_logic;
+signal f_r, f_g, f_b  : std_logic_vector(7 downto 0);
+signal f_hs, f_vs, f_hblank, f_vblank, f_ce : std_logic;
+signal f_audio_l      : std_logic_vector(15 downto 0);
+signal f_audio_r      : std_logic_vector(15 downto 0);
+signal f_reset        : std_logic;
+signal f_cold_reset   : std_logic;
+signal f_por          : std_logic;
+signal f_sdram_start  : std_logic;
+signal f_joy0         : std_logic_vector(31 downto 0);
+signal f_joy1         : std_logic_vector(31 downto 0);
+signal sdram_ext_cmd  : std_logic_vector(3 downto 0);
+signal sdram_ext_a    : std_logic_vector(12 downto 0);
+signal sdram_ext_ba   : std_logic_vector(1 downto 0);
+signal sdram_ext_dqm  : std_logic_vector(1 downto 0);
+signal sdram_ext_dout : std_logic_vector(15 downto 0);
+signal sdram_ext_doe  : std_logic;
+signal sdram_ext_din  : std_logic_vector(15 downto 0);
+signal sdram_ext_ready : std_logic;
 
 signal fdc_mounted    : std_logic_vector(1 downto 0);
 signal fdc_img_size   : std_logic_vector(31 downto 0);
@@ -312,6 +421,7 @@ signal ps2_mouse      : std_logic_vector(24 downto 0);
 signal ps2_1351       : std_logic_vector(24 downto 0);
 signal ps2_quad       : std_logic_vector(24 downto 0);
 signal quad_on        : std_logic;
+signal quad_pins      : std_logic_vector(5 downto 0);
 signal mouse_port     : std_logic_vector(4 downto 0);
 signal port1_db       : std_logic_vector(4 downto 0);
 signal port2_db       : std_logic_vector(4 downto 0);
@@ -358,6 +468,23 @@ begin
    -- The M2M firmware keeps the core in reset while the TOS image is being loaded.
    reset_core <= reset_soft_i or reset_hard_i or cart_loading_i or tos_loading_i;
 
+   -- The Falcon030 needs the SDRAM: not on the R3 (block RAM build)
+   p_falcon : process (clk_main_i)
+   begin
+      if rising_edge(clk_main_i) then
+         if G_BRAM_MEM = 0 then
+            falcon <= falcon_i;
+         end if;
+         -- The TOS loader's toggle goes to the machine that runs, the other one keeps its last value
+         if falcon = '1' then
+            f_dio_strobe  <= dio_strobe_i;
+         else
+            st_dio_strobe <= dio_strobe_i;
+         end if;
+      end if;
+   end process p_falcon;
+   reset_st <= reset_core or falcon;
+
    port1 <= not (joy_1_fire_n_i & joy_1_right_n_i & joy_1_left_n_i & joy_1_down_n_i & joy_1_up_n_i);
    port2 <= not (joy_2_fire_n_i & joy_2_right_n_i & joy_2_left_n_i & joy_2_down_n_i & joy_2_up_n_i);
 
@@ -385,7 +512,7 @@ begin
 
    -- A 1351 mouse (mouse1351.vhd) and an Amiga mouse (quadmouse.vhd) go through the IKBD's PS/2 mouse
    -- emulation, so the ST's mouse port does not see their raw signals.
-   quad_on   <= st_amigamouse_i and not st_mouse1351_i;
+   quad_on   <= (st_amigamouse_i or falcon) and not st_mouse1351_i;
    joy_mouse <= (others => '0') when st_mouse1351_i = '1' or quad_on = '1' else
                 mouse_rmb & mouse_port_db;   -- {right button, fire = left button, right, left, down, up}
    joy_stick <= port1_db when st_joy_swap_i = '1' else port2_db;
@@ -432,11 +559,12 @@ begin
       port map (
          clk_i          => clk_main_i,
          enable_i       => quad_on,
-         st_pins_i      => mouse_rmb & amiga(mouse_port),
+         st_pins_i      => quad_pins,
          ps2_mouse_o    => ps2_quad
       ); -- i_quadmouse
 
    ps2_mouse <= ps2_quad when quad_on = '1' else ps2_1351;
+   quad_pins <= mouse_rmb & amiga(mouse_port) when st_amigamouse_i = '1' else mouse_rmb & mouse_port;
 
    ---------------------------------------------------------------------------------------------
    -- PMOD: serial port, MIDI and parallel port
@@ -469,7 +597,7 @@ begin
          clk_96          => clk_sdram_i,
          clk_2           => clk_ikbd_i,
          init            => init_i,
-         reset_in        => reset_core,
+         reset_in        => reset_st,
 
          cfg_mem         => st_mem_i,
          cfg_ste         => st_ste_i,
@@ -489,30 +617,30 @@ begin
          rtc             => rtc_i,
 
          -- the TOS image is only written while the core is held in reset
-         dio_download    => reset_core,
+         dio_download    => reset_st,
          dio_addr        => dio_addr_i,
          dio_data        => dio_data_i,
-         dio_strobe      => dio_strobe_i,
-         dio_strobe_ack  => dio_strobe_ack_o,
+         dio_strobe      => st_dio_strobe,
+         dio_strobe_ack  => st_dio_ack,
          tos192k_in      => tos192k_i,
          cart_loaded     => cart_loaded_i,
 
          img_mounted     => fdc_mounted,
          img_readonly    => img_readonly_i,
          img_size        => fdc_img_size,
-         sd_lba          => sd_lba_o(31 downto 0),
+         sd_lba          => st_sd_lba(31 downto 0),
          sd_rd           => fdc_sd_rd,
          sd_wr           => fdc_sd_wr,
          sd_ack          => sd_ack_i(0) or sd_ack_i(1),
          sd_buff_addr    => sd_buff_addr_i,
          sd_buff_dout    => sd_buff_dout_i,
-         sd_buff_din     => sd_buff_din_o(15 downto 0),
+         sd_buff_din     => st_sd_buff_din(15 downto 0),
          sd_buff_wr      => sd_buff_wr_i,
 
          hd_img_mounted  => img_mounted_i(3 downto 2) or (eject_i & eject_i),
          hd_sd_lba       => hd_lba,
-         hd_sd_rd        => sd_rd_o(3 downto 2),
-         hd_sd_wr        => sd_wr_o(3 downto 2),
+         hd_sd_rd        => st_sd_rd(3 downto 2),
+         hd_sd_wr        => st_sd_wr(3 downto 2),
          hd_sd_ack       => sd_ack_i(3 downto 2),
          hd_sd_buff_din  => hd_buff_din,
 
@@ -536,21 +664,21 @@ begin
          par_strobe      => par_strobe,
          par_busy        => par_busy,
 
-         video_r         => video_red_o,
-         video_g         => video_green_o,
-         video_b         => video_blue_o,
-         video_hs        => video_hs_o,
-         video_vs        => video_vs_o,
-         video_hblank    => video_hblank_o,
-         video_vblank    => video_vblank_o,
-         video_ce        => video_ce_o,
-         video_31khz     => video_31khz_o,
+         video_r         => st_r,
+         video_g         => st_g,
+         video_b         => st_b,
+         video_hs        => st_hs,
+         video_vs        => st_vs,
+         video_hblank    => st_hblank,
+         video_vblank    => st_vblank,
+         video_ce        => st_ce,
+         video_31khz     => st_31khz,
 
          audio_l         => audio_l,
          audio_r         => audio_r,
 
-         floppy_led      => floppy_led_o,
-         hd_led          => hd_led_o,
+         floppy_led      => st_floppy_led,
+         hd_led          => st_hd_led,
          rfd_sel_a       => rfd_sel_a_o,
          rfd_motor       => rfd_motor_o,
          rfd_side        => rfd_side_o,
@@ -574,6 +702,15 @@ begin
          sdram_dqml      => sdram_dqml_o,
          sdram_dqmh      => sdram_dqmh_o,
          sdram_dq        => sdram_dq_io,
+         sdram_ext_en    => falcon,
+         sdram_ext_cmd   => sdram_ext_cmd,
+         sdram_ext_a     => sdram_ext_a,
+         sdram_ext_ba    => sdram_ext_ba,
+         sdram_ext_dqm   => sdram_ext_dqm,
+         sdram_ext_dout  => sdram_ext_dout,
+         sdram_ext_doe   => sdram_ext_doe,
+         sdram_ext_din   => sdram_ext_din,
+         sdram_ext_ready => sdram_ext_ready,
          dbg_kbd_bytes   => dbg_kbd_bytes_o,
          dbg_fdc_idx     => dbg_fdc_idx_i,
          dbg_fdc_entry   => dbg_fdc_entry_o,
@@ -589,8 +726,8 @@ begin
          vd_mounted_i     => img_mounted_i(1 downto 0),
          vd_readonly_i    => img_readonly_i,
          vd_size_i        => img_size_i,
-         vd_sd_rd_o       => sd_rd_o(1 downto 0),
-         vd_sd_wr_o       => sd_wr_o(1 downto 0),
+         vd_sd_rd_o       => st_sd_rd(1 downto 0),
+         vd_sd_wr_o       => st_sd_wr(1 downto 0),
          fdc_mounted_o    => fdc_mounted,
          fdc_size_o       => fdc_img_size,
          fdc_readonly_o   => fdc_ro,
@@ -599,19 +736,134 @@ begin
       ); -- i_floppy_swap
 
    -- both hard disks share one LBA (only one request is active at a time)
-   sd_lba_o(95 downto 64)    <= hd_lba;
-   sd_lba_o(127 downto 96)   <= hd_lba;
-   sd_lba_o(63 downto 32)    <= sd_lba_o(31 downto 0);   -- floppy B: (fdc1772 has one LBA for both drives)
-   sd_buff_din_o(31 downto 16) <= sd_buff_din_o(15 downto 0);
-   sd_buff_din_o(47 downto 32) <= hd_buff_din;
-   sd_buff_din_o(63 downto 48) <= hd_buff_din;
+   st_sd_lba(95 downto 64)    <= hd_lba;
+   st_sd_lba(127 downto 96)   <= hd_lba;
+   st_sd_lba(63 downto 32)    <= st_sd_lba(31 downto 0);   -- floppy B: (fdc1772 has one LBA for both drives)
+   st_sd_buff_din(31 downto 16) <= st_sd_buff_din(15 downto 0);
+   st_sd_buff_din(47 downto 32) <= hd_buff_din;
+   st_sd_buff_din(63 downto 48) <= hd_buff_din;
+
+   ---------------------------------------------------------------------------------------------
+   -- Falcon030 (R4-R6): selected in the menu instead of an ST. Its TOS (a 512 KB Falcon TOS or
+   -- EmuTOS) is loaded with the menu item TOS; drives 0/1 are its floppy drives A:/B:, drives 2/3
+   -- its IDE hard disks (master/slave).
+   ---------------------------------------------------------------------------------------------
+
+   dio_strobe_ack_o <= f_dio_ack when falcon = '1' else st_dio_ack;
+
+   g_falcon : if G_BRAM_MEM = 0 generate
+      f_reset      <= reset_core or not falcon;
+      f_cold_reset <= tos_loading_i or init_i or not falcon;
+      f_por        <= init_i or not falcon;
+      f_sdram_start <= falcon and sdram_ext_ready;
+      f_joy0       <= (31 downto 5 => '0') & ste_bits(mouse_port_db);
+      f_joy1       <= (31 downto 5 => '0') & ste_bits(joy_stick);
+
+      i_falcon : falcon_m65
+         generic map (
+            CLK_HZ          => CORE_CLK_SPEED
+         )
+         port map (
+            clk_32          => clk_main_i,
+            clk_96          => clk_sdram_i,
+            reset           => f_reset,
+            cold_reset      => f_cold_reset,
+            por             => f_por,
+            ram_mb          => "1110",          -- 14 MB ST-RAM
+            monitor         => "10",            -- VGA monitor (31 kHz)
+            cpu_turbo       => '0',
+            dio_addr        => dio_addr_i,
+            dio_data        => dio_data_i,
+            dio_strobe      => f_dio_strobe,
+            dio_strobe_ack  => f_dio_ack,
+            kbd_matrix_n    => st_matrix_n,
+            ps2_mouse       => ps2_mouse,
+            joy0            => f_joy0,
+            joy1            => f_joy1,
+            rtc             => rtc_i,
+            img_mounted     => img_mounted_i,
+            img_readonly    => img_readonly_i,
+            img_size        => img_size_i,
+            sd_lba          => f_sd_lba,
+            sd_rd           => f_sd_rd,
+            sd_wr           => f_sd_wr,
+            sd_ack          => sd_ack_i,
+            sd_buff_addr    => sd_buff_addr_i,
+            sd_buff_dout    => sd_buff_dout_i,
+            sd_buff_din     => f_sd_buff_din,
+            sd_buff_wr      => sd_buff_wr_i,
+            r               => f_r,
+            g               => f_g,
+            b               => f_b,
+            hsync           => f_hs,
+            vsync           => f_vs,
+            hblank          => f_hblank,
+            vblank          => f_vblank,
+            ce_pix          => f_ce,
+            audio_l         => f_audio_l,
+            audio_r         => f_audio_r,
+            fdd_led         => f_fdd_led,
+            hdd_led         => f_hdd_led,
+            sdram_start     => f_sdram_start,
+            sd_cmd_o        => sdram_ext_cmd,
+            sd_addr_o       => sdram_ext_a,
+            sd_ba_o         => sdram_ext_ba,
+            sd_dqm_o        => sdram_ext_dqm,
+            sd_dout_o       => sdram_ext_dout,
+            sd_doe_o        => sdram_ext_doe,
+            sd_din_i        => sdram_ext_din
+         ); -- i_falcon
+   end generate g_falcon;
+
+   g_no_falcon : if G_BRAM_MEM /= 0 generate
+      f_dio_ack      <= '0';
+      f_sd_lba       <= (others => '0');
+      f_sd_rd        <= (others => '0');
+      f_sd_wr        <= (others => '0');
+      f_sd_buff_din  <= (others => '0');
+      f_r            <= (others => '0');
+      f_g            <= (others => '0');
+      f_b            <= (others => '0');
+      f_hs           <= '0';
+      f_vs           <= '0';
+      f_hblank       <= '1';
+      f_vblank       <= '1';
+      f_ce           <= '0';
+      f_audio_l      <= (others => '0');
+      f_audio_r      <= (others => '0');
+      f_fdd_led      <= '0';
+      f_hdd_led      <= '0';
+      sdram_ext_cmd  <= (others => '1');
+      sdram_ext_a    <= (others => '0');
+      sdram_ext_ba   <= (others => '0');
+      sdram_ext_dqm  <= (others => '1');
+      sdram_ext_dout <= (others => '0');
+      sdram_ext_doe  <= '0';
+   end generate g_no_falcon;
+
+   sd_lba_o       <= f_sd_lba       when falcon = '1' else st_sd_lba;
+   sd_rd_o        <= f_sd_rd        when falcon = '1' else st_sd_rd;
+   sd_wr_o        <= f_sd_wr        when falcon = '1' else st_sd_wr;
+   sd_buff_din_o  <= f_sd_buff_din  when falcon = '1' else st_sd_buff_din;
+   floppy_led_o   <= f_fdd_led      when falcon = '1' else st_floppy_led;
+   hd_led_o       <= f_hdd_led      when falcon = '1' else st_hd_led;
+
+   video_red_o    <= f_r            when falcon = '1' else st_r;
+   video_green_o  <= f_g            when falcon = '1' else st_g;
+   video_blue_o   <= f_b            when falcon = '1' else st_b;
+   video_hs_o     <= f_hs           when falcon = '1' else st_hs;
+   video_vs_o     <= f_vs           when falcon = '1' else st_vs;
+   video_hblank_o <= f_hblank       when falcon = '1' else st_hblank;
+   video_vblank_o <= f_vblank       when falcon = '1' else st_vblank;
+   video_ce_o     <= f_ce           when falcon = '1' else st_ce;
+   video_31khz_o  <= '1'            when falcon = '1' else st_31khz;   -- the Falcon runs a VGA monitor
 
    -- The OSM overlay (analog pipeline) always runs at 32 MHz: In the color modes the M2M
    -- scandoubler doubles the 16 MHz pixel rate, in the monochrome mode the pixel rate is 32 MHz.
    video_ce_ovl_o <= '1';
 
-   audio_left_o  <= signed(audio_l);
-   audio_right_o <= signed(audio_r);
+   audio_left_o  <= signed(f_audio_l) when falcon = '1' else signed(audio_l);
+   audio_right_o <= signed(f_audio_r) when falcon = '1' else signed(audio_r);
 
    i_keyboard : entity work.keyboard
       generic map (

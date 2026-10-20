@@ -14,10 +14,9 @@ SRCS="$F/falcon_system.sv $F/falcon_cpubus.sv $F/falcon_cpuclk.sv $F/falcon_pipe
  $F/falcon_videl.sv $F/falcon_psg.sv $F/falcon_mfp.sv $F/falcon_mfp_timer.sv $F/falcon_mfp_usart.sv
  $F/falcon_acia.sv $F/falcon_ikbd.sv $F/falcon_ikbd_keymap.sv $F/falcon_nvram.sv $F/falcon_mbox_test.sv $F/falcon_fpu_bridge.sv
  $F/falcon_blitter.sv $F/falcon_crossbar.sv $(ls $F/falcon_ide*.sv) $(ls $F/falcon_fdc*.sv) $F/falcon_scsi.sv $(ls $F/dsp/*.sv)"
-# the .mem tables are found relative to the project root, as in Quartus
-mkdir -p rtl/falcon
-ln -sf ../../$F/falcon_psg_vol.mem rtl/falcon/falcon_psg_vol.mem
-ln -sf ../../$F/falcon_optbl.mem rtl/falcon/falcon_optbl.mem
+# the .mem tables ($readmemb with the file name only) are read from the directory the test runs in
+ln -sf $F/falcon_psg_vol.mem falcon_psg_vol.mem
+ln -sf $F/falcon_optbl.mem falcon_optbl.mem
 verilator --cc --exe --build -j 16 -O3 --x-assign fast --x-initial fast \
 	-Wno-fatal -Wno-WIDTH -Wno-CASEINCOMPLETE -Wno-PINMISSING -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN -Wno-UNOPTFLAT \
 	-Wno-INITIALDLY -Wno-BLKANDNBLK -Wno-LATCH \

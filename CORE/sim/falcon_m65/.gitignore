@@ -1,3 +1,4 @@
 obj_dir/
-rtl/
+falcon_psg_vol.mem
+falcon_optbl.mem
 build.log

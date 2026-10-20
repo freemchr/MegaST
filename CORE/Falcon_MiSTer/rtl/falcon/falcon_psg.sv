@@ -97,7 +97,7 @@ module falcon_psg #(
     parameter bit    MIRROR     = 1'b1,
     parameter bit    VOL_TABLE  = 1'b1,
     parameter bit    PWM_FILTER = 1'b1,
-    parameter        VOL_MEM    = "rtl/falcon/falcon_psg_vol.mem"
+    parameter        VOL_MEM    = "falcon_psg_vol.mem"   // MEGA65: file name only (Vivado finds project files by name)
 ) (
     input             clk,
     input             reset,

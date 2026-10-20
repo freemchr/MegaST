@@ -345,6 +345,7 @@ constant C_MENU_ST             : natural := 12;
 constant C_MENU_STE            : natural := 13;
 constant C_MENU_MSTE           : natural := 14;
 constant C_MENU_STEROIDS       : natural := 15;
+constant C_MENU_FALCON         : natural := 16;   -- Falcon030 (falcon_m65.sv), not on the R3
 constant C_MENU_MEM_512K       : natural := 21;
 constant C_MENU_MEM_1M         : natural := 22;
 constant C_MENU_MEM_2M         : natural := 23;
@@ -624,6 +625,7 @@ begin
          st_cubase_i          => main_osm_control_i(C_MENU_CUBASE),
          st_kbd_print_i       => main_osm_control_i(C_MENU_KBD_US) or main_osm_control_i(C_MENU_KBD_UK),
          st_kbd_uk_i          => main_osm_control_i(C_MENU_KBD_UK),
+         falcon_i             => main_osm_control_i(C_MENU_FALCON),
          rtc_i                => main_rtc_i,
 
          -- TOS loader
@@ -875,7 +877,7 @@ begin
          qnice_cart_ce_i   => qnice_cart_ce,
          qnice_tosm_ce_i   => qnice_tosm_ce,
          qnice_we_i        => qnice_tos_we,
-         qnice_sys_cfg_i   => qnice_osm_control_i(C_MENU_STEROIDS downto C_MENU_ST) &
+         qnice_sys_cfg_i   => qnice_osm_control_i(C_MENU_FALCON downto C_MENU_ST) &
                               qnice_osm_control_i(C_MENU_MEM_14M downto C_MENU_MEM_512K),
          qnice_wait_o      => qnice_tos_wait,
          qnice_csr_data_o  => qnice_csr_data,
