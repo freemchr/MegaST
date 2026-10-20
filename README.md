@@ -106,13 +106,7 @@ Requirements
   The R3/R3A has no SDRAM, and its HyperRAM is too slow for the ST's cycle exact memory timing, so
   its own core (`MegaST-R3-...cor`) keeps the ST RAM in the FPGA's block RAM: **512 KB ST RAM**,
   no Viking card and no STEroids mode, everything else is the same.
-* SD card (FAT32, 32 GB or less) formatted with the official
-  [SD Card Formatter](https://www.sdcard.org/downloads/formatter/), not with Windows. The MEGA65
-  needs partition 1 of type `0x0B`/`0x0C` (FAT32): a card that was exFAT before can keep the type
-  `0x07` and then gives "Cannot mount the SD card", although Windows reads it. Repair without data
-  loss (PowerShell as administrator, `N` from `Get-Disk`):
-  `Set-Partition -DiskNumber N -PartitionNumber 1 -MbrType 12`.
-* On that SD card a folder `/atarist` containing
+* SD card with a folder `/atarist` containing
   * `tos.img`: your TOS image (mandatory). The release zip contains the free
     [EmuTOS](https://emutos.sourceforge.io) as `tos.img`; a TOS ROM dump of your own Atari also works.
   * your floppy disk images (`.st`), hard disk images (`.hd`, `.img`, `.vhd`) and cartridges (`.stc`, `.img`)
