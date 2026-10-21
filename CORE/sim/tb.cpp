@@ -243,8 +243,10 @@ int main(int argc, char** argv) {
         top->hd_img_mounted = 1; cycle32(); cycle32();
         top->hd_img_mounted = 0;
     }
-    top->dio_download = 0;
-    top->reset_in = 0;
+    // HOLD_RESET=n: keep the ST in reset for the first n frames (like the welcome screen of the core)
+    int hold_reset = getenv("HOLD_RESET") ? atoi(getenv("HOLD_RESET")) : 0;
+    top->dio_download = hold_reset > 0;
+    top->reset_in = hold_reset > 0;
     int hd_state = 0, hd_idx = 0, hd_wait = 0; uint32_t hd_lba = 0; uint64_t hd_reads = 0, hd_writes = 0;
     // HD_WR_DELAY=<cycles>: each sector write takes this many extra 32 MHz cycles (like the slow
     // firmware path on the MEGA65), HD_TRACE=1: print every sector read/write,
@@ -286,6 +288,10 @@ int main(int argc, char** argv) {
             printf("key %d released at frame %d\n", key_idx, frame);
             top->kbd_matrix[key_idx / 32] |= 1u << (key_idx % 32);
             key_at = key_every > 5 ? key_at + key_every : -1;
+        }
+        if (hold_reset > 0 && frame == hold_reset && top->reset_in) {
+            printf("reset released at frame %d\n", frame);
+            top->reset_in = 0; top->dio_download = 0;
         }
         if (frame == reset_at) {
             printf("reset at frame %d\n", frame);

@@ -26,6 +26,10 @@ RP_SYSTEM_START INCRB
                 ; The QNICE CSR is in a sophisticated state when we arrive
                 ; here, and the core is in RESET state.
                 ; (See also CSR_DEFAULT in M2M/vhdl/QNICE/qnice.vhd)
+                ; MegaST: R7 was never set here, so the writes below went to
+                ; a random address and the core stayed in reset until the
+                ; welcome screen was closed (START_CONNECT in shell.asm)
+                MOVE    M2M$CSR, R7
 
                 ; handle keyboard and joystick settings
                 MOVE    M2M$CFG_RP_KB_RST, R1
