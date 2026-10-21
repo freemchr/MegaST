@@ -266,7 +266,14 @@ int main(int argc, char** argv) {
     uint32_t last_a = 0; uint64_t n_bus = 0;
     // RESET_AT=n: reset the ST at frame n like the "Reset Atari ST" menu item
     // (main.vhd: reset_core also drives dio_download)
-    int reset_at = getenv("RESET_AT") ? atoi(getenv("RESET_AT")) : -1;
+    // RESET_AT=n[,m...]: several resets; RESET_DELAY=c: c more clk_32 cycles after the frame start
+    // (the phase); RESET_LEN=c: reset held for c clk_32 cycles (default 64; the M2M reset manager
+    // holds it for RESET_COUNTER ms)
+    std::vector<int> resets;
+    if (getenv("RESET_AT")) for (char* p = getenv("RESET_AT"); *p; ) { resets.push_back(strtol(p, &p, 10)); if (*p == ',') p++; else break; }
+    int reset_at = resets.empty() ? -1 : resets[0]; size_t reset_i = 0;
+    int reset_delay = getenv("RESET_DELAY") ? atoi(getenv("RESET_DELAY")) : 0;
+    int reset_len = getenv("RESET_LEN") ? atoi(getenv("RESET_LEN")) : 64;
     // MOUSE_AT=n: from frame n on, move an ST mouse in the mouse port to the right (quadrature on
     // XA = pin 2 = bit 1, XB = pin 1 = bit 0, one step every 2 ms); MOUSE_AMIGA=1: Amiga mouse wiring
     // (H = pin 2 = bit 1, HQ = pin 4 = bit 3)
@@ -295,10 +302,11 @@ int main(int argc, char** argv) {
         }
         if (frame == reset_at) {
             printf("reset at frame %d\n", frame);
+            for (int i = 0; i < reset_delay; i++) cycle32();
             top->reset_in = 1; top->dio_download = 1;
-            for (int i = 0; i < 64; i++) cycle32();
+            for (int i = 0; i < reset_len; i++) cycle32();
             top->reset_in = 0; top->dio_download = 0;
-            reset_at = -1;
+            reset_at = ++reset_i < resets.size() ? resets[reset_i] : -1;
         }
         tick();
         if ((ticks % 6) != 1) continue;   // right after the rising edge of clk_32
@@ -425,6 +433,7 @@ int main(int argc, char** argv) {
         fwrite(hd.data(), 1, hd.size(), h); fclose(h);
         printf("hard disk image saved: %s\n", getenv("HD_OUT"));
     }
+    top->final();
     delete top;
     return 0;
 }

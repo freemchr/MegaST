@@ -167,6 +167,35 @@ module tb_top (
     if (dut.dma.acsi.clk_en && dut.dma.acsi.cpu_req && dut.dma.acsi.cpu_rw) $display("ACSI status read %02x", dut.dma.acsi.dma_status);
   end
 `endif
+`ifdef ROMWR_TRACE
+  // every SDRAM write into the TOS area ($E00000-$EFFFFF) after the initial TOS upload
+  // (build with VFLAGS=-DROMWR_TRACE)
+  integer romwr_n = 0;
+  always @(posedge clk_32) if (dut.sdram_req && dut.sdram_we) begin
+    if (dut.dio_download && dut.cpu_cycle && dut.data_wr) romwr_n <= romwr_n + 1;
+    if (dut.sdram_address[23:20] == 4'hE && !(dut.dio_download && dut.cpu_cycle && dut.data_wr))
+      $display("ROM write t=%0t addr %06x data %04x uds %0d lds %0d dio_download %0d cpu_cycle %0d data_wr %0d reset %0d bus_cycle %0d ram_a %06x",
+               $time, {dut.sdram_address, 1'b0}, dut.ram_data_in, dut.sdram_uds, dut.sdram_lds, dut.dio_download, dut.cpu_cycle,
+               dut.data_wr, dut.reset, dut.bus_cycle, {dut.ram_a, 1'b0});
+  end
+  // at the end: the TOS area of the SDRAM model ($E00000, 256 KB) to rom_dump.hex
+  integer rom_f, rom_i;
+  reg [22:0] rom_w;
+  final begin
+    rom_f = $fopen("rom_dump.hex", "w");
+    for (rom_i = 0; rom_i < 131072; rom_i = rom_i + 1) begin
+      rom_w = 23'h700000 + rom_i;
+      $fwrite(rom_f, "%04x\n", sdram.mem[{rom_w[21:20], rom_w[19:8], rom_w[22], rom_w[7:0]}]);
+    end
+    $fclose(rom_f);
+  end
+  // a ROM port access for which the SDRAM controller issues a WRITE command
+  always @(posedge dut.clk_96)
+    if (dut.g_sdram.sdram.req_latch && dut.g_sdram.sdram.rom_port && dut.g_sdram.sdram.t == 4'd3 && dut.g_sdram.sdram.sd_cmd == 4'b0100)
+      $display("ROM port WRITE t=%0t addr %06x data %04x ds %0d reset %0d dio_download %0d cpu_cycle %0d",
+               $time, {dut.g_sdram.sdram.addr_latch[22:0], 1'b0}, dut.g_sdram.sdram.din_latch, dut.g_sdram.sdram.ds,
+               dut.reset, dut.dio_download, dut.cpu_cycle);
+`endif
   wire        sdram_clk, sdram_cke, sdram_ras_n, sdram_cas_n, sdram_we_n, sdram_cs_n, sdram_dqml, sdram_dqmh;
   wire  [1:0] sdram_ba;
   wire [12:0] sdram_a;
