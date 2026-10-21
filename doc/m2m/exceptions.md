@@ -173,6 +173,23 @@ less bandwidth and loses nothing visible for the ST's colours. Generic, a candid
 debugging firmware hangs on the real hardware without a logic analyser (see `tools/JTAG.md`).
 Debugging aid; it can be removed without any effect on the core.
 
+Falcon core Falcon_MiSTer
+-------------------------
+
+`CORE/Falcon_MiSTer` is a copy of Falcon_MiSTer and AP68030 (see its `ORIGIN.md`). Changes, marked
+with `MEGA65` comments:
+
+* `rtl/falcon/falcon_psg.sv`, `falcon_pipescan.sv`: the `.mem` tables by file name only (Vivado finds
+  project files by name).
+* `rtl/falcon/falcon_system.sv`: `FALCON_FPU_LOCAL`: the FPU bridge's mailbox port (d3) goes out of the
+  module to the RISC-V that runs the 68882 service (`CORE/verilog/fpu_rv.v`) instead of to
+  `falcon_memarb` (no ARM, no DDR3 mailbox).
+* `rtl/falcon/falcon_cpubus.sv`: `hold` is never active during a reset. The reset holds the bridge in
+  `F_IDLE`; a bus cycle the processor had started then stopped its clock for good, and the AP68030
+  (which counts the reset only on `cpu_ce` clocks) never took the reset while the devices did: the
+  program ran on with reset video registers (garbage on the screen). Found in simulation (20 of 50
+  resets missed the CPU, 0 with the fix). Generic, a candidate for upstream.
+
 QNICE
 -----
 
