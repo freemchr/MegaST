@@ -133,7 +133,9 @@ assign sd_we  = sd_cmd[0];
 // MEGA65: explicit tristate data bus registers (packed into the IOBs)
 (* IOB = "TRUE" *) reg [15:0] sd_dout;
 (* IOB = "TRUE" *) reg [15:0] sd_doe;
-(* IOB = "TRUE" *) reg [15:0] sd_din;
+// MEGA65: no copies of sd_din (with the Falcon on ext_din, synthesis replicated it into the
+// fabric, where the false path input is not timed): only the IOB flop samples the pins
+(* IOB = "TRUE", dont_touch = "true" *) reg [15:0] sd_din;
 
 genvar gi;
 generate

@@ -18,8 +18,8 @@ ROOT_SECS = ROOT_ENTRIES * 32 // 512    # 7
 DATA0 = RESERVED + NFATS * FAT_SECS + ROOT_SECS   # first data sector (18)
 
 
-def wrtest_prg():
-    fname = b"A:\\OUT.TXT\0"
+def wrtest_prg(drive=b"A"):
+    fname = drive + b":\\OUT.TXT\0"
     code = bytearray()
     def w(*words):
         for x in words: code.extend(struct.pack('>H', x))
