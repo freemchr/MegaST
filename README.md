@@ -211,7 +211,8 @@ Using disk images
 * The browser only shows the file types the core can use: `.st` (floppy), `.hd`, `.img`, `.vhd`
   (hard disk), `.img`, `.rom` (TOS), `.stc`, `.img` (cartridge).
 * The menu shows the name of the mounted image next to the drive. To **unmount (eject)** a drive,
-  select its line and press <kbd>Space</kbd>.
+  select its line and press <kbd>Space</kbd>. The same on the "Cartridge:" line **removes the
+  cartridge**: the ST restarts without it.
 * With `/atarist/stmount` on the SD card (in the release zip), the mounted images and the chosen
   TOS and cartridge are **remembered** and loaded again at the next start ("Remember floppies" and
   "Remember TOS/cartridge" in "System settings" switch this off for the floppies or the TOS).

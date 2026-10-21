@@ -22,6 +22,12 @@ module sdram_model (
 
   assign dq = dq_oe ? dq_out : 16'bz;
 
+`ifdef SDRAM_RANDOM
+  // power-on content of a real SDRAM: random (VFLAGS=-DSDRAM_RANDOM)
+  integer i;
+  initial for (i = 0; i < (1<<23); i = i + 1) mem[i] = $random;
+`endif
+
   wire [3:0] cmd = {cs_n, ras_n, cas_n, we_n};
   localparam CMD_ACTIVE = 4'b0011, CMD_READ = 4'b0101, CMD_WRITE = 4'b0100, CMD_PRECHARGE = 4'b0010,
              CMD_REFRESH = 4'b0001, CMD_MODE = 4'b0000;

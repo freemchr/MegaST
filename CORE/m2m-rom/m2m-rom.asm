@@ -308,6 +308,60 @@ OSM_SEL_PRE     INCRB
                 RET
 
 ; ----------------------------------------------------------------------------
+; MegaST: remove the cartridge
+; ----------------------------------------------------------------------------
+
+; Called by HANDLE_MOUNTING (shell.asm) for a manually loadable CRT/ROM before
+; the file browser opens: Space on the "Cartridge:" line with a cartridge
+; loaded removes it. The ST restarts without it: tos_loader.vhd keeps the core
+; in reset while the status of the device is "loading", like when a cartridge
+; is loaded. It is also no longer remembered (mntmem.asm).
+;
+; Input:  R8: CRT/ROM id
+;         R9: OPTM_KEY_SELECT or OPTM_KEY_SELALT
+; Output: Carry=1: removed, Carry=0: nothing done (load a CRT/ROM instead)
+;         R8..R10 are changed
+CRT_ID_CART     .EQU    1                       ; C_CRTROMS_MAN (globals.vhd)
+
+MNT_CRT_EJECT   INCRB
+                CMP     OPTM_KEY_SELALT, R9     ; Space?
+                RBRA    _MCE_NO, !Z
+                CMP     CRT_ID_CART, R8         ; the cartridge?
+                RBRA    _MCE_NO, !Z
+                MOVE    CRTROM_MAN_LDF, R0
+                ADD     R8, R0
+                CMP     0, @R0                  ; loaded?
+                RBRA    _MCE_NO, Z
+                MOVE    0, @R0                  ; not anymore
+                MOVE    R8, R1                  ; R1: CRT/ROM id
+
+                MOVE    SCRATCH_HEX, R8
+                RSUB    SAVE_DEVSEL, 1
+                MOVE    CRTROM_MAN_DEV, R8
+                ADD     R1, R8
+                MOVE    @R8, R8                 ; R8: device id
+                MOVE    CRTROM_CSR_STATUS, R9
+                MOVE    CRTROM_CSR_ST_LDNG, R10 ; ST in reset
+                RSUB    CRTROM_CSR_W, 1
+                MOVE    0x0100, R2
+_MCE_WAIT       SUB     1, R2
+                RBRA    _MCE_WAIT, !Z
+                MOVE    CRTROM_CSR_ST_IDLE, R10 ; no cartridge: the ST restarts
+                RSUB    CRTROM_CSR_W, 1
+                MOVE    SCRATCH_HEX, R8
+                RSUB    RESTORE_DEVSEL, 1
+
+                MOVE    R1, R8                  ; forget it
+                MOVE    1, R9                   ; (mode 1: CRT/ROM)
+                RSUB    MNT_FORGET, 1
+                OR      0x0004, SR              ; Carry=1
+                RBRA    _MCE_RET, 1
+
+_MCE_NO         AND     0xFFFB, SR              ; Carry=0
+_MCE_RET        DECRB
+                RET
+
+; ----------------------------------------------------------------------------
 ; Core specific callback functions: Custom messages
 ; ----------------------------------------------------------------------------
 

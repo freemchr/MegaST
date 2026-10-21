@@ -1,3 +1,20 @@
+Version 1.1.4-test1 - October 21, 2026 (test build, R6)
+=======================================================
+
+* **Bombs after a reset** (tester report: about 5 out of 10 resets, mostly STEroids, only a power
+  cycle helped): a reset could hit the ST while it was reading TOS. During a reset the memory
+  controller saw a write request, and the TOS read in progress became a write: one word of the
+  TOS in memory was overwritten (TOS 2.06 reported "BAD ROM CRC", then bombs). The TOS stayed
+  damaged until it was loaded again at power on. TOS reads can no longer write. Reproduced and
+  fixed in simulation (TOS 2.06, STEroids, reset during the memory test).
+* **Coloured stripes behind the welcome screen** (tester report): the ST was meant to start
+  behind the welcome screen, but it stayed in reset until the screen was closed, so the HDMI
+  output showed whatever was in the video memory. The ST now starts at once.
+* **A cartridge could not be removed** (tester report): Space on the "Cartridge:" line now removes
+  the cartridge, and the ST restarts without it.
+
+The settings file stays the same: the 104 byte `/atarist/stcfg` of 1.1 is still valid.
+
 Version 1.1.3 - October 21, 2026
 ================================
 

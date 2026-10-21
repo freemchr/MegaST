@@ -152,6 +152,13 @@ reg [1:0] burst_addr;
 reg [15:0] data_latch;
 reg [23:0] addr_latch;
 reg [15:0] din_latch;
+// MEGA65: write enable and data strobes are latched with the request, like din (and like
+// bram_m65.v does). The MiSTer module took them live in the CAS phase, so a ROM port read
+// (which has no request) became a write of din_latch into the TOS image whenever we was
+// high at that moment, e.g. while main.vhd drives dio_download during a reset (then
+// we = 1 in every CPU slot): "BAD ROM CRC" and bombs after a reset.
+reg        we_latch;
+reg  [1:0] ds_latch;
 reg        req_latch;
 reg        rom_port;
 
@@ -195,6 +202,8 @@ always @(posedge clk_96) begin
 				addr_latch <= addr;
 				req_latch <= 1;
 				din_latch <= din;
+				we_latch  <= we;
+				ds_latch  <= ds;
 				rom_port <= 0;
 
 				// RAS phase
@@ -209,6 +218,7 @@ always @(posedge clk_96) begin
 			else if (rom_oe && (addr_latch != rom_addr)) begin
 				addr_latch <= rom_addr;
 				req_latch <= 1;
+				we_latch  <= 1'b0;     // the ROM port only reads
 				rom_port <= 1;
 
 				// RAS phase
@@ -230,19 +240,19 @@ always @(posedge clk_96) begin
 
 			// CAS phase 
 			if(t == STATE_CMD_CONT) begin
-				sd_cmd <= we?CMD_WRITE:CMD_READ;
-				if (we) begin
+				sd_cmd <= we_latch?CMD_WRITE:CMD_READ;
+				if (we_latch) begin
 					sd_dout <= din_latch;
 					sd_doe  <= 16'hFFFF;
 				end
 				// always return both bytes in a read. The cpu may not
 				// need it, but the caches need to be able to store everything
-				sd_addr <= { we ? ~ds : 2'b00, 2'b10, addr_latch[22], addr_latch[7:0] };  // auto precharge
-				sd_dqm  <= we ? ~ds : 2'b00;
+				sd_addr <= { we_latch ? ~ds_latch : 2'b00, 2'b10, addr_latch[22], addr_latch[7:0] };  // auto precharge
+				sd_dqm  <= we_latch ? ~ds_latch : 2'b00;
 			end
 
 			// read phase
-			if(!we || rom_port) begin
+			if(!we_latch) begin
 				if((t >= STATE_READ) && (t < STATE_READ+4'd4)) begin
 					if (burst_addr == addr_latch[1:0]) if (rom_port) rom_dout <= sd_din; else dout <= sd_din;
 					// de-multiplex the data directly into the 64 bit buffer

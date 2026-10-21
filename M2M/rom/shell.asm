@@ -229,9 +229,15 @@ HANDLE_MOUNTING SYSCALL(enter, 1)
                 MOVE    R10, R5                 ; R5: mount mode
 
                 CMP     1, R5                   ; CRT/ROM mode?
-                RBRA    _HM_START_MOUNT, Z      ; yes
+                RBRA    _HM_VDRIVE, !Z          ; no
+                MOVE    R7, R8                  ; MegaST: Space on a loaded
+                MOVE    R6, R9                  ; cartridge removes it
+                RSUB    MNT_CRT_EJECT, 1
+                RBRA    _HM_SDMOUNTED7, C       ; removed: redraw menu, exit
+                RBRA    _HM_START_MOUNT, 1      ; else: load a CRT/ROM
 
                 ; we treat already mounted drives differently
+_HM_VDRIVE
                 RSUB    VD_MOUNTED, 1           ; C=1: the given drive in R8..
                 RBRA    _HM_MOUNTED, C          ; ..is already mounted
 
