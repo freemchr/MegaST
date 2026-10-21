@@ -1,11 +1,11 @@
 #!/bin/sh
 # falcon_fpu for the RISC-V in the FPGA (fpu_rv.v, PicoRV32 RV32IM): the engine (Hatari's fpp.c +
 # softfloat through ../engine, unmodified) and
-#   fpu_rv.hex     the FPU service (fpu_rv.c), the block RAM image of the FPGA build
-#   bench.hex      bench.c: RISC-V cycles per instruction (simulation)
-#   selftest.hex   ../engine/fpe_selftest.c (the engine against fpp.c driven with real EAs), for
+#   fpu_rv.mem     the FPU service (fpu_rv.c), the block RAM image of the FPGA build
+#   bench.mem      bench.c: RISC-V cycles per instruction (simulation)
+#   selftest.mem   ../engine/fpe_selftest.c (the engine against fpp.c driven with real EAs), for
 #                  the simulation (CORE/sim/fpu_rv)
-# A .hex is one 32-bit word per line for $readmemh, the whole RAM (256 KB).
+# A .mem is one 32-bit word per line for $readmemh, the whole RAM (256 KB).
 #   HATARI  Hatari source tree (default ~/opt/src/hatari-2.6.1)
 #   RVGCC   RISC-V compiler (default riscv-none-elf-gcc: xPack GNU RISC-V Embedded GCC)
 #
@@ -41,7 +41,7 @@ link() {    # $1 name, rest: objects
 	n=$1; shift
 	$CC $LF -Wl,-Map=$O/$n.map $O/start.o "$@" $O/sys.o $objs -lm -o $O/$n.elf
 	${P}objcopy -O binary $O/$n.elf $O/$n.bin
-	python3 - "$O/$n.bin" "$n.hex" <<'EOF'
+	python3 - "$O/$n.bin" "$n.mem" <<'EOF'
 import sys
 b = open(sys.argv[1], 'rb').read()
 if len(b) > 256 * 1024 - 8192: sys.exit(f"{sys.argv[1]}: {len(b)} bytes, too big for the 256 KB RAM")
@@ -55,4 +55,4 @@ EOF
 link fpu_rv $O/fpu_rv.o
 link selftest $O/fpe_selftest.o
 link bench $O/bench.o
-echo "built: fpu_rv.hex selftest.hex bench.hex"
+echo "built: fpu_rv.mem selftest.mem bench.mem"

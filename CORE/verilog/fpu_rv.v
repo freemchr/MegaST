@@ -19,7 +19,7 @@
 `default_nettype none
 
 module fpu_rv #(
-	parameter G_HEX = "fpu_rv.hex"
+	parameter G_HEX = "fpu_rv.mem"
 ) (
 	input  wire        clk_96,
 

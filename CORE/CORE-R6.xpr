@@ -1167,6 +1167,20 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
+      <File Path="$PPRDIR/verilog/fpu_rv.v">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
+      <File Path="$PPRDIR/picorv32/picorv32.v">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="implementation"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
       <File Path="$PPRDIR/Falcon_MiSTer/rtl/falcon/falcon_system.sv">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
@@ -1466,13 +1480,19 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
+      <File Path="$PPRDIR/falcon_fpu/rv/fpu_rv.mem">
+        <FileInfo>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
       <Config>
         <Option Name="DesignMode" Val="RTL"/>
         <Option Name="TopModule" Val="mega65_r6"/>
         <Option Name="VerilogDir" Val="$PPRDIR/Falcon_MiSTer/rtl/AP68030/rtl"/>
         <Option Name="VerilogDir" Val="$PPRDIR/Falcon_MiSTer/rtl/falcon"/>
         <Option Name="VerilogDir" Val="$PPRDIR/Falcon_MiSTer/rtl/falcon/dsp"/>
-        <Verilog_Define Name="FALCON_NO_FPU"/>
+        <Verilog_Define Name="FALCON_FPU_LOCAL"/>
       </Config>
     </FileSet>
     <FileSet Name="constrs_1" Type="Constrs" RelSrcDir="$PSRCDIR/constrs_1" RelGenDir="$PGENDIR/constrs_1">

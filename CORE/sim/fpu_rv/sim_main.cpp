@@ -1,5 +1,5 @@
 // Test bench of fpu_rv.v alone: the RISC-V runs a program (default: the engine self-test,
-// CORE/falcon_fpu/rv/selftest.hex) and its stdout is printed; ends when the program exits.
+// CORE/falcon_fpu/rv/selftest.mem) and its stdout is printed; ends when the program exits.
 //   ./build.sh && ./obj_dir/Vfpu_rv [--max-mcycles N] [--prof FILE] [--trace N]
 // --prof writes the cycles spent per instruction address (fetch address, cycles until the
 // next fetch, fetches) as "addr cycles count" lines: tools/rvprof.py turns them into a per-function profile.
