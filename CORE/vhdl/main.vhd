@@ -756,7 +756,10 @@ begin
       f_cold_reset <= tos_loading_i or init_i or not falcon;
       f_por        <= init_i or not falcon;
       f_sdram_start <= falcon and sdram_ext_ready;
-      f_joy0       <= (31 downto 5 => '0') & ste_bits(mouse_port_db);
+      -- The mouse port is the mouse (quadmouse or mouse1351 -> ps2_mouse), as on the ST with those
+      -- mice (joy_mouse): its raw pins as joystick 0 made the IKBD send joystick packets for every
+      -- mouse step (in its "both" mode), which kept the link busy and lost short clicks.
+      f_joy0       <= (others => '0');
       f_joy1       <= (31 downto 5 => '0') & ste_bits(joy_stick);
 
       i_falcon : falcon_m65

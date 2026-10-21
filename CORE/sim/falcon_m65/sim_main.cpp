@@ -9,6 +9,9 @@
 //     --hda FILE          hard disk on drive 2 (IDE master), served the same way
 //     --key IDX:T[:D]     ST matrix position IDX (col*8+row) pressed at T ms for D ms (default 100)
 //     --turbo             CPU at 32 MHz
+//     --mouse T:DX:DY:B   at T ms a PS/2 mouse packet (B: bit 0 left, bit 1 right)
+//     --reset T:US        at T ms a reset pulse of US microseconds (the menu item "Reset Atari ST")
+//     --joyflicker T      from T ms on joystick 0 changes every ms (mouse pins seen as a joystick)
 //
 // TOS goes in like tos_loader.vhd sends it (68000 word address from $E00000, even byte in bits
 // 15..8, a toggle per word, acknowledged by the machine) and is compared with the image in the
@@ -52,6 +55,11 @@ int main(int argc, char **argv) {
     int frame_every = 50, monitor = 2, ram = 14;
     bool turbo = false;
     std::vector<Key> keys;
+    struct Mouse { double t; int dx, dy, b; };
+    std::vector<Mouse> mice;
+    double joyflicker = -1;
+    struct Rst { double t, us; };
+    std::vector<Rst> resets;
     for (int i = 2; i < argc; i++) {
         std::string a = argv[i];
         auto next = [&]() { return std::string(i + 1 < argc ? argv[++i] : ""); };
@@ -63,6 +71,9 @@ int main(int argc, char **argv) {
         else if (a == "--fda") img_name[0] = next();
         else if (a == "--hda") img_name[2] = next();
         else if (a == "--turbo") turbo = true;
+        else if (a == "--mouse") { Mouse m{0, 0, 0, 0}; sscanf(next().c_str(), "%lf:%d:%d:%d", &m.t, &m.dx, &m.dy, &m.b); mice.push_back(m); }
+        else if (a == "--reset") { Rst r{0, 30}; sscanf(next().c_str(), "%lf:%lf", &r.t, &r.us); resets.push_back(r); }
+        else if (a == "--joyflicker") joyflicker = atof(next().c_str());
         else if (a == "--key") { Key k{0, 0, 100}; sscanf(next().c_str(), "%d:%lf:%lf", &k.idx, &k.t, &k.d); keys.push_back(k); }
     }
     std::vector<uint8_t> tos, img[4];
@@ -86,7 +97,7 @@ int main(int argc, char **argv) {
     svSetScope(svGetScopeFromName("TOP.tb_top"));
     top->ram_mb = ram; top->monitor = monitor; top->cpu_turbo = turbo;
     for (int i = 0; i < 4; i++) top->kbd_matrix_n[i] = 0xFFFFFFFF;
-    top->ps2_mouse = 0; top->img_mounted = 0; top->img_size = 0; top->sd_ack = 0;
+    top->ps2_mouse = 0; top->joy0 = 0; top->img_mounted = 0; top->img_size = 0; top->sd_ack = 0;
     top->sd_buff_wr = 0; top->sd_buff_addr = 0; top->sd_buff_dout = 0;
     top->dio_strobe = 0;
 
@@ -143,6 +154,22 @@ int main(int argc, char **argv) {
             uint32_t &wd = top->kbd_matrix_n[k.idx / 32];
             uint32_t bit = 1u << (k.idx % 32);
             if (down) wd &= ~bit; else wd |= bit;
+        }
+
+        // mouse packets (toggle bit 24 like hps_io) and the joystick 0 flicker
+        for (auto &m : mice) if (m.t >= 0 && now_ms >= m.t) {
+            int st = (m.b & 3) | 8 | (m.dx < 0 ? 0x10 : 0) | (m.dy < 0 ? 0x20 : 0);
+            top->ps2_mouse = ((~top->ps2_mouse >> 24 & 1) << 24) | ((m.dy & 0xFF) << 16) | ((m.dx & 0xFF) << 8) | st;
+            printf("[%9.3f ms] mouse packet dx %d dy %d buttons %d\n", now_ms, m.dx, m.dy, m.b);
+            m.t = -1;
+        }
+        if (joyflicker >= 0 && now_ms >= joyflicker) top->joy0 = ((uint64_t)(now_ms) & 3) == 0 ? 1 : ((uint64_t)(now_ms) & 3) == 1 ? 2 : 0;
+
+        {
+            bool r = false;
+            for (auto &x : resets) if (now_ms >= x.t && now_ms < x.t + x.us * 1e-3) r = true;
+            if (r != (bool)top->reset) printf("[%9.3f ms] reset %d\n", now_ms, r);
+            top->reset = r;
         }
 
         // drive A

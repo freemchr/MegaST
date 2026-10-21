@@ -20,6 +20,7 @@ module tb_top (
 
 	input     [119:0] kbd_matrix_n,
 	input      [24:0] ps2_mouse,
+	input      [31:0] joy0,
 
 	input       [3:0] img_mounted,
 	input      [31:0] img_size,
@@ -55,7 +56,7 @@ falcon_m65 #(.CLK_HZ(32083333)) dut (
 	.clk_32(clk_32), .clk_96(clk_96), .reset(reset), .cold_reset(cold_reset), .por(por),
 	.ram_mb(ram_mb), .monitor(monitor), .cpu_turbo(cpu_turbo),
 	.dio_addr(dio_addr), .dio_data(dio_data), .dio_strobe(dio_strobe), .dio_strobe_ack(dio_strobe_ack),
-	.kbd_matrix_n(kbd_matrix_n), .ps2_mouse(ps2_mouse), .joy0(32'd0), .joy1(32'd0),
+	.kbd_matrix_n(kbd_matrix_n), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(32'd0),
 	.rtc({1'b0, 64'h0000_0042_6101_1200}),
 	.img_mounted(img_mounted), .img_readonly(1'b0), .img_size(img_size),
 	.sd_lba(sd_lba), .sd_rd(sd_rd), .sd_wr(sd_wr), .sd_ack(sd_ack),
