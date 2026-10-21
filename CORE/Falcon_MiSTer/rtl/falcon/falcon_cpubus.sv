@@ -262,7 +262,10 @@ assign wbuf_busy = wb_valid;
 // bridge has decided anything (while the processor catches up, S0 and the
 // following edge are on consecutive clocks).  A hold costs Falcon time
 // (debt), never a processor clock.
-assign hold = fmode && (((fst == F_RUN) && !fready && (fk >= (fplan ? fw : 5'd0))) ||
+// MEGA65: never during the reset: the reset holds fst at F_IDLE, so a cycle the
+// processor had started (as_act) held its clock for good and it never took the
+// reset (it only counts the reset on clocks with cpu_ce), while the devices did
+assign hold = fmode && !reset && (((fst == F_RUN) && !fready && (fk >= (fplan ? fw : 5'd0))) ||
                         ((fst == F_IDLE) && as_act) || (fst == F_GOV) || bus_lost);
 
 //----------------------------------------------------------------------------
