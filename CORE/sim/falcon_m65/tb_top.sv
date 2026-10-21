@@ -43,7 +43,9 @@ module tb_top (
 
 	output            dbg_kbd_rd,       // the CPU reads the IKBD ACIA's data register
 	output      [7:0] dbg_kbd_byte,
-	output            dbg_sdram_err
+	output            dbg_sdram_err,
+	output     [31:0] dbg_pc,           // CPU program counter
+	output            dbg_cpu_rst       // the CPU's synchronized reset
 );
 
 wire  [3:0] e_cmd;
@@ -89,6 +91,8 @@ sdram_strict sdram (
 assign dbg_kbd_rd    = dut.system.acia.ik_rd_dr;
 assign dbg_kbd_byte  = dut.system.acia.rdr_ikbd;
 assign dbg_sdram_err = (sdram.errors != 0);
+assign dbg_pc        = dut.system.dbg_pc;
+assign dbg_cpu_rst   = dut.system.cpu.rst;
 
 // guest memory for the C++ side (big endian bytes), through the SDRAM model
 function [22:0] sd_idx(input [20:0] q, input [1:0] k);

@@ -17,7 +17,7 @@ SRCS="$F/falcon_system.sv $F/falcon_cpubus.sv $F/falcon_cpuclk.sv $F/falcon_pipe
 # the .mem tables ($readmemb with the file name only) are read from the directory the test runs in
 ln -sf $F/falcon_psg_vol.mem falcon_psg_vol.mem
 ln -sf $F/falcon_optbl.mem falcon_optbl.mem
-verilator --cc --exe --build -j 16 -O3 --x-assign fast --x-initial fast \
+verilator --cc --exe --build -j 8 -O3 --x-assign fast --x-initial fast \
 	-Wno-fatal -Wno-WIDTH -Wno-CASEINCOMPLETE -Wno-PINMISSING -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN -Wno-UNOPTFLAT \
 	-Wno-INITIALDLY -Wno-BLKANDNBLK -Wno-LATCH \
 	--top-module tb_top -Mdir obj_dir +define+FALCON_NO_FPU \

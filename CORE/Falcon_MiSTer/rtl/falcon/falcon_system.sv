@@ -93,6 +93,18 @@ module falcon_system #(parameter CLK_HZ = 32000000)
 	output     [63:0] DDRAM_DIN,
 	output      [7:0] DDRAM_BE,
 	output            DDRAM_WE
+`ifdef FALCON_FPU_LOCAL
+	,
+	// MEGA65: the FPU bridge's mailbox port (d3) to the RISC-V that runs the FPU service
+	// (CORE/verilog/fpu_rv.v) instead of to falcon_memarb (no ARM, no DDR3 mailbox)
+	output            fpu_d3_req,
+	output            fpu_d3_we,
+	output     [23:1] fpu_d3_addr,
+	output      [1:0] fpu_d3_be,
+	output     [15:0] fpu_d3_wdata,
+	input      [15:0] fpu_d3_rdata,
+	input             fpu_d3_ack
+`endif
 );
 
 //////////////////////////////////////////////////////////////////
@@ -367,6 +379,10 @@ wire [23:1] d3_addr;
 wire  [1:0] d3_be;
 wire [15:0] d3_wdata, d3_rdata;
 wire        fpu_present;
+`ifdef FALCON_FPU_LOCAL
+assign fpu_d3_req = d3_req, fpu_d3_we = d3_we, fpu_d3_addr = d3_addr, fpu_d3_be = d3_be, fpu_d3_wdata = d3_wdata;
+assign d3_rdata = fpu_d3_rdata, d3_ack = fpu_d3_ack;
+`endif
 
 `ifdef FALCON_MBOX_TEST
 falcon_mbox_test #(.CLK_HZ(CLK_HZ)) mbox_test
@@ -423,8 +439,14 @@ falcon_memarb memarb
 	.d1_rdata(fdc_drdata), .d1_ack(fdc_dack),
 	.d2_req(blt_req & ~blt_io), .d2_we(blt_we), .d2_addr(blt_addr), .d2_be(blt_be), .d2_wdata(blt_wdata),
 	.d2_rdata(mblt_rdata), .d2_ack(mblt_ack), .d2_hold(blit_bg),
+`ifdef FALCON_FPU_LOCAL
+	// MEGA65: d3 (the FPU mailbox) is not in the DDR3/SDRAM, see the ports
+	.d3_req(1'b0), .d3_we(1'b0), .d3_addr(23'd0), .d3_be(2'b00), .d3_wdata(16'd0),
+	.d3_rdata(), .d3_ack(),
+`else
 	.d3_req(d3_req), .d3_we(d3_we), .d3_addr(d3_addr), .d3_be(d3_be), .d3_wdata(d3_wdata),
 	.d3_rdata(d3_rdata), .d3_ack(d3_ack),
+`endif
 	.cpu_req(mram_req), .cpu_we(mram_we), .cpu_addr(mram_addr), .cpu_be(mram_be),
 	.cpu_wdata(mram_wdata), .cpu_rdata(mram_rdata), .cpu_rdata64(mram_rdata64), .cpu_ack(mram_ack),
 	.cpu_burst(mram_burst), .cpu_beat(mram_beat), .owr_we(owr_we), .owr_addr(owr_addr),

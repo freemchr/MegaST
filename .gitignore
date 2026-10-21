@@ -36,3 +36,13 @@ stcfg
 
 # Python
 __pycache__/
+
+# Falcon FPU: build outputs (fpu_rv.hex is committed: the FPGA build reads it)
+CORE/falcon_fpu/*/build/
+CORE/falcon_fpu/rv/bench.hex
+CORE/falcon_fpu/rv/selftest.hex
+CORE/sim/*/obj_*/
+CORE/sim/*/*.log
+CORE/sim/*/build.err
+CORE/sim/*/build_dbg.sh
+CORE/sim/*/fpu_rv.hex

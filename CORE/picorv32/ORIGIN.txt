@@ -1,0 +1,1 @@
+PicoRV32 from https://github.com/YosysHQ/picorv32, commit: ef203c2b0a3fb793280f5114941416c425c5b461 Mon Sep 7 20:01:21 2026 +1200

@@ -11,6 +11,9 @@
 //     --turbo             CPU at 32 MHz
 //     --mouse T:DX:DY:B   at T ms a PS/2 mouse packet (B: bit 0 left, bit 1 right)
 //     --reset T:US        at T ms a reset pulse of US microseconds (the menu item "Reset Atari ST")
+//     --pc MS             print the CPU's PC every MS milliseconds (and the CPU's reset edges)
+//     --text ADDR         at the end print the NUL-terminated text at ADDR (hex; FPUTEST's simrom.s: 100000)
+//     --done ADDR         stop when the long at ADDR is $D0E0600D (simrom.s: FFFF0)
 //     --joyflicker T      from T ms on joystick 0 changes every ms (mouse pins seen as a joystick)
 //
 // TOS goes in like tos_loader.vhd sends it (68000 word address from $E00000, even byte in bits
@@ -49,6 +52,7 @@ struct Key { int idx; double t, d; };
 
 int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
+    setvbuf(stdout, nullptr, _IOLBF, 0);   // line buffered: progress is visible in a log file
     if (argc < 2) { fprintf(stderr, "usage: %s TOS.img [options]\n", argv[0]); return 1; }
     std::string tos_name = argv[1], frames_dir, img_name[4];
     double run_ms = 6000;
@@ -57,7 +61,9 @@ int main(int argc, char **argv) {
     std::vector<Key> keys;
     struct Mouse { double t; int dx, dy, b; };
     std::vector<Mouse> mice;
-    double joyflicker = -1;
+    double joyflicker = -1, pc_every = 0, pc_next = 0;
+    uint32_t text_addr = 0, done_addr = 0;
+    bool prev_cpu_rst = true;
     struct Rst { double t, us; };
     std::vector<Rst> resets;
     for (int i = 2; i < argc; i++) {
@@ -73,6 +79,9 @@ int main(int argc, char **argv) {
         else if (a == "--turbo") turbo = true;
         else if (a == "--mouse") { Mouse m{0, 0, 0, 0}; sscanf(next().c_str(), "%lf:%d:%d:%d", &m.t, &m.dx, &m.dy, &m.b); mice.push_back(m); }
         else if (a == "--reset") { Rst r{0, 30}; sscanf(next().c_str(), "%lf:%lf", &r.t, &r.us); resets.push_back(r); }
+        else if (a == "--text") text_addr = (uint32_t)strtoul(next().c_str(), nullptr, 16);
+        else if (a == "--done") done_addr = (uint32_t)strtoul(next().c_str(), nullptr, 16);
+        else if (a == "--pc") pc_every = atof(next().c_str());
         else if (a == "--joyflicker") joyflicker = atof(next().c_str());
         else if (a == "--key") { Key k{0, 0, 100}; sscanf(next().c_str(), "%d:%lf:%lf", &k.idx, &k.t, &k.d); keys.push_back(k); }
     }
@@ -215,6 +224,13 @@ int main(int argc, char **argv) {
 
         tick();
 
+        if (done_addr && (cyc & 32767) == 0 &&
+            (guest_peek8(done_addr) << 24 | guest_peek8(done_addr + 1) << 16 | guest_peek8(done_addr + 2) << 8 | guest_peek8(done_addr + 3)) == (int)0xD0E0600D) {
+            printf("[%9.3f ms] done marker at %06x\n", now_ms, done_addr);
+            break;
+        }
+        if (pc_every > 0 && now_ms >= pc_next) { printf("[%9.3f ms] PC %08X\n", now_ms, top->dbg_pc); pc_next = now_ms + pc_every; }
+        if (top->dbg_cpu_rst != prev_cpu_rst) { printf("[%9.3f ms] CPU reset %d, PC %08X\n", now_ms, top->dbg_cpu_rst, top->dbg_pc); prev_cpu_rst = top->dbg_cpu_rst; }
         if (top->dbg_kbd_rd && !prev_kbd_rd) printf("[%9.3f ms] IKBD byte %02X\n", now_ms, top->dbg_kbd_byte);
         prev_kbd_rd = top->dbg_kbd_rd;
 
@@ -253,6 +269,28 @@ int main(int argc, char **argv) {
             FILE *f = fopen(out.c_str(), "wb"); fwrite(img[d].data(), 1, img[d].size(), f); fclose(f);
             printf("drive %d written back to %s\n", d, out.c_str());
         }
+    }
+    if (text_addr) {
+        printf("text at %06x:\n", text_addr);
+        for (uint32_t i = 0; i < 65536; i++) {
+            uint8_t c = guest_peek8(text_addr + i);
+            if (!c) break;
+            if (c != 13) putchar(c >= 32 || c == 10 ? c : '?');
+        }
+        printf("\n");
+    }
+    // the cookie jar (_p_cookies at $5A0): which CPU and FPU TOS found
+    {
+        auto rd32 = [](uint32_t x) { return (uint32_t)guest_peek8(x) << 24 | guest_peek8(x + 1) << 16 | guest_peek8(x + 2) << 8 | guest_peek8(x + 3); };
+        uint32_t jar = rd32(0x5A0);
+        if (jar && jar < 0xE00000) {
+            for (int i = 0; i < 64; i++) {
+                uint32_t id = rd32(jar + 8 * i), v = rd32(jar + 8 * i + 4);
+                if (!id) break;
+                if (id == 0x5F435055 || id == 0x5F465055)   // _CPU, _FPU
+                    printf("cookie %c%c%c%c = %08X\n", id >> 24, id >> 16 & 255, id >> 8 & 255, id & 255, v);
+            }
+        } else printf("no cookie jar\n");
     }
     top->final();
     delete top;
