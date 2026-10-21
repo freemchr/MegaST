@@ -212,6 +212,13 @@ assign sd_wr = f_wr[3:0];
 // ---------------------------------------------------------------------------
 // The Falcon
 // ---------------------------------------------------------------------------
+`ifdef FALCON_FPU_LOCAL
+// the 68882 mailbox port (declared before falcon_system uses them, see fpu below)
+wire        fpu_req, fpu_we, fpu_ack;
+wire [23:1] fpu_addr;
+wire  [1:0] fpu_be;
+wire [15:0] fpu_wdata, fpu_rdata;
+`endif
 
 wire        DDRAM_BUSY, DDRAM_DOUT_READY, DDRAM_RD, DDRAM_WE;
 wire  [7:0] DDRAM_BURSTCNT, DDRAM_BE;
@@ -243,11 +250,6 @@ falcon_system #(.CLK_HZ(CLK_HZ)) system (
 `ifdef FALCON_FPU_LOCAL
 // the 68882: the bridge in falcon_system, its service on a RISC-V (fpu_rv.v: Hatari's FPU
 // emulation, what the ARM runs on MiSTer)
-wire        fpu_req, fpu_we, fpu_ack;
-wire [23:1] fpu_addr;
-wire  [1:0] fpu_be;
-wire [15:0] fpu_wdata, fpu_rdata;
-
 fpu_rv fpu (
 	.clk_96(clk_96), .clk_32(clk_32),
 	.d3_req(fpu_req), .d3_we(fpu_we), .d3_addr(fpu_addr), .d3_be(fpu_be), .d3_wdata(fpu_wdata),
