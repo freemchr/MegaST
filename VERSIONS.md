@@ -9,7 +9,6 @@ Version 1.1.4-test3 - October 22, 2026 (test build, R6)
   fixed in simulation (TOS 2.06, STEroids, reset during the memory test).
 * **A cartridge could not be removed** (tester report): Space on the "Cartridge:" line now removes
   the cartridge, and the ST restarts without it.
-
 * **"config.vhd: No selected menu group item" when opening the menu**: a settings file that does not
   match the menu (written by another build, or damaged) stopped the core. Now a setting without a
   valid choice in the file goes back to its default, and all other settings are kept.
