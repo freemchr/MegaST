@@ -32,20 +32,21 @@
 //  happen in Falcon time: the position goes back, the debt grows, and the
 //  processor makes them up at 32 MHz).
 //
-//  MEGA65: `sync` (one clock pulse, a 68030 access to the DSP host port) forgives the debt
-//  (counted in `forgiven`): while the processor catches up at 32 MHz the code between two
-//  host port accesses ran in half its Falcon time, and the DSP, which runs in real time,
-//  missed words that the 68030 writes without handshake (ATRIS: the bITmASTER DSP
-//  Protracker sends 2-3 words in a row; the third overwrote the second when the DSP was in
-//  its SSI interrupt, and both sides waited for each other for good).  With no debt at a
-//  host port access the next one comes no earlier than on the Falcon.
+//  MEGA65: `sync` (one clock pulse, a 68030 access to the DSP host port)
+//  opens a window of SYNC_CLOCKS system clocks in which the processor and idle clocks come
+//  no faster than the Falcon rate; each access restarts it.  While the processor caught up
+//  at 32 MHz the code between two host port accesses ran in half its Falcon time, and the
+//  DSP, which runs in real time, missed words that the 68030 writes without handshake
+//  (ATRIS: the bITmASTER DSP Protracker sends 2-3 words in a row; the third overwrote the
+//  second when the DSP was in its SSI interrupt, and both sides waited for each other for
+//  good).  The debt is kept: the processor catches up after the window.
 //
 //  tpos counts the processor clocks (and idle clocks), mod 20: Hatari's
 //  4-clock ST-RAM slot and 10-clock E clock are positions in this count
 //  (custom.c:329, m68000.c:808-824).
 //============================================================================
 
-module falcon_cpuclk #(parameter DEBT_MAX = 4095)
+module falcon_cpuclk #(parameter DEBT_MAX = 4095, parameter SYNC_CLOCKS = 512)
 (
 	input             clk,
 	input             reset,
@@ -55,7 +56,7 @@ module falcon_cpuclk #(parameter DEBT_MAX = 4095)
 	input       [3:0] credit,      // processor clocks to give back (one clock pulse)
 	input             idle,        // falcon_cpubus: an idle clock instead of a processor clock
 	input       [7:0] back,        // falcon_cpubus: processor clocks to give back (one clock pulse, < 32)
-	input             sync,        // MEGA65: forgive the debt (one clock pulse, see above)
+	input             sync,        // MEGA65: Falcon rate for SYNC_CLOCKS clocks (one clock pulse, see above)
 
 	output            cpu_ce,
 	output            idle_tick,   // an idle clock passed
@@ -71,7 +72,11 @@ module falcon_cpuclk #(parameter DEBT_MAX = 4095)
 
 wire [2:0] period = cpu_16mhz ? 3'd2 : 3'd4;
 
-wire   due    = debt >= {13'd0, period};     // one processor clock behind
+// MEGA65: in the sync window a tick needs `period` clocks since the last one
+reg  [9:0] sync_win = 10'd0;
+reg  [2:0] since = 3'd7;                      // clocks since the last tick (saturates)
+wire   paced  = sync_win == 10'd0 || since >= period - 3'd1;
+wire   due    = debt >= {13'd0, period} && paced;   // one processor clock behind
 assign cpu_ce    = turbo || (due && !hold && !idle);
 assign idle_tick = !turbo && due && idle;
 wire   tick      = cpu_ce || idle_tick;
@@ -89,10 +94,7 @@ wire  [4:0] tpos_nxt = tpos_m[4:0];   // tpos_m < 20
 wire        unused_cpuclk = tpos_m[5] | (|back[7:5]);
 /* verilator lint_on UNUSEDSIGNAL */
 wire        over     = debt_nxt > DEBT_MAX;
-// MEGA65: sync keeps less than one processor clock, so the processor goes on at the Falcon rate
-wire [15:0] debt_cap = (sync && debt_nxt >= {15'd0, period}) ? {13'd0, period} - 16'd1 :
-                       over ? DEBT_MAX[15:0] : debt_nxt[15:0];
-wire [17:0] sync_by  = debt_nxt - {15'd0, period} + 18'd1;
+wire [15:0] debt_cap = over ? DEBT_MAX[15:0] : debt_nxt[15:0];
 wire [17:0] over_by  = debt_nxt - DEBT_MAX[17:0];
 
 // (the pacing runs through reset: the processor takes its reset on clocks
@@ -106,12 +108,17 @@ always @(posedge clk) begin
 	if (turbo) debt <= 16'd0;
 	else       debt <= debt_cap;
 
+	// MEGA65: sync window
+	if (sync)                   sync_win <= SYNC_CLOCKS[9:0];
+	else if (sync_win != 10'd0) sync_win <= sync_win - 10'd1;
+	if (tick)                   since <= 3'd0;
+	else if (since != 3'd7)     since <= since + 3'd1;
+
 	if (reset) begin
 		debt_peak <= 16'd0; forgiven <= 32'd0; held <= 32'd0; idled <= 32'd0;
 	end else if (!turbo) begin
 		if (idle_tick) idled <= idled + 32'd1;
-		if (sync && debt_nxt >= {15'd0, period}) forgiven <= forgiven + {14'd0, sync_by};   // MEGA65
-		else if (over) forgiven <= forgiven + {14'd0, over_by};
+		if (over) forgiven <= forgiven + {14'd0, over_by};
 		if (debt_cap > debt_peak) debt_peak <= debt_cap;
 		if (hold && !idle && due) held <= held + 32'd1;
 	end

@@ -201,11 +201,15 @@ with `MEGA65` comments:
   (which counts the reset only on `cpu_ce` clocks) never took the reset while the devices did: the
   program ran on with reset video registers (garbage on the screen). Found in simulation (20 of 50
   resets missed the CPU, 0 with the fix). Generic, a candidate for upstream.
-* `rtl/falcon/falcon_cpuclk.sv`, `falcon_system.sv`: a 68030 access to the DSP host port forgives the
-  processor's debt (`sync`). While the processor caught up at 32 MHz, the code between two host port
-  accesses ran in half its Falcon time, and the DSP (real time) lost words the 68030 wrote without
-  handshake: ATRIS (bITmASTER DSP Protracker) froze with the DSP and the 68030 waiting for each other
-  (found with the JTAG probe below on an R6). Generic, a candidate for upstream.
+* `rtl/falcon/falcon_cpuclk.sv`, `falcon_system.sv`: after a 68030 access to the DSP host port the
+  processor runs at the Falcon rate for 512 clocks (`sync`, restarted by every access; the debt is
+  kept and caught up afterwards). While the processor caught up at 32 MHz, the code between two host
+  port accesses ran in half its Falcon time, and the DSP (real time) lost words the 68030 wrote
+  without handshake: ATRIS (bITmASTER DSP Protracker) froze with the DSP and the 68030 waiting for
+  each other (found with the JTAG probe below on an R6). Generic, a candidate for upstream.
+* `rtl/falcon/falcon_system.sv`: `falcon_scsi` with `CD_ALWAYS = 0`. The core has no SCSI images and
+  no ARM to answer the target's window reads, so the always present CD-ROM (ID 2) stayed busy on its
+  first command and TOS waited for its timeout.
 * `rtl/falcon/falcon_system.sv`, `dsp/falcon_dsp.sv`, `dsp/dsp56k_core.sv`, `dsp/dsp_periph.sv`: a
   `dbg` output for the JTAG probe (`tools/probe5.tcl`): the last 68030 program space bus address and
   device access, DSP PC, R6, R7, LC, SSISR, host ISR/HSR and a count of the DSP's SSI TX writes.

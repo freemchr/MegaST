@@ -708,7 +708,10 @@ falcon_fdc #(.CLK_HZ(CLK_HZ), .EXT_SCSI(1)) fdc
 );
 
 // ---- SCSI: NCR 5380 behind the DMA chip ($FF8604 with DMA mode bit 3) ----
-falcon_scsi #(.CLK_HZ(CLK_HZ)) scsi
+// MEGA65: no CD-ROM without an image (CD_ALWAYS = 0): the core has no SCSI images and no ARM to
+// answer the target's window reads (sd_ack of slots 4-6 stays 0), so the always present CD-ROM
+// stayed busy on its first command and TOS waited for its timeout (about 1 s per command)
+falcon_scsi #(.CLK_HZ(CLK_HZ), .CD_ALWAYS(0)) scsi
 (
 	.clk(clk), .reset(dev_reset),
 	.acc(hdc_acc), .we(hdc_we), .rs(hdc_rs), .wdata(hdc_wdata), .rdata(hdc_rdata),
