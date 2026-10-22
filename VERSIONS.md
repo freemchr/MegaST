@@ -1,4 +1,4 @@
-Version 1.1.4-test2 - October 22, 2026 (test build, R6)
+Version 1.1.4-test3 - October 22, 2026 (test build, R6)
 =======================================================
 
 * **Bombs after a reset** (tester report: about 5 out of 10 resets, mostly STEroids, only a power
@@ -9,6 +9,10 @@ Version 1.1.4-test2 - October 22, 2026 (test build, R6)
   fixed in simulation (TOS 2.06, STEroids, reset during the memory test).
 * **A cartridge could not be removed** (tester report): Space on the "Cartridge:" line now removes
   the cartridge, and the ST restarts without it.
+
+* **"config.vhd: No selected menu group item" when opening the menu**: a settings file that does not
+  match the menu (written by another build, or damaged) stopped the core. Now a setting without a
+  valid choice in the file goes back to its default, and all other settings are kept.
 
 The settings file stays the same: the 104 byte `/atarist/stcfg` of 1.1 is still valid.
 
