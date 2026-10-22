@@ -26,6 +26,9 @@ RP_SYSTEM_START INCRB
                 ; The QNICE CSR is in a sophisticated state when we arrive
                 ; here, and the core is in RESET state.
                 ; (See also CSR_DEFAULT in M2M/vhdl/QNICE/qnice.vhd)
+                ; MegaST: R7 was never set here, so the writes below went to
+                ; a random address
+                MOVE    M2M$CSR, R7
 
                 ; handle keyboard and joystick settings
                 MOVE    M2M$CFG_RP_KB_RST, R1
@@ -52,9 +55,11 @@ _RP_SS_1_LOOP   CMP     R1, R2                  ; done?
                 ADD     1, R2
                 RBRA    _RP_SS_1_LOOP, 1
 
-_RP_SS_2        AND     M2M$CSR_UN_RESET, @R7   ; delete reset state
-
-                RSUB    ASCAL_INIT, 1           ; handle ascal configuration
+                ; MegaST: the core stays in reset until START_CONNECT (shell.asm)
+                ; releases it, as it always did with the random R7: the virtual
+                ; drives are only served from the main loop on, so an ST
+                ; started behind the welcome screen would miss its floppies
+_RP_SS_2        RSUB    ASCAL_INIT, 1           ; handle ascal configuration
                 DECRB
                 RET
 
