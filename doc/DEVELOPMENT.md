@@ -100,6 +100,9 @@ simulation):
 * `CORE/sim/mntmem/run.sh`: remembering the mounted images (`M2M/rom/mntmem.asm`) in the QNICE
   emulator: path tracking of the file browser, saving to and restoring from `/atarist/stmount` on a
   FAT32 image, with stubs for the rest of the shell
+* `CORE/sim/rosmfix/run.sh [stcfg ...]`: the check of the settings loaded from `/atarist/stcfg`
+  (`M2M/rom/rosmfix.asm`) in the QNICE emulator: the menu of `config.vhd` with valid settings and with
+  files where a group of options has no or several items selected (that group gets its defaults)
 * `CORE/sim/acsi_write/run.sh <emutos tos.img> [delay]`: hard disk writes in the Verilator
   simulation (run `build.sh` first). A floppy boot sector writes 64 KB with one `Rwabs` call, and
   `check.py` verifies every sector of the image. A delay (641666 = 20 ms per sector) makes the

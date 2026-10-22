@@ -83,6 +83,7 @@ Simulate first. Every hardware round trip costs the maintainer time.
 * `CORE/sim/real_floppy/run_wf1772.sh`: WF1772 floppy controller, original vs. clock enable version (4 min).
 * `CORE/sim/fastseek/run.sh`: firmware fast seek in the QNICE emulator.
 * `CORE/sim/mntmem/run.sh`: remembering the mounted images (`/atarist/stmount`) in the QNICE emulator.
+* `CORE/sim/rosmfix/run.sh [stcfg]`: the check of a loaded settings file (`/atarist/stcfg`) against the menu, QNICE emulator.
 * `CORE/sim/acsi_write/run.sh <emutos tos.img> [delay]`: hard disk writes (64 KB, every sector checked).
 * After a Vivado build check: timing met (WNS/WHS >= 0), no new critical warnings, no block RAM
   demoted to LUTRAM (Synth 8-5835).

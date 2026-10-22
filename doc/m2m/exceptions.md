@@ -121,6 +121,13 @@ The framework does not remember mounted images (issue #13). Changes:
 * `M2M/rom/shell.asm`: `HANDLE_MOUNTING` calls `MNT_REMEMBER` after a successful load, `MNT_FORGET` when a
   drive is unmounted and `MNT_SAVE` on exit. The code that puts the file name into the menu
   (`OPTM_HEAP`) moved to `MNT_OSM_NAME` in `mntmem.asm`, so that the restore can use it, too.
+* `M2M/rom/rosmfix.asm` (new), `M2M/rom/options.asm` (`HELP_MENU_INIT`), `M2M/rom/shell.asm`
+  (include), `M2M/rom/strings.asm` (`LOG_STR_CFG_GRP`): after the settings were loaded from `CFG_FILE`,
+  `ROSM_FIXGRP` checks every group of options (same group id, not single select, not submenu): if not
+  exactly one item is selected, the group gets its `OPTM_G_STDSEL` defaults. A settings file of another
+  menu with the same size (a Falcon test build had written `stcfg` with its fifth Machine item) or a
+  damaged one made `OPTM_CB_SHOW` stop the firmware with "No selected menu group item" when the menu was
+  opened. Test: `CORE/sim/rosmfix/run.sh` (QNICE emulator). Generic, a candidate for upstream.
 * `M2M/rom/shell.asm`: in CRT/ROM mode `HANDLE_MOUNTING` first calls `MNT_CRT_EJECT`
   (`CORE/m2m-rom/m2m-rom.asm`): Space on the line of a loaded cartridge removes it (status "loading",
   then "idle" in the device, so the ST restarts without it) and forgets it, instead of opening the browser.
