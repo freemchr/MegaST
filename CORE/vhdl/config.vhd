@@ -190,12 +190,15 @@ constant SEL_MNT_FILE      : std_logic_vector(15 downto 0) := x"0102";  -- MegaS
 -- START YOUR CONFIGURATION BELOW THIS LINE
 
 constant DIR_START         : string := "/atarist";
-constant CFG_FILE          : string := "/atarist/stcfg";
+-- MegaST: the Falcon test builds have a menu of the same size as the ST builds but other items (Machine:
+-- Falcon030), so they keep their own settings and remembered images (fccfg, fcmount): switching between ST
+-- and Falcon test builds must not load the other one's files. Revisit when the Falcon goes into a release.
+constant CFG_FILE          : string := "/atarist/fccfg";
 
 -- MegaST: remember the mounted disk images and the manually loaded ROMs (TOS, cartridge) and load them
 -- again at the next start, if this file exists with exactly (C_VDNUM + C_CRTROMS_MAN_NUM) * 256 bytes
 -- (see M2M/rom/mntmem.asm). An empty string switches the feature off.
-constant MNT_FILE          : string := "/atarist/stmount";
+constant MNT_FILE          : string := "/atarist/fcmount";
 
 --------------------------------------------------------------------------------------------------------------------
 -- General configuration settings: Reset, Pause, OSD behavior, Ascal, etc. (Selector 0x0110)
