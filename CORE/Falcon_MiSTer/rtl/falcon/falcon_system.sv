@@ -160,11 +160,13 @@ falcon_pipescan pipescan
 wire  [4:0] cpu_tpos;
 wire  [3:0] cpu_credit;
 wire [15:0] cpu_debt;
+wire        cpu_dsp_sync;                       // MEGA65: a 68030 access to the DSP host port
 falcon_cpuclk cpuclk
 (
 	.clk(clk), .reset(reset),
 	.turbo(!cpu_fmode), .cpu_16mhz(cpu_16mhz),
 	.hold(cpu_hold), .credit(cpu_credit), .idle(cpu_idle), .back(cpu_back),
+	.sync(cpu_dsp_sync),                            // MEGA65: see falcon_cpuclk.sv
 	.cpu_ce(cpu_ce), .idle_tick(cpu_idle_tick), .tpos(cpu_tpos),
 	.debt(cpu_debt), .debt_peak(), .forgiven(), .held(), .idled()
 );
@@ -483,6 +485,7 @@ wire sel_nvram   = (da[23:2]  == 22'h3FE258);                  // FF8960-FF8963
 wire sel_blit    = (da[23:6]  == 18'h3FE28);                   // FF8A00-FF8A3F
 wire sel_scc     = (da[23:3]  == 21'h1FF190);                  // FF8C80-FF8C87
 wire sel_dsp     = (da[23:3]  == 21'h1FF440);                  // FFA200-FFA207
+assign cpu_dsp_sync = c_dev_stb && !bd_cs && sel_dsp;           // MEGA65: falcon_cpuclk.sv
 wire sel_mfp     = (da[23:6]  == 18'h3FFE8) && (da[5:0] < 6'h30); // FFFA00-FFFA2F
 wire sel_acia    = (da[23:3]  == 21'h1FFF80);                  // FFFC00-FFFC07
 wire sel_tstat   = tstat_en && (da[23:5] == 19'h7FF80);        // FFF000-FFF01F, OSD option (bus error otherwise)

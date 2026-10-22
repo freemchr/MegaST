@@ -32,6 +32,14 @@
 //  happen in Falcon time: the position goes back, the debt grows, and the
 //  processor makes them up at 32 MHz).
 //
+//  MEGA65: `sync` (one clock pulse, a 68030 access to the DSP host port) forgives the debt
+//  (counted in `forgiven`): while the processor catches up at 32 MHz the code between two
+//  host port accesses ran in half its Falcon time, and the DSP, which runs in real time,
+//  missed words that the 68030 writes without handshake (ATRIS: the bITmASTER DSP
+//  Protracker sends 2-3 words in a row; the third overwrote the second when the DSP was in
+//  its SSI interrupt, and both sides waited for each other for good).  With no debt at a
+//  host port access the next one comes no earlier than on the Falcon.
+//
 //  tpos counts the processor clocks (and idle clocks), mod 20: Hatari's
 //  4-clock ST-RAM slot and 10-clock E clock are positions in this count
 //  (custom.c:329, m68000.c:808-824).
@@ -47,6 +55,7 @@ module falcon_cpuclk #(parameter DEBT_MAX = 4095)
 	input       [3:0] credit,      // processor clocks to give back (one clock pulse)
 	input             idle,        // falcon_cpubus: an idle clock instead of a processor clock
 	input       [7:0] back,        // falcon_cpubus: processor clocks to give back (one clock pulse, < 32)
+	input             sync,        // MEGA65: forgive the debt (one clock pulse, see above)
 
 	output            cpu_ce,
 	output            idle_tick,   // an idle clock passed
@@ -80,7 +89,10 @@ wire  [4:0] tpos_nxt = tpos_m[4:0];   // tpos_m < 20
 wire        unused_cpuclk = tpos_m[5] | (|back[7:5]);
 /* verilator lint_on UNUSEDSIGNAL */
 wire        over     = debt_nxt > DEBT_MAX;
-wire [15:0] debt_cap = over ? DEBT_MAX[15:0] : debt_nxt[15:0];
+// MEGA65: sync keeps less than one processor clock, so the processor goes on at the Falcon rate
+wire [15:0] debt_cap = (sync && debt_nxt >= {15'd0, period}) ? {13'd0, period} - 16'd1 :
+                       over ? DEBT_MAX[15:0] : debt_nxt[15:0];
+wire [17:0] sync_by  = debt_nxt - {15'd0, period} + 18'd1;
 wire [17:0] over_by  = debt_nxt - DEBT_MAX[17:0];
 
 // (the pacing runs through reset: the processor takes its reset on clocks
@@ -98,7 +110,8 @@ always @(posedge clk) begin
 		debt_peak <= 16'd0; forgiven <= 32'd0; held <= 32'd0; idled <= 32'd0;
 	end else if (!turbo) begin
 		if (idle_tick) idled <= idled + 32'd1;
-		if (over) forgiven <= forgiven + {14'd0, over_by};
+		if (sync && debt_nxt >= {15'd0, period}) forgiven <= forgiven + {14'd0, sync_by};   // MEGA65
+		else if (over) forgiven <= forgiven + {14'd0, over_by};
 		if (debt_cap > debt_peak) debt_peak <= debt_cap;
 		if (hold && !idle && due) held <= held + 32'd1;
 	end
