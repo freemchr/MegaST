@@ -367,8 +367,8 @@ constant OPTM_ITEMS        : string :=
    " STEroids (turbo)\n"          &   -- 15
    " Falcon030 (R4-R6, test)\n"   &   -- 16
    " Back to main menu\n"         &   -- 17
-   " Memory: %s\n"                &   -- 18
-   " Memory\n"                    &   -- 19
+   " Memory (ST only): %s\n"      &   -- 18
+   " Memory (ST only)\n"          &   -- 19
    "\n"                           &   -- 20
    " 512 KB\n"                    &   -- 21
    " 1 MB\n"                      &   -- 22
