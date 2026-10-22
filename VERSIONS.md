@@ -1,4 +1,4 @@
-Version 1.1.4-test1 - October 21, 2026 (test build, R6)
+Version 1.1.4-test2 - October 22, 2026 (test build, R6)
 =======================================================
 
 * **Bombs after a reset** (tester report: about 5 out of 10 resets, mostly STEroids, only a power
@@ -7,9 +7,6 @@ Version 1.1.4-test1 - October 21, 2026 (test build, R6)
   TOS in memory was overwritten (TOS 2.06 reported "BAD ROM CRC", then bombs). The TOS stayed
   damaged until it was loaded again at power on. TOS reads can no longer write. Reproduced and
   fixed in simulation (TOS 2.06, STEroids, reset during the memory test).
-* **Coloured stripes behind the welcome screen** (tester report): the ST was meant to start
-  behind the welcome screen, but it stayed in reset until the screen was closed, so the HDMI
-  output showed whatever was in the video memory. The ST now starts at once.
 * **A cartridge could not be removed** (tester report): Space on the "Cartridge:" line now removes
   the cartridge, and the ST restarts without it.
 
