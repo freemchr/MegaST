@@ -271,11 +271,43 @@ reg [7:0] vid_r, vid_g, vid_b;
 reg       vid_hs, vid_vs, vid_hbl, vid_vbl;
 reg       vid_ce16;
 reg       vid_viking;
+reg       vid_nosync;
+
+// MEGA65: while the ST sends no hsync (held in reset behind the welcome screen, TOS
+// loading), put out a black 50 Hz picture with its own timing: without syncs the HDMI
+// scaler keeps showing its frame buffer, which is random after power-on (coloured stripes).
+// 1 ms without hsync (about 15 lines) switches to it, the next hsync of the ST back.
+reg [14:0] nosync_cnt = 15'd0;
+reg        nosync = 1'b1;
+reg        src_hs_l;
+wire       src_hs = vid_viking ? viking_s_hs : ~hsync_n_l;
+reg [10:0] bl_h = 11'd0;       // 2048 clk_32 = 64 us per line
+reg  [8:0] bl_v = 9'd0;        // 313 lines
+always @(posedge clk_32) begin
+	src_hs_l <= src_hs;
+	if (src_hs & ~src_hs_l) begin
+		nosync_cnt <= 15'd0;
+		nosync     <= 1'b0;
+	end else if (~&nosync_cnt) nosync_cnt <= nosync_cnt + 1'd1;
+	else nosync <= 1'b1;
+	bl_h <= bl_h + 1'd1;
+	if (&bl_h) bl_v <= (bl_v == 9'd312) ? 9'd0 : bl_v + 1'd1;
+end
+
 always @(posedge clk_32) begin
 	vid_ce16 <= ~vid_ce16;
 	// switch at the end of a frame
 	if (viking_active ? viking_s_vs : ~vsync_n_l) vid_viking <= viking_active;
-	if (vid_viking) begin
+	vid_nosync <= nosync;
+	if (nosync) begin
+		vid_r    <= 8'd0;
+		vid_g    <= 8'd0;
+		vid_b    <= 8'd0;
+		vid_hs   <= bl_h < 11'd150;
+		vid_vs   <= bl_v < 9'd3;
+		vid_hbl  <= bl_h < 11'd384 || bl_h >= 11'd1920;
+		vid_vbl  <= bl_v < 9'd34 || bl_v >= 9'd304;
+	end else if (vid_viking) begin
 		vid_r    <= viking_grey;
 		vid_g    <= viking_grey;
 		vid_b    <= viking_grey;
@@ -301,8 +333,8 @@ assign video_hs     = vid_hs;
 assign video_vs     = vid_vs;
 assign video_hblank = vid_hbl;
 assign video_vblank = vid_vbl;
-assign video_31khz  = mode[1] | vid_viking;
-assign video_ce     = (mode[1] | vid_viking) ? 1'b1 : vid_ce16;
+assign video_31khz  = !vid_nosync & (mode[1] | vid_viking);
+assign video_ce     = (!vid_nosync & (mode[1] | vid_viking)) ? 1'b1 : vid_ce16;
 
 /* ------------------------------------------------------------------------------ */
 

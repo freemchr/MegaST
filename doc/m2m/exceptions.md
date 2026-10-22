@@ -152,6 +152,15 @@ Generic, a candidate for upstream.
 `VD_DRV_READ` returns the dirty flag in `R8`, so with more than one virtual drive the loop never ended.
 The id is now kept in `R1`. This is a framework bug (candidate for upstream).
 
+### Bug fix: reset handling at the start of the firmware
+
+`M2M/rom/gencfg.asm` (`RP_SYSTEM_START`): `R7` was used as the pointer to `M2M$CSR` without being set,
+so the keyboard/joystick bits and the release of the reset went to a random address. `R7` is now set.
+The release itself is gone: the core stays in reset until `START_CONNECT` (`shell.asm`) releases it after
+the welcome screen, as it did in practice before. The virtual drives are only served from the main loop
+on, so an ST started behind the welcome screen would miss its floppies. Framework bug (candidate for
+upstream; there the missing release would be a behaviour change).
+
 ### HDMI: scaler with downscaling
 
 `M2M/vhdl/av_pipeline/digital_pipeline.vhd`: `ascal` is built with `DOWNSCALE => true` (M2M: `false`, "we use

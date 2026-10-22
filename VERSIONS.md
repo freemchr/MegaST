@@ -1,5 +1,5 @@
-Version 1.1.4-test2 - October 22, 2026 (test build, R6)
-=======================================================
+Version 1.1.4 - October 22, 2026
+================================
 
 * **Bombs after a reset** (tester report: about 5 out of 10 resets, mostly STEroids, only a power
   cycle helped): a reset could hit the ST while it was reading TOS. During a reset the memory
@@ -9,6 +9,14 @@ Version 1.1.4-test2 - October 22, 2026 (test build, R6)
   fixed in simulation (TOS 2.06, STEroids, reset during the memory test).
 * **A cartridge could not be removed** (tester report): Space on the "Cartridge:" line now removes
   the cartridge, and the ST restarts without it.
+* **"config.vhd: No selected menu group item" when opening the menu**: a settings file that does not
+  match the menu (written by another build, or damaged) stopped the core. Now a setting without a
+  valid choice in the file goes back to its default, and all other settings are kept.
+* **Coloured stripes behind the welcome screen** (tester report): the ST is held in reset until the
+  welcome screen is closed, and sends no picture then. The HDMI scaler kept showing its memory,
+  which holds random data after power on. While the ST sends no picture, the core now sends a
+  black one, so the welcome screen is shown on black (also on VGA).
+* The menu firmware wrote to a random memory address at start (framework bug); fixed.
 
 The settings file stays the same: the 104 byte `/atarist/stcfg` of 1.1 is still valid.
 
