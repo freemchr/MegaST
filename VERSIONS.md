@@ -1,4 +1,4 @@
-Version 1.1.4-test3 - October 22, 2026 (test build, R6)
+Version 1.1.4-test4 - October 22, 2026 (test build, R6)
 =======================================================
 
 * **Bombs after a reset** (tester report: about 5 out of 10 resets, mostly STEroids, only a power
@@ -12,6 +12,11 @@ Version 1.1.4-test3 - October 22, 2026 (test build, R6)
 * **"config.vhd: No selected menu group item" when opening the menu**: a settings file that does not
   match the menu (written by another build, or damaged) stopped the core. Now a setting without a
   valid choice in the file goes back to its default, and all other settings are kept.
+* **Coloured stripes behind the welcome screen** (tester report): the ST is held in reset until the
+  welcome screen is closed, and sends no picture then. The HDMI scaler kept showing its memory,
+  which holds random data after power on. While the ST sends no picture, the core now sends a
+  black one, so the welcome screen is shown on black (also on VGA).
+* The menu firmware wrote to a random memory address at start (framework bug); fixed.
 
 The settings file stays the same: the 104 byte `/atarist/stcfg` of 1.1 is still valid.
 
