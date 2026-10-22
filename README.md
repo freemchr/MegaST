@@ -16,14 +16,15 @@ runs games and GEM programs from floppy and hard disk images. Download the core 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
-**Latest version: [1.1.3](https://github.com/freemchr/MegaST/releases/tag/v1.1.3)**
-(October 21, 2026): the monochrome mode no longer flickers on HDMI at 720p (confirmed by a
-tester), and the STEroids picture is no longer cut off on the left. 1.1.2 removed the reset delay
-with the real floppy drive, 1.1.1 fixed the real floppy drive with EmuTOS (issue #24).
+**Latest version: [1.1.4](https://github.com/freemchr/MegaST/releases/tag/v1.1.4)**
+(October 22, 2026): no more bombs after a reset (mostly STEroids), a cartridge can be removed
+(Space on the "Cartridge:" line), and no more coloured stripes behind the welcome screen (all
+tester reports, tested on an R6). 1.1.3 fixed the monochrome flicker on HDMI at 720p.
 Since 1.1 (October 16, 2026) **the MEGA65's internal floppy drive** works as the ST's drive A:
 (read only, issue #15, see [Real floppy drive](#real-floppy-drive)). Original ST disks, including copy
 protected games with 10 sectors and 82 tracks, are read as on a real ST. Core files for the
-R3/R3A, R4, R5 and R6.
+R3/R3A and R6 (from 1.1.4 on there are no separate R4 and R5 files; if you have one of these
+boards, please open an issue).
 **Coming from 1.0 or older: copy the new `atarist/stcfg` (104 bytes) from the zip**, otherwise
 the menu settings are not saved (from 1.1 on, keep your file). **All versions up to 0.4.10 damage hard disk images when writing** (issue #11): if you
 wrote to an image with one of them, restore it from a backup.

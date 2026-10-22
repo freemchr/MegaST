@@ -1,5 +1,5 @@
-Version 1.1.4-test4 - October 22, 2026 (test build, R6)
-=======================================================
+Version 1.1.4 - October 22, 2026
+================================
 
 * **Bombs after a reset** (tester report: about 5 out of 10 resets, mostly STEroids, only a power
   cycle helped): a reset could hit the ST while it was reading TOS. During a reset the memory
