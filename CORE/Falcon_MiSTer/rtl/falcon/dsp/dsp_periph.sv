@@ -96,7 +96,9 @@ module dsp_periph (
     input      [15:0] ssi_rx_data,
     output     [15:0] ssi_tx_data,
     output reg        ssi_tx_valid,
-    output reg        ssi_hs_play_req
+    output reg        ssi_hs_play_req,
+    // MEGA65: JTAG probe {ISR, HSR, SSISR, DSP writes to TX (8 bit count)}
+    output     [31:0] dbg
 );
 
     // ------------------------------------------------------------------
@@ -542,4 +544,9 @@ module dsp_periph (
             pvalid <= 128'd0;
         end
     end
+    // MEGA65: JTAG probe
+    reg [7:0] dbg_txw = 8'd0;
+    always @(posedge clk) if (perx_wr && perx_addr == 6'h2f) dbg_txw <= dbg_txw + 8'd1;
+    assign dbg = {isr, hsr, ssisr, dbg_txw};
+
 endmodule

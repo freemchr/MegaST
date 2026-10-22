@@ -102,7 +102,9 @@ module falcon_dsp #(
     input             ssi_tx_en,
     input             ssi_rx_en,
     input             ssi_rx_frame,
-    output            ssi_hs_play_req
+    output            ssi_hs_play_req,
+    // MEGA65: JTAG probe {ISR, HSR, SSISR, TX write count, LC[15:0], R7, R6, PC}
+    output     [95:0] dbg
 );
 
     wire rst = reset | dsp_reset;
@@ -135,7 +137,7 @@ module falcon_dsp #(
         .msk_host_rcv(msk_host_rcv), .msk_host_trx(msk_host_trx), .msk_host_cmd(msk_host_cmd),
         .msk_ssi_rcv(msk_ssi_rcv), .msk_ssi_trx(msk_ssi_trx),
         .ipr(ipr), .hc_vector(hc_vector), .hc_ack(hc_ack),
-        .retire(retire));
+        .retire(retire), .dbg(dbg[63:0]));       // MEGA65: JTAG probe
 
     dsp_periph u_periph (
         .clk(clk), .rst(rst),
@@ -157,7 +159,8 @@ module falcon_dsp #(
         .ssi_slot_stb(ssi_slot_stb), .ssi_tx_en(ssi_tx_en), .ssi_frame(ssi_frame),
         .ssi_rx_en(ssi_rx_en), .ssi_rx_frame(ssi_rx_frame), .ssi_rx_data(ssi_rx_data),
         .ssi_tx_data(ssi_tx_data), .ssi_tx_valid(ssi_tx_valid),
-        .ssi_hs_play_req(ssi_hs_play_req));
+        .ssi_hs_play_req(ssi_hs_play_req),
+        .dbg(dbg[95:64]));                          // MEGA65: JTAG probe
 
     wire unused_ok = &{1'b0, iack, retire};
 endmodule

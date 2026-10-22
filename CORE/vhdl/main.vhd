@@ -164,7 +164,8 @@ entity main is
       dbg_kbd_bytes_o         : out std_logic_vector(31 downto 0);   -- last 4 bytes the CPU read from the keyboard ACIA
       dbg_fdc_idx_i           : in  std_logic_vector(7 downto 0);    -- real floppy controller: command log entry
       dbg_fdc_entry_o         : out std_logic_vector(55 downto 0);   -- (see wd1772_m65.v)
-      dbg_fdc_count_o         : out std_logic_vector(15 downto 0)    -- commands logged so far
+      dbg_fdc_count_o         : out std_logic_vector(15 downto 0);   -- commands logged so far
+      dbg_falcon_o            : out std_logic_vector(159 downto 0)   -- Falcon CPU/DSP state (falcon_system.sv)
    );
 end entity main;
 
@@ -344,6 +345,7 @@ component falcon_m65 is
       audio_r         : out   std_logic_vector(15 downto 0);
       fdd_led         : out   std_logic;
       hdd_led         : out   std_logic;
+      dbg             : out   std_logic_vector(159 downto 0);
       sdram_start     : in    std_logic;
       sd_cmd_o        : out   std_logic_vector(3 downto 0);
       sd_addr_o       : out   std_logic_vector(12 downto 0);
@@ -807,6 +809,7 @@ begin
             audio_r         => f_audio_r,
             fdd_led         => f_fdd_led,
             hdd_led         => f_hdd_led,
+            dbg             => dbg_falcon_o,
             sdram_start     => f_sdram_start,
             sd_cmd_o        => sdram_ext_cmd,
             sd_addr_o       => sdram_ext_a,
@@ -836,6 +839,7 @@ begin
       f_audio_r      <= (others => '0');
       f_fdd_led      <= '0';
       f_hdd_led      <= '0';
+      dbg_falcon_o   <= (others => '0');
       sdram_ext_cmd  <= (others => '1');
       sdram_ext_a    <= (others => '0');
       sdram_ext_ba   <= (others => '0');

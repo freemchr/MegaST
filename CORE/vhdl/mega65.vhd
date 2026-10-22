@@ -270,8 +270,9 @@ type jp_cnt_t is array (0 to 4) of unsigned(7 downto 0);
 signal jp_cnt       : jp_cnt_t := (others => (others => '0'));
 signal jp_old       : std_logic_vector(4 downto 0) := (others => '1');
 signal jp_free      : unsigned(23 downto 0) := (others => '0');
-signal jp_snap      : std_logic_vector(95 downto 0);
-signal jp_sr        : std_logic_vector(95 downto 0);
+signal jp_snap      : std_logic_vector(255 downto 0);
+signal jp_sr        : std_logic_vector(255 downto 0);
+signal jp_falcon    : std_logic_vector(159 downto 0);
 signal jp_capture, jp_sel, jp_shift, jp_tck, jp_tdi : std_logic;
 
 -- JTAG probe of the keyboard (USER3 data register, 176 bits, see below)
@@ -723,7 +724,8 @@ begin
          dbg_kbd_bytes_o      => kp_kbd_bytes,
          dbg_fdc_idx_i        => fp_log_idx,
          dbg_fdc_entry_o      => fp_log_entry,
-         dbg_fdc_count_o      => fp_log_count
+         dbg_fdc_count_o      => fp_log_count,
+         dbg_falcon_o         => jp_falcon
       ); -- i_main
 
    ---------------------------------------------------------------------------------------------
@@ -1124,6 +1126,10 @@ begin
    -- data register scan (LSB first) returns: 4..0: port 1 (fire, right, left, down, up; low active),
    -- 9..5: port 2, 12..10: menu Amiga mouse, 1351 mouse, swap ports, 23..16: pot 1 x, 31..24: pot 1 y,
    -- 71..32: edges of port 1 up, down, left, right, fire (8 bits each), 95..72: free running counter.
+   -- Bits 255..96 (scan 256 bits, tools/probe5.tcl): the Falcon (falcon_system.sv): 127..96 the last
+   -- program space address of the 68030, 152..128 the last device access (bit 152: write),
+   -- 175..160 DSP PC, 191..176 R6, 207..192 R7, 223..208 LC, 231..224 DSP writes to SSI TX,
+   -- 239..232 SSISR, 247..240 HSR, 255..248 ISR (host port).
    jp_sample : process (main_clk)
       variable j1 : std_logic_vector(4 downto 0);
    begin
@@ -1136,7 +1142,7 @@ begin
                jp_cnt(i) <= jp_cnt(i) + 1;
             end if;
          end loop;
-         jp_snap <= std_logic_vector(jp_free) &
+         jp_snap <= jp_falcon & std_logic_vector(jp_free) &
                     std_logic_vector(jp_cnt(4)) & std_logic_vector(jp_cnt(3)) & std_logic_vector(jp_cnt(2)) &
                     std_logic_vector(jp_cnt(1)) & std_logic_vector(jp_cnt(0)) &
                     main_pot1_y_i & main_pot1_x_i & "000" &
@@ -1171,7 +1177,7 @@ begin
          if jp_sel = '1' and jp_capture = '1' then
             jp_sr <= jp_snap;
          elsif jp_sel = '1' and jp_shift = '1' then
-            jp_sr <= jp_tdi & jp_sr(95 downto 1);
+            jp_sr <= jp_tdi & jp_sr(255 downto 1);
          end if;
       end if;
    end process jp_shiftreg;

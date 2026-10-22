@@ -93,7 +93,9 @@ module dsp56k_core (
     output            hc_ack,         // host command accepted: clear HCP, HC
 
     // instruction boundary (testbench / debug)
-    output reg        retire /*verilator public_flat_rw*/ // last clock of an instruction
+    output reg        retire /*verilator public_flat_rw*/, // last clock of an instruction
+    // MEGA65: JTAG probe {LC[15:0], R7, R6, PC}
+    output     [63:0] dbg
 );
 
 `include "dsp56k_tables.svh"
@@ -1634,4 +1636,7 @@ module dsp56k_core (
             endcase
         end
     end
+    // MEGA65: JTAG probe
+    assign dbg = {lc[15:0], rr[7], rr[6], pc};
+
 endmodule

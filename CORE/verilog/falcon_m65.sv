@@ -71,6 +71,7 @@ module falcon_m65 #(
 	output     [15:0] audio_r,
 	output            fdd_led,
 	output            hdd_led,
+	output    [159:0] dbg,            // JTAG probe (falcon_system.sv)
 
 	// SDRAM through the pin registers of sdram_m65.v
 	input             sdram_start,    // sdram_m65.v has initialized the SDRAM and gave the pins away
@@ -237,7 +238,7 @@ falcon_system #(.CLK_HZ(CLK_HZ)) system (
 	.r(r), .g(g), .b(b), .hsync(hsync), .vsync(vsync), .hblank(hblank), .vblank(vblank), .ce_pix(ce_pix),
 	.audio_l(audio_l), .audio_r(audio_r),
 	.midi_rx(1'b1), .midi_tx(), .ser_rx(1'b1), .ser_tx(),
-	.fdd_led(fdd_led), .hdd_led(hdd_led),
+	.fdd_led(fdd_led), .hdd_led(hdd_led), .dbg(dbg),
 	.DDRAM_BUSY(DDRAM_BUSY), .DDRAM_BURSTCNT(DDRAM_BURSTCNT), .DDRAM_ADDR(DDRAM_ADDR),
 	.DDRAM_DOUT(DDRAM_DOUT), .DDRAM_DOUT_READY(DDRAM_DOUT_READY), .DDRAM_RD(DDRAM_RD),
 	.DDRAM_DIN(DDRAM_DIN), .DDRAM_BE(DDRAM_BE), .DDRAM_WE(DDRAM_WE)

@@ -201,6 +201,10 @@ with `MEGA65` comments:
   (which counts the reset only on `cpu_ce` clocks) never took the reset while the devices did: the
   program ran on with reset video registers (garbage on the screen). Found in simulation (20 of 50
   resets missed the CPU, 0 with the fix). Generic, a candidate for upstream.
+* `rtl/falcon/falcon_system.sv`, `dsp/falcon_dsp.sv`, `dsp/dsp56k_core.sv`, `dsp/dsp_periph.sv`: a
+  `dbg` output for the JTAG probe (`tools/probe5.tcl`): the last 68030 program space bus address and
+  device access, DSP PC, R6, R7, LC, SSISR, host ISR/HSR and a count of the DSP's SSI TX writes.
+  Debugging only, no change in behaviour.
 
 QNICE
 -----

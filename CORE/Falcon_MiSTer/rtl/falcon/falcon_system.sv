@@ -83,6 +83,10 @@ module falcon_system #(parameter CLK_HZ = 32000000)
 	output            fdd_led,
 	output            hdd_led,
 
+	// MEGA65: JTAG probe {DSP (96 bits, falcon_dsp.sv), last device access {7'd0, we, address},
+	// last 68030 program space bus address}
+	output    [159:0] dbg,
+
 	// DDR3
 	input             DDRAM_BUSY,
 	output      [7:0] DDRAM_BURSTCNT,
@@ -777,6 +781,7 @@ falcon_crossbar #(.CLK_HZ(CLK_HZ)) crossbar
 	.ssi_tx_en(ssi_tx_en), .ssi_rx_en(ssi_rx_en), .ssi_rx_frame(ssi_rx_frame), .ssi_hs_play_req(ssi_hs_play_req), .dbg_underrun()
 );
 
+wire [95:0] dsp_dbg;                            // MEGA65: JTAG probe
 `ifndef FALCON_NO_DSP
 // ---- DSP56001 ----
 wire       dsp_hreq;
@@ -789,7 +794,8 @@ falcon_dsp dsp
 	.ssi_slot_stb(ssi_slot_stb), .ssi_frame(ssi_frame), .ssi_rx_data(ssi_rx_data),
 	.ssi_tx_data(ssi_tx_data), .ssi_tx_valid(ssi_tx_valid),
 	.ssi_tx_en(ssi_tx_en), .ssi_rx_en(ssi_rx_en), .ssi_rx_frame(ssi_rx_frame),
-	.ssi_hs_play_req(ssi_hs_play_req)
+	.ssi_hs_play_req(ssi_hs_play_req),
+	.dbg(dsp_dbg)                                   // MEGA65: JTAG probe
 );
 
 `else
@@ -798,7 +804,18 @@ wire       dsp_hreq = 0;
 wire [7:0] dsp_ivr = 8'h0F;
 assign dsp_dout = 16'hFFFF; assign dsp_ack = dev_stb & sel_dsp;
 assign ssi_tx_data = 0; assign ssi_tx_valid = 0; assign ssi_hs_play_req = 0;
+assign dsp_dbg = 96'd0;                             // MEGA65: JTAG probe
 `endif
+
+// MEGA65: JTAG probe: the last program space address the 68030 put on its bus (instruction
+// fetches that miss the caches) and the last device bus access
+reg  [31:0] dbg_pfetch;
+reg  [24:0] dbg_dev;
+always @(posedge clk) begin
+	if (!cpu_as_n && cpu_fc[1:0] == 2'b10) dbg_pfetch <= cpu_a;
+	if (dev_stb) dbg_dev <= {dev_we, dev_addr, 1'b0};
+end
+assign dbg = {dsp_dbg, 7'd0, dbg_dev, dbg_pfetch};
 
 //////////////////////////////////////////////////////////////////
 //  Interrupts (M68000_Update_intlev)
