@@ -9,12 +9,17 @@
 //     --hda FILE          hard disk on drive 2 (IDE master), served the same way
 //     --key IDX:T[:D]     ST matrix position IDX (col*8+row) pressed at T ms for D ms (default 100)
 //     --turbo             CPU at 32 MHz
+//     --lang N            NVRAM language and keyboard (0 US, 3 UK)
 //     --mouse T:DX:DY:B   at T ms a PS/2 mouse packet (B: bit 0 left, bit 1 right)
 //     --reset T:US        at T ms a reset pulse of US microseconds (the menu item "Reset Atari ST")
 //     --pc MS             print the CPU's PC every MS milliseconds (and the CPU's reset edges)
 //     --text ADDR         at the end print the NUL-terminated text at ADDR (hex; FPUTEST's simrom.s: 100000)
+//     --dump ADDR:LEN     at the end print LEN bytes at ADDR (hex) as hex
 //     --done ADDR         stop when the long at ADDR is $D0E0600D (simrom.s: FFFF0)
 //     --joyflicker T      from T ms on joystick 0 changes every ms (mouse pins seen as a joystick)
+//     --joy T:BITS[:D]    joystick port 1 (MiSTer bits, hex: 1 right 2 left 4 down 8 up 10 fire) at T ms for D ms
+//     --pad T:BITS[:D]    the same on the enhanced joystick port A (joypad; 80 Pause, 100 Option, ...)
+//     --wav FILE          the audio (audio_l/r) as a 16-bit stereo WAV file at 50 kHz
 //
 // TOS goes in like tos_loader.vhd sends it (68000 word address from $E00000, even byte in bits
 // 15..8, a toggle per word, acknowledged by the machine) and is compared with the image in the
@@ -49,6 +54,7 @@ static void tick() {
 }
 
 struct Key { int idx; double t, d; };
+struct Joy { double t; uint32_t bits; double d; bool pad; };
 
 int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
@@ -58,11 +64,14 @@ int main(int argc, char **argv) {
     double run_ms = 6000;
     int frame_every = 50, monitor = 2, ram = 14;
     bool turbo = false;
+    int lang = 0;
     std::vector<Key> keys;
+    std::vector<Joy> joys;
+    std::string wav_name;
     struct Mouse { double t; int dx, dy, b; };
     std::vector<Mouse> mice;
     double joyflicker = -1, pc_every = 0, pc_next = 0;
-    uint32_t text_addr = 0, done_addr = 0;
+    uint32_t text_addr = 0, done_addr = 0, dump_addr = 0, dump_len = 0;
     bool prev_cpu_rst = true;
     struct Rst { double t, us; };
     std::vector<Rst> resets;
@@ -77,12 +86,16 @@ int main(int argc, char **argv) {
         else if (a == "--fda") img_name[0] = next();
         else if (a == "--hda") img_name[2] = next();
         else if (a == "--turbo") turbo = true;
+        else if (a == "--lang") lang = atoi(next().c_str());
         else if (a == "--mouse") { Mouse m{0, 0, 0, 0}; sscanf(next().c_str(), "%lf:%d:%d:%d", &m.t, &m.dx, &m.dy, &m.b); mice.push_back(m); }
         else if (a == "--reset") { Rst r{0, 30}; sscanf(next().c_str(), "%lf:%lf", &r.t, &r.us); resets.push_back(r); }
         else if (a == "--text") text_addr = (uint32_t)strtoul(next().c_str(), nullptr, 16);
+        else if (a == "--dump") sscanf(next().c_str(), "%x:%x", &dump_addr, &dump_len);
         else if (a == "--done") done_addr = (uint32_t)strtoul(next().c_str(), nullptr, 16);
         else if (a == "--pc") pc_every = atof(next().c_str());
         else if (a == "--joyflicker") joyflicker = atof(next().c_str());
+        else if (a == "--joy" || a == "--pad") { Joy j{0, 0, 100, a == "--pad"}; sscanf(next().c_str(), "%lf:%x:%lf", &j.t, &j.bits, &j.d); joys.push_back(j); }
+        else if (a == "--wav") wav_name = next();
         else if (a == "--key") { Key k{0, 0, 100}; sscanf(next().c_str(), "%d:%lf:%lf", &k.idx, &k.t, &k.d); keys.push_back(k); }
     }
     std::vector<uint8_t> tos, img[4];
@@ -104,9 +117,9 @@ int main(int argc, char **argv) {
 
     top = new Vtb_top;
     svSetScope(svGetScopeFromName("TOP.tb_top"));
-    top->ram_mb = ram; top->monitor = monitor; top->cpu_turbo = turbo;
+    top->ram_mb = ram; top->monitor = monitor; top->cpu_turbo = turbo; top->tos_lang = lang;
     for (int i = 0; i < 4; i++) top->kbd_matrix_n[i] = 0xFFFFFFFF;
-    top->ps2_mouse = 0; top->joy0 = 0; top->img_mounted = 0; top->img_size = 0; top->sd_ack = 0;
+    top->ps2_mouse = 0; top->joy0 = 0; top->joy1 = 0; top->pad0 = 0; top->pad1 = 0; top->img_mounted = 0; top->img_size = 0; top->sd_ack = 0;
     top->sd_buff_wr = 0; top->sd_buff_addr = 0; top->sd_buff_dout = 0;
     top->dio_strobe = 0;
 
@@ -153,6 +166,10 @@ int main(int argc, char **argv) {
     int fx = 0, fy = 0, maxx = 0, frame_no = 0;
     bool prev_hb = true, prev_vb = true, prev_kbd_rd = false;
 
+    FILE *wav = nullptr;
+    uint64_t wav_next = 0, wav_samples = 0, wav_c0 = cyc;
+    if (!wav_name.empty()) { wav = fopen(wav_name.c_str(), "wb"); fseek(wav, 44, SEEK_SET); wav_next = cyc; }
+
     const uint64_t total = cyc + (uint64_t)(run_ms * 1e-3 * CLK_HZ);
     while (cyc < total && !Verilated::gotFinish()) {
         double now_ms = cyc / CLK_HZ * 1e3;
@@ -171,6 +188,17 @@ int main(int argc, char **argv) {
             top->ps2_mouse = ((~top->ps2_mouse >> 24 & 1) << 24) | ((m.dy & 0xFF) << 16) | ((m.dx & 0xFF) << 8) | st;
             printf("[%9.3f ms] mouse packet dx %d dy %d buttons %d\n", now_ms, m.dx, m.dy, m.b);
             m.t = -1;
+        }
+        {
+            uint32_t j1 = 0, p0 = 0;
+            for (auto &j : joys) if (now_ms >= j.t && now_ms < j.t + j.d) (j.pad ? p0 : j1) |= j.bits;
+            if (j1 != top->joy1 || p0 != top->pad0) printf("[%9.3f ms] joystick %X, joypad A %X\n", now_ms, j1, p0);
+            top->joy1 = j1; top->pad0 = p0;
+        }
+        if (wav && cyc >= wav_next) {
+            int16_t smp[2] = {(int16_t)top->audio_l, (int16_t)top->audio_r};
+            fwrite(smp, 2, 2, wav); wav_samples++;
+            wav_next = (uint64_t)((wav_samples + 1) * CLK_HZ / 50000.0) + wav_c0;
         }
         if (joyflicker >= 0 && now_ms >= joyflicker) top->joy0 = ((uint64_t)(now_ms) & 3) == 0 ? 1 : ((uint64_t)(now_ms) & 3) == 1 ? 2 : 0;
 
@@ -261,6 +289,16 @@ int main(int argc, char **argv) {
             prev_hb = hb; prev_vb = vb;
         }
     }
+    if (wav) {   // the header, now that the length is known
+        uint32_t n = wav_samples * 4, rate = 50000, brate = rate * 4, fmt = 16, n36 = n + 36;
+        uint16_t pcm = 1, ch = 2, align = 4, bits = 16;
+        fseek(wav, 0, SEEK_SET);
+        fwrite("RIFF", 1, 4, wav); fwrite(&n36, 4, 1, wav); fwrite("WAVEfmt ", 1, 8, wav); fwrite(&fmt, 4, 1, wav);
+        fwrite(&pcm, 2, 1, wav); fwrite(&ch, 2, 1, wav); fwrite(&rate, 4, 1, wav); fwrite(&brate, 4, 1, wav);
+        fwrite(&align, 2, 1, wav); fwrite(&bits, 2, 1, wav); fwrite("data", 1, 4, wav); fwrite(&n, 4, 1, wav);
+        fclose(wav);
+        printf("audio: %llu samples in %s\n", (unsigned long long)wav_samples, wav_name.c_str());
+    }
     printf("simulated %.0f ms; SDRAM errors: %s\n", cyc / CLK_HZ * 1e3, top->dbg_sdram_err ? "YES" : "none");
     for (int d = 0; d < 4; d++) if (!img[d].empty()) {
         printf("drive %d: %d sectors read, %d written\n", d, sectors_rd[d], sectors_wr[d]);
@@ -279,6 +317,8 @@ int main(int argc, char **argv) {
         }
         printf("\n");
     }
+    for (uint32_t i = 0; i < dump_len; i++)
+        printf("%s%02x%s", i % 16 == 0 ? (i ? "" : "dump:\n") : "", guest_peek8(dump_addr + i), i % 16 == 15 || i + 1 == dump_len ? "\n" : " ");
     // the cookie jar (_p_cookies at $5A0): which CPU and FPU TOS found
     {
         auto rd32 = [](uint32_t x) { return (uint32_t)guest_peek8(x) << 24 | guest_peek8(x + 1) << 16 | guest_peek8(x + 2) << 8 | guest_peek8(x + 3); };

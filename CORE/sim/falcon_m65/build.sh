@@ -10,7 +10,7 @@ V=../../verilog
 # FPU=1: with the 68882 (the bridge's service on the RISC-V, fpu_rv.v; image falcon_fpu/rv/fpu_rv.mem),
 # built into obj_fpu
 if [ -n "$FPU" ]; then
-	DEFS="+define+FALCON_FPU_LOCAL"; EXTRA="$V/fpu_rv.v ../../picorv32/picorv32.v"; MDIR=obj_fpu
+	DEFS="+define+FALCON_FPU_LOCAL"; EXTRA="$V/fpu_rv.v ../../picorv32/picorv32.v"; MDIR=${MDIR:-obj_fpu}
 	ln -sf ../../falcon_fpu/rv/fpu_rv.mem fpu_rv.mem
 else
 	DEFS="+define+FALCON_NO_FPU"; EXTRA=""; MDIR=${MDIR:-obj_dir}

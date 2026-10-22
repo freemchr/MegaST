@@ -32,11 +32,14 @@ module falcon_system #(parameter CLK_HZ = 32000000)
 	input      [24:0] ps2_mouse,
 	input      [31:0] joy0,
 	input      [31:0] joy1,
+	input      [31:0] pad0,         // MEGA65: the enhanced joystick ports (joypads) apart from the
+	input      [31:0] pad1,         // IKBD's joysticks (MiSTer: joy0, joy1)
 	input      [15:0] ana0,         // MiSTer left analog sticks (paddles)
 	input      [15:0] ana1,
 	input      [64:0] rtc,
 
 	// Persistent 50-byte NVRAM image, served by the MiSTer top level.
+	input       [7:0] nv_lang,      // MEGA65: language and keyboard of the default image (TOS_LANG_*, US = 0)
 	input             nv_init,
 	input       [5:0] nv_addr,
 	input       [7:0] nv_din,
@@ -567,7 +570,7 @@ falcon_combel combel
 	.clk(clk), .reset(dev_reset), .cold_reset(cold_reset),
 	.ram_mb(ram_mb), .monitor(monitor),
 	`DEVBUS(sel_combel), .bus_addr(dev_addr), .bus_dout(combel_dout), .bus_ack(combel_ack),
-	.joy0(joy0), .joy1(joy1), .ana0(ana0), .ana1(ana1),
+	.joy0(pad0), .joy1(pad1), .ana0(ana0), .ana1(ana1),   // MEGA65: pad0/pad1
 	.falcon_bus(falcon_bus), .cpu_16mhz(cpu_16mhz)
 );
 
@@ -649,7 +652,7 @@ falcon_nvram #(.CLK_HZ(CLK_HZ)) nvram
 	.clk(clk), .reset(dev_reset),
 	`DEVBUS(sel_nvram), .bus_addr(dev_addr[1:1]), .bus_dout(nvram_dout), .bus_ack(nvram_ack),
 	.rtc(rtc),
-	.cfg_vga(monitor == 2'b10), .cfg_lang(8'd0), .cfg_kbd(8'd0), .nv_init(nv_init),
+	.cfg_vga(monitor == 2'b10), .cfg_lang(nv_lang), .cfg_kbd(nv_lang),   // MEGA65: nv_lang .nv_init(nv_init),
 	.nv_addr(nv_addr), .nv_dout(nv_dout), .nv_din(nv_din), .nv_wr(nv_wr),
 	.nv_changed(nv_changed), .nv_ready(nv_ready),
 	.irq()

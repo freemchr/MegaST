@@ -59,6 +59,9 @@ entity main is
       st_kbd_print_i          : in  std_logic;              -- keyboard: symbols as printed on the MEGA65 keys
       st_kbd_uk_i             : in  std_logic;              -- ... for a UK TOS (else US)
       falcon_i                : in  std_logic;              -- the Falcon030 runs instead of the ST (R4-R6 only)
+      falcon_monitor_i        : in  std_logic_vector(1 downto 0);  -- Falcon monitor: 00 mono, 01 RGB, 10 VGA, 11 TV
+      falcon_turbo_i          : in  std_logic;              -- Falcon CPU at 32 MHz
+      falcon_4mb_i            : in  std_logic;              -- Falcon ST-RAM 4 MB instead of 14 MB
 
       -- MEGA65 real time clock (M2M format), used by the Mega ST RTC (rp5c15_m65.sv)
       rtc_i                   : in  std_logic_vector(64 downto 0);
@@ -313,6 +316,7 @@ component falcon_m65 is
       ram_mb          : in    std_logic_vector(3 downto 0);
       monitor         : in    std_logic_vector(1 downto 0);
       cpu_turbo       : in    std_logic;
+      tos_lang        : in    std_logic_vector(7 downto 0);
       dio_addr        : in    std_logic_vector(23 downto 1);
       dio_data        : in    std_logic_vector(15 downto 0);
       dio_strobe      : in    std_logic;
@@ -321,6 +325,8 @@ component falcon_m65 is
       ps2_mouse       : in    std_logic_vector(24 downto 0);
       joy0            : in    std_logic_vector(31 downto 0);
       joy1            : in    std_logic_vector(31 downto 0);
+      pad0            : in    std_logic_vector(31 downto 0);
+      pad1            : in    std_logic_vector(31 downto 0);
       rtc             : in    std_logic_vector(64 downto 0);
       img_mounted     : in    std_logic_vector(3 downto 0);
       img_readonly    : in    std_logic;
@@ -344,6 +350,10 @@ component falcon_m65 is
       audio_l         : out   std_logic_vector(15 downto 0);
       audio_r         : out   std_logic_vector(15 downto 0);
       fdd_led         : out   std_logic;
+      midi_rx         : in    std_logic;
+      midi_tx         : out   std_logic;
+      ser_rx          : in    std_logic;
+      ser_tx          : out   std_logic;
       hdd_led         : out   std_logic;
       dbg             : out   std_logic_vector(159 downto 0);
       sdram_start     : in    std_logic;
@@ -393,6 +403,14 @@ signal f_por          : std_logic;
 signal f_sdram_start  : std_logic;
 signal f_joy0         : std_logic_vector(31 downto 0);
 signal f_joy1         : std_logic_vector(31 downto 0);
+signal f_pad0         : std_logic_vector(31 downto 0);
+signal f_ram_mb       : std_logic_vector(3 downto 0);
+signal f_tos_lang     : std_logic_vector(7 downto 0);
+signal f_midi_txd     : std_logic := '1';
+signal f_uart_txd     : std_logic := '1';
+signal pm_midi_txd    : std_logic;
+signal pm_uart_txd    : std_logic;
+signal f_pad1         : std_logic_vector(31 downto 0);
 signal sdram_ext_cmd  : std_logic_vector(3 downto 0);
 signal sdram_ext_a    : std_logic_vector(12 downto 0);
 signal sdram_ext_ba   : std_logic_vector(1 downto 0);
@@ -585,7 +603,10 @@ begin
    par_busy  <= pmod_in_i(7) when st_pmod_i = '1' else '1';
    par_din   <= pmod_in_i(15 downto 8) when st_pmod_i = '1' else x"FF";
 
-   pmod_out_o <= par_dout & par_busy & par_strobe & midi_rxd & midi_txd & uart_rts & uart_rxd & uart_txd & uart_cts;
+   -- the Falcon's MIDI and serial port (MFP USART: RXD/TXD only) on the same pins
+   pm_midi_txd <= f_midi_txd when falcon = '1' else midi_txd;
+   pm_uart_txd <= f_uart_txd when falcon = '1' else uart_txd;
+   pmod_out_o <= par_dout & par_busy & par_strobe & midi_rxd & pm_midi_txd & uart_rts & uart_rxd & pm_uart_txd & uart_cts;
    pmod_oe_o  <= (15 downto 8 => par_dout_en and st_pmod_i) &
                  '0' & st_pmod_i & '0' & st_pmod_i &
                  st_pmod_i & '0' & st_pmod_i & '0';
@@ -763,6 +784,13 @@ begin
       -- mouse step (in its "both" mode), which kept the link busy and lost short clicks.
       f_joy0       <= (others => '0');
       f_joy1       <= (31 downto 5 => '0') & ste_bits(joy_stick);
+      f_ram_mb     <= "0100" when falcon_4mb_i = '1' else "1110";   -- ST-RAM 4 or 14 MB
+      -- NVRAM language and keyboard (EmuTOS and TOS 4 take them from there): UK with the menu item
+      -- "As printed, UK TOS", else US
+      f_tos_lang   <= x"03" when st_kbd_print_i = '1' and st_kbd_uk_i = '1' else x"00";
+      -- menu "STe joypads": the MEGA65 joysticks on the enhanced joystick ports, as on the STe
+      f_pad0       <= (31 downto 21 => '0') & ste_pad0 when st_ste_pads_i = '1' else (others => '0');
+      f_pad1       <= (31 downto 21 => '0') & ste_pad1 when st_ste_pads_i = '1' else (others => '0');
 
       i_falcon : falcon_m65
          generic map (
@@ -774,9 +802,10 @@ begin
             reset           => f_reset,
             cold_reset      => f_cold_reset,
             por             => f_por,
-            ram_mb          => "1110",          -- 14 MB ST-RAM
-            monitor         => "10",            -- VGA monitor (31 kHz)
-            cpu_turbo       => '0',
+            ram_mb          => f_ram_mb,
+            monitor         => falcon_monitor_i,
+            cpu_turbo       => falcon_turbo_i,
+            tos_lang        => f_tos_lang,
             dio_addr        => dio_addr_i,
             dio_data        => dio_data_i,
             dio_strobe      => f_dio_strobe,
@@ -785,6 +814,8 @@ begin
             ps2_mouse       => ps2_mouse,
             joy0            => f_joy0,
             joy1            => f_joy1,
+            pad0            => f_pad0,
+            pad1            => f_pad1,
             rtc             => rtc_i,
             img_mounted     => img_mounted_i,
             img_readonly    => img_readonly_i,
@@ -808,6 +839,10 @@ begin
             audio_l         => f_audio_l,
             audio_r         => f_audio_r,
             fdd_led         => f_fdd_led,
+            midi_rx         => midi_rxd,
+            midi_tx         => f_midi_txd,
+            ser_rx          => uart_rxd,
+            ser_tx          => f_uart_txd,
             hdd_led         => f_hdd_led,
             dbg             => dbg_falcon_o,
             sdram_start     => f_sdram_start,
@@ -863,7 +898,8 @@ begin
    video_hblank_o <= f_hblank       when falcon = '1' else st_hblank;
    video_vblank_o <= f_vblank       when falcon = '1' else st_vblank;
    video_ce_o     <= f_ce           when falcon = '1' else st_ce;
-   video_31khz_o  <= '1'            when falcon = '1' else st_31khz;   -- the Falcon runs a VGA monitor
+   -- the Falcon on an RGB or TV monitor sends 15 kHz (scandoubler on), VGA and mono 31/35 kHz
+   video_31khz_o  <= not falcon_monitor_i(0) when falcon = '1' else st_31khz;
 
    -- The OSM overlay (analog pipeline) always runs at 32 MHz: In the color modes the M2M
    -- scandoubler doubles the 16 MHz pixel rate, in the monochrome mode the pixel rate is 32 MHz.

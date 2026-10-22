@@ -31,6 +31,7 @@ module falcon_m65 #(
 	input       [3:0] ram_mb,         // ST-RAM in MB (4 or 14)
 	input       [1:0] monitor,        // 0 mono, 1 RGB, 2 VGA, 3 TV
 	input             cpu_turbo,      // 1: CPU at 32 MHz; 0: Falcon 16/8 MHz
+	input       [7:0] tos_lang,       // NVRAM language and keyboard (0 US, 3 UK, see falcon_nvram.sv)
 
 	// TOS loader (MegaST tos_loader.vhd; written while the machine is in reset)
 	input      [23:1] dio_addr,
@@ -43,6 +44,8 @@ module falcon_m65 #(
 	input      [24:0] ps2_mouse,      // MiSTer format
 	input      [31:0] joy0,           // MiSTer format: 0 right, 1 left, 2 down, 3 up, 4 fire
 	input      [31:0] joy1,
+	input      [31:0] pad0,           // enhanced joystick ports A and B (joypads), MiSTer format
+	input      [31:0] pad1,
 	input      [64:0] rtc,
 
 	// drives 0..3: fdc_bridge.vhd core side
@@ -70,6 +73,10 @@ module falcon_m65 #(
 	output     [15:0] audio_l,
 	output     [15:0] audio_r,
 	output            fdd_led,
+	input             midi_rx,        // MIDI and the serial port (MFP USART), idle 1
+	output            midi_tx,
+	input             ser_rx,
+	output            ser_tx,
 	output            hdd_led,
 	output    [159:0] dbg,            // JTAG probe (falcon_system.sv)
 
@@ -221,6 +228,19 @@ wire  [1:0] fpu_be;
 wire [15:0] fpu_wdata, fpu_rdata;
 `endif
 
+// NVRAM: the default image has the boot video mode of the monitor type (VGA or RGB/TV) and the
+// language and keyboard, so it is built again when they change in the menu (MiSTer: "Reset
+// NVRAM"). Not stored on the SD card.
+reg   [1:0] monitor_d = 2'b10;
+reg   [7:0] lang_d = 8'd0;
+reg         nv_init = 1'b0;
+
+always @(posedge clk_32) begin
+	monitor_d <= monitor;
+	lang_d    <= tos_lang;
+	nv_init   <= monitor != monitor_d || tos_lang != lang_d;
+end
+
 wire        DDRAM_BUSY, DDRAM_DOUT_READY, DDRAM_RD, DDRAM_WE;
 wire  [7:0] DDRAM_BURSTCNT, DDRAM_BE;
 wire [28:0] DDRAM_ADDR;
@@ -230,14 +250,14 @@ falcon_system #(.CLK_HZ(CLK_HZ)) system (
 	.clk(clk_32), .reset(reset), .cold_reset(cold_reset), .por(por),
 	.ram_mb(ram_mb), .ram_tos(1'b0), .monitor(monitor), .cpu_turbo(cpu_turbo), .tstat_en(1'b0),
 	.ld_wr(ld_wr), .ld_addr(ld_addr), .ld_data(ld_data), .ld_busy(ld_busy),
-	.ps2_key(ps2_key), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(joy1), .ana0(16'd0), .ana1(16'd0), .rtc(rtc),
-	.nv_init(1'b0), .nv_addr(6'd0), .nv_din(8'd0), .nv_wr(1'b0), .nv_dout(), .nv_changed(), .nv_ready(),
+	.ps2_key(ps2_key), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(joy1), .pad0(pad0), .pad1(pad1), .ana0(16'd0), .ana1(16'd0), .rtc(rtc),
+	.nv_lang(tos_lang), .nv_init(nv_init), .nv_addr(6'd0), .nv_din(8'd0), .nv_wr(1'b0), .nv_dout(), .nv_changed(), .nv_ready(),
 	.img_mounted({3'b000, img_mounted}), .img_readonly(img_readonly), .img_size({32'd0, img_size}),
 	.sd_lba(f_lba), .sd_rd(f_rd), .sd_wr(f_wr), .sd_blk_cnt(f_blk_cnt), .sd_ack({3'b000, sd_ack}),
 	.sd_buff_addr(f_buff_addr), .sd_buff_dout(f_buff_dout), .sd_buff_din(f_buff_din), .sd_buff_wr(f_buff_wr),
 	.r(r), .g(g), .b(b), .hsync(hsync), .vsync(vsync), .hblank(hblank), .vblank(vblank), .ce_pix(ce_pix),
 	.audio_l(audio_l), .audio_r(audio_r),
-	.midi_rx(1'b1), .midi_tx(), .ser_rx(1'b1), .ser_tx(),
+	.midi_rx(midi_rx), .midi_tx(midi_tx), .ser_rx(ser_rx), .ser_tx(ser_tx),
 	.fdd_led(fdd_led), .hdd_led(hdd_led), .dbg(dbg),
 	.DDRAM_BUSY(DDRAM_BUSY), .DDRAM_BURSTCNT(DDRAM_BURSTCNT), .DDRAM_ADDR(DDRAM_ADDR),
 	.DDRAM_DOUT(DDRAM_DOUT), .DDRAM_DOUT_READY(DDRAM_DOUT_READY), .DDRAM_RD(DDRAM_RD),

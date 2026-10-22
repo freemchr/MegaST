@@ -12,6 +12,7 @@ module tb_top (
 	input       [3:0] ram_mb,
 	input       [1:0] monitor,
 	input             cpu_turbo,
+	input       [7:0] tos_lang,
 
 	input      [23:1] dio_addr,
 	input      [15:0] dio_data,
@@ -21,6 +22,9 @@ module tb_top (
 	input     [119:0] kbd_matrix_n,
 	input      [24:0] ps2_mouse,
 	input      [31:0] joy0,
+	input      [31:0] joy1,
+	input      [31:0] pad0,
+	input      [31:0] pad1,
 
 	input       [3:0] img_mounted,
 	input      [31:0] img_size,
@@ -40,6 +44,7 @@ module tb_top (
 	output            vblank,
 	output            ce_pix,
 	output     [15:0] audio_l,
+	output     [15:0] audio_r,
 
 	output            dbg_kbd_rd,       // the CPU reads the IKBD ACIA's data register
 	output      [7:0] dbg_kbd_byte,
@@ -56,15 +61,16 @@ wire        e_doe, e_ready;
 
 falcon_m65 #(.CLK_HZ(32083333)) dut (
 	.clk_32(clk_32), .clk_96(clk_96), .reset(reset), .cold_reset(cold_reset), .por(por),
-	.ram_mb(ram_mb), .monitor(monitor), .cpu_turbo(cpu_turbo),
+	.ram_mb(ram_mb), .monitor(monitor), .cpu_turbo(cpu_turbo), .tos_lang(tos_lang),
 	.dio_addr(dio_addr), .dio_data(dio_data), .dio_strobe(dio_strobe), .dio_strobe_ack(dio_strobe_ack),
-	.kbd_matrix_n(kbd_matrix_n), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(32'd0),
+	.kbd_matrix_n(kbd_matrix_n), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(joy1), .pad0(pad0), .pad1(pad1),
 	.rtc({1'b0, 64'h0000_0042_6101_1200}),
 	.img_mounted(img_mounted), .img_readonly(1'b0), .img_size(img_size),
 	.sd_lba(sd_lba), .sd_rd(sd_rd), .sd_wr(sd_wr), .sd_ack(sd_ack),
 	.sd_buff_addr(sd_buff_addr), .sd_buff_dout(sd_buff_dout), .sd_buff_din(sd_buff_din), .sd_buff_wr(sd_buff_wr),
 	.r(r), .g(g), .b(b), .hsync(), .vsync(), .hblank(hblank), .vblank(vblank), .ce_pix(ce_pix),
-	.audio_l(audio_l), .audio_r(), .fdd_led(), .hdd_led(),
+	.audio_l(audio_l), .audio_r(audio_r), .fdd_led(), .hdd_led(),
+	.midi_rx(1'b1), .midi_tx(), .ser_rx(1'b1), .ser_tx(),
 	.sdram_start(e_ready), .sd_cmd_o(e_cmd), .sd_addr_o(e_addr), .sd_ba_o(e_ba), .sd_dqm_o(e_dqm),
 	.sd_dout_o(e_dout), .sd_doe_o(e_doe), .sd_din_i(e_din)
 );

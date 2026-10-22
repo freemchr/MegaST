@@ -75,7 +75,7 @@ type WHS_RECORD_ARRAY_TYPE is array (0 to WHS_RECORDS - 1) of WHS_RECORD_TYPE;
 -- window contains the amount of pages, so each zero-terminated string can be up to 4095 bytes = 4094 characters long.
 
 constant SCR_WELCOME : string :=
-   "Atari ST/STe for MEGA65 Version 1.1.4-falcon-test7\n" &
+   "Atari ST/STe for MEGA65 Version 1.1.4-falcon-test8\n" &
    "\n"                           &
    "MEGA65 port by Chris Freeman\n" &
    "Report bugs at:\n" &
@@ -98,7 +98,7 @@ constant SCR_WELCOME : string :=
    "  Press Space to continue.\n";
 
 constant HELP_1 : string :=
-   "\n Atari ST/STe for MEGA65 1.1.4-falcon-test7\n\n" &
+   "\n Atari ST/STe for MEGA65 1.1.4-falcon-test8\n\n" &
    " MEGA65 port by Chris Freeman\n" &
    " github.com/freemchr/MegaST/issues\n" &
    " MiSTer port of the MiSTery core\n" &
@@ -338,7 +338,7 @@ constant OPTM_S_SAVING     : string := "<Saving>";          -- the internal writ
 --             Do use a lower case \n. If you forget one of them or if you use upper case, you will run into undefined behavior.
 --          2. Start each line that contains an actual menu item (multi- or single-select) with a Space character,
 --             otherwise you will experience visual glitches.
-constant OPTM_SIZE         : natural := 104;  -- amount of items including empty lines:
+constant OPTM_SIZE         : natural := 117;  -- amount of items including empty lines:
                                              -- needs to be equal to the number of lines in OPTM_ITEMS and amount of items in OPTM_GROUPS
                                              -- IMPORTANT: If SAVE_SETTINGS is true and OPTM_SIZE changes: Make sure to re-generate and
                                              -- and re-distribute the config file. You can make a new one using M2M/tools/make_config.sh
@@ -346,7 +346,7 @@ constant OPTM_SIZE         : natural := 104;  -- amount of items including empty
 -- Net size of the Options menu on the screen in characters (excluding the frame, which is hardcoded to two characters)
 -- Without submenus: Use OPTM_SIZE as height, otherwise count how large the actually visible main menu is.
 constant OPTM_DX           : natural := 28;
-constant OPTM_DY           : natural := 23;
+constant OPTM_DY           : natural := 24;
 
 constant OPTM_ITEMS        : string :=
    " Atari ST/STe\n"              &   --  0
@@ -448,11 +448,24 @@ constant OPTM_ITEMS        : string :=
    " HDMI: CRT emulation\n"       &   -- 96
    " Zoom-in (hide border)\n"     &   -- 97
    " Audio improvements\n"        &   -- 98
-   "\n"                           &   -- 99
-   " Reset Atari ST\n"            &   -- 100
-   " About & Help\n"              &   -- 101
-   "\n"                           &   -- 102
-   " Close Menu\n"                ;   -- 103
+   " Falcon: %s\n"                &   -- 99
+   " Falcon030 settings\n"        &   -- 100
+   "\n"                           &   -- 101
+   " Monitor:\n"                  &   -- 102
+   " VGA (31 kHz)\n"              &   -- 103
+   " RGB (15 kHz)\n"              &   -- 104
+   " TV (15 kHz)\n"               &   -- 105
+   " Mono (SM124)\n"              &   -- 106
+   "\n"                           &   -- 107
+   " CPU at 32 MHz (turbo)\n"     &   -- 108
+   " ST-RAM 4 MB (not 14 MB)\n"   &   -- 109
+   "\n"                           &   -- 110
+   " Back to main menu\n"         &   -- 111
+   "\n"                           &   -- 112
+   " Reset Atari ST\n"            &   -- 113
+   " About & Help\n"              &   -- 114
+   "\n"                           &   -- 115
+   " Close Menu\n"                ;   -- 116
 
 -- define your own constants here and choose meaningful names
 -- make sure that your first group uses the value 1 (0 means "no menu item", such as text and line),
@@ -494,6 +507,9 @@ constant OPTM_G_RemFloppy  : integer := 32;
 constant OPTM_G_RemRom     : integer := 33;
 constant OPTM_G_RealFd     : integer := 34;
 constant OPTM_G_Dsep       : integer := 35;
+constant OPTM_G_FMonitor   : integer := 36;
+constant OPTM_G_FTurbo     : integer := 37;
+constant OPTM_G_F4MB       : integer := 38;
 
 -- !!! DO NOT TOUCH !!!
 type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC- 1;
@@ -599,11 +615,24 @@ constant OPTM_GROUPS       : OPTM_GTYPE := (
                                              OPTM_G_CRT + OPTM_G_SINGLESEL,                            -- 96 HDMI: CRT emulation
                                              OPTM_G_Zoom + OPTM_G_SINGLESEL,                           -- 97 Zoom-in (hide border)
                                              OPTM_G_Audio + OPTM_G_SINGLESEL,                          -- 98 Audio improvements
-                                             OPTM_G_LINE,                                              -- 99
-                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 100 Reset Atari ST
-                                             OPTM_G_About + OPTM_G_HELP,                               -- 101 About & Help
-                                             OPTM_G_LINE,                                              -- 102
-                                             OPTM_G_CLOSE                                              -- 103 Close Menu
+                                             OPTM_G_SUBMENU,                                           -- 99 Falcon: %s
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 100 Falcon030 settings
+                                             OPTM_G_LINE,                                              -- 101
+                                             OPTM_G_TEXT,                                              -- 102 Monitor:
+                                             OPTM_G_FMonitor + OPTM_G_STDSEL,                          -- 103 VGA (31 kHz)
+                                             OPTM_G_FMonitor,                                          -- 104 RGB (15 kHz)
+                                             OPTM_G_FMonitor,                                          -- 105 TV (15 kHz)
+                                             OPTM_G_FMonitor,                                          -- 106 Mono (SM124)
+                                             OPTM_G_LINE,                                              -- 107
+                                             OPTM_G_FTurbo + OPTM_G_SINGLESEL,                         -- 108 CPU at 32 MHz (turbo)
+                                             OPTM_G_F4MB + OPTM_G_SINGLESEL,                           -- 109 ST-RAM 4 MB (not 14 MB)
+                                             OPTM_G_LINE,                                              -- 110
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 111 Back to main menu
+                                             OPTM_G_LINE,                                              -- 112
+                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 113 Reset Atari ST
+                                             OPTM_G_About + OPTM_G_HELP,                               -- 114 About & Help
+                                             OPTM_G_LINE,                                              -- 115
+                                             OPTM_G_CLOSE                                              -- 116 Close Menu
                                            );
 
 --------------------------------------------------------------------------------------------------------------------

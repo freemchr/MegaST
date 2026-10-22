@@ -387,13 +387,19 @@ constant C_MENU_SCANLINES_75   : natural := 93;
 constant C_MENU_CRT_EMULATION  : natural := 96;
 constant C_MENU_HDMI_ZOOM      : natural := 97;
 constant C_MENU_IMPROVE_AUDIO  : natural := 98;
--- 98 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
+constant C_MENU_F_RGB          : natural := 104;  -- Falcon monitor: 103 VGA (default), 104 RGB, 105 TV, 106 mono
+constant C_MENU_F_TV           : natural := 105;
+constant C_MENU_F_MONO         : natural := 106;
+constant C_MENU_F_TURBO        : natural := 108;  -- Falcon CPU at 32 MHz
+constant C_MENU_F_4MB          : natural := 109;  -- Falcon ST-RAM 4 MB instead of 14 MB
+-- 113 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
 ---------------------------------------------------------------------------------------------
 
 signal main_st_mem            : std_logic_vector(2 downto 0);
+signal main_f_monitor         : std_logic_vector(1 downto 0);
 signal main_st_ste            : std_logic;
 signal main_st_mste           : std_logic;
 
@@ -585,6 +591,12 @@ begin
                    "101" when main_osm_control_i(C_MENU_MEM_14M)  = '1' else
                    "001";   -- 1 MB
 
+   -- Falcon monitor (Falcon's monitor type bits): 00 mono, 01 RGB, 10 VGA, 11 TV
+   main_f_monitor <= "01" when main_osm_control_i(C_MENU_F_RGB)  = '1' else
+                     "11" when main_osm_control_i(C_MENU_F_TV)   = '1' else
+                     "00" when main_osm_control_i(C_MENU_F_MONO) = '1' else
+                     "10";    -- VGA
+
    -- main.vhd contains the actual MiSTer core
    i_main : entity work.main
       generic map (
@@ -627,6 +639,9 @@ begin
          st_kbd_print_i       => main_osm_control_i(C_MENU_KBD_US) or main_osm_control_i(C_MENU_KBD_UK),
          st_kbd_uk_i          => main_osm_control_i(C_MENU_KBD_UK),
          falcon_i             => main_osm_control_i(C_MENU_FALCON),
+         falcon_monitor_i     => main_f_monitor,
+         falcon_turbo_i       => main_osm_control_i(C_MENU_F_TURBO),
+         falcon_4mb_i         => main_osm_control_i(C_MENU_F_4MB),
          rtc_i                => main_rtc_i,
 
          -- TOS loader

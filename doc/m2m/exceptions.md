@@ -214,6 +214,12 @@ with `MEGA65` comments:
   `dbg` output for the JTAG probe (`tools/probe5.tcl`): the last 68030 program space bus address and
   device access, DSP PC, R6, R7, LC, SSISR, host ISR/HSR and a count of the DSP's SSI TX writes.
   Debugging only, no change in behaviour.
+* `rtl/falcon/falcon_system.sv`: inputs `pad0`/`pad1` for the enhanced joystick ports (`falcon_combel`),
+  apart from `joy0`/`joy1` for the IKBD's joysticks. On MiSTer both are the same pads; on the MEGA65
+  the mouse port must not appear as a joystick (see `main.vhd`), while the joypads come from the
+  MEGA65 joystick ports when the menu item "STe joypads" is on. MiSTer: connect `joy0`/`joy1` to both.
+* `rtl/falcon/falcon_system.sv`: input `nv_lang`, the language and keyboard of the NVRAM default image
+  (`falcon_nvram` `cfg_lang`/`cfg_kbd`, upstream 0 = US): UK with the menu item "As printed, UK TOS".
 
 QNICE
 -----
