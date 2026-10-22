@@ -19,6 +19,10 @@
 //         for the CPU's line cache (falcon_l2): one cpu_beat per word,
 //         cpu_ack with the last
 //
+//  MEGA65: the CPU port has two more address bits, the Fast RAM blocks of
+//  falcon_cpubus (guest 01000000-03FFFFFF), right above the 24-bit space in
+//  memory (DDRAM_ADDR[22:21]); the other masters reach the 24-bit space only.
+//
 //  One command is outstanding at a time.  DMA writes are reported on the
 //  snoop port so the CPU data cache never holds stale lines.
 //
@@ -103,7 +107,7 @@ module falcon_memarb
 	// CPU: 32 bit, level request, one-clock acknowledge
 	input             cpu_req,
 	input             cpu_we,
-	input      [23:2] cpu_addr,
+	input      [25:2] cpu_addr,    // MEGA65: [25:24] Fast RAM block
 	input       [3:0] cpu_be,      // [3] = lowest address (D31..D24)
 	input      [31:0] cpu_wdata,
 	output reg [31:0] cpu_rdata,
@@ -172,7 +176,7 @@ reg        cmd_burst;   // a CPU burst read
 
 // the selected master's request, in guest big-endian form
 reg        g_we;
-reg [23:3] g_addr;
+reg [25:3] g_addr;      // MEGA65: [25:24] Fast RAM block (CPU only)
 reg [63:0] g_wdata;
 reg  [7:0] g_be;        // [7] = lowest address
 reg  [2:0] g_owner;
@@ -183,27 +187,27 @@ reg        g_ok;        // 0: a DMA access outside writable/readable memory, no 
 wire [23:0] ram_top = {ram_mb, 20'd0};
 
 always @* begin : sel
-	reg [23:0] wa;
+	reg [25:0] wa;
 	g_any = 1; g_we = 0; g_addr = 0; g_wdata = 0; g_be = 0; g_owner = M_CPU; g_sub = 0; g_ok = 1;
 	if (vid_req) begin
-		g_owner = M_VID; g_addr = vid_addr; g_be = 8'hFF;
+		g_owner = M_VID; g_addr = {2'b00, vid_addr}; g_be = 8'hFF;
 	end else if (ld_pend) begin
-		g_owner = M_LD; g_we = 1; g_addr = ld_a[23:3];
+		g_owner = M_LD; g_we = 1; g_addr = {2'b00, ld_a[23:3]};
 		g_wdata = {8{ld_d}}; g_be = 8'h80 >> ld_a[2:0];
 	end else if (d0_req) begin
-		g_owner = M_D0; g_we = d0_we; g_addr = d0_addr[23:3]; g_sub = d0_addr[2:1];
+		g_owner = M_D0; g_we = d0_we; g_addr = {2'b00, d0_addr[23:3]}; g_sub = d0_addr[2:1];
 		g_wdata = {4{d0_wdata}}; g_be = {6'd0, d0_be} << (6 - 2 * d0_addr[2:1]);
 	end else if (d1_req) begin
-		g_owner = M_D1; g_we = d1_we; g_addr = d1_addr[23:3]; g_sub = d1_addr[2:1];
+		g_owner = M_D1; g_we = d1_we; g_addr = {2'b00, d1_addr[23:3]}; g_sub = d1_addr[2:1];
 		g_wdata = {4{d1_wdata}}; g_be = {6'd0, d1_be} << (6 - 2 * d1_addr[2:1]);
 	end else if (d2_req) begin
-		g_owner = M_D2; g_we = d2_we; g_addr = d2_addr[23:3]; g_sub = d2_addr[2:1];
+		g_owner = M_D2; g_we = d2_we; g_addr = {2'b00, d2_addr[23:3]}; g_sub = d2_addr[2:1];
 		g_wdata = {4{d2_wdata}}; g_be = {6'd0, d2_be} << (6 - 2 * d2_addr[2:1]);
 	end else if (d3_req) begin
-		g_owner = M_D3; g_we = d3_we; g_addr = d3_addr[23:3]; g_sub = d3_addr[2:1];
+		g_owner = M_D3; g_we = d3_we; g_addr = {2'b00, d3_addr[23:3]}; g_sub = d3_addr[2:1];
 		g_wdata = {4{d3_wdata}}; g_be = {6'd0, d3_be} << (6 - 2 * d3_addr[2:1]);
 	end else if (cpu_req) begin
-		g_owner = M_CPU; g_we = cpu_we; g_addr = cpu_burst ? {cpu_addr[23:5], 2'b00} : cpu_addr[23:3]; g_sub = {cpu_addr[2], 1'b0};
+		g_owner = M_CPU; g_we = cpu_we; g_addr = cpu_burst ? {cpu_addr[25:5], 2'b00} : cpu_addr[25:3]; g_sub = {cpu_addr[2], 1'b0};
 		g_wdata = {2{cpu_wdata}}; g_be = cpu_addr[2] ? {4'd0, cpu_be} : {cpu_be, 4'd0};
 	end else g_any = 0;
 
@@ -221,11 +225,11 @@ wire [63:0] rd_be = swap64(DDRAM_DOUT);      // guest order
 
 // the blitter's read buffer (guest order)
 reg   [1:0] b_v = 2'b00;
-reg  [23:3] b_tag0, b_tag1;
+reg  [25:3] b_tag0, b_tag1;
 reg  [63:0] b_dat0, b_dat1;
 reg         b_lru = 0;          // the entry the next fill replaces
-wire        b_h0   = b_v[0] && (b_tag0 == d2_addr[23:3]);
-wire        b_h1   = b_v[1] && (b_tag1 == d2_addr[23:3]);
+wire        b_h0   = b_v[0] && (b_tag0 == {2'b00, d2_addr[23:3]});
+wire        b_h1   = b_v[1] && (b_tag1 == {2'b00, d2_addr[23:3]});
 wire [63:0] b_line = b_h0 ? b_dat0 : b_dat1;
 // a read hit (not the request just acknowledged, nor that of a read in the DDR3)
 wire        d2_hit = d2_req && !d2_we && !d2_ack && (b_h0 || b_h1) && !(st != S_IDLE && owner == M_D2 && !cmd_we);
@@ -264,7 +268,7 @@ always @(posedge clk) begin
 			owner      <= g_owner;
 			sub        <= g_sub;
 			cmd_we     <= g_we;
-			DDRAM_ADDR <= DDR_BASE | {8'd0, g_addr};
+			DDRAM_ADDR <= DDR_BASE | {6'd0, g_addr};
 			DDRAM_BURSTCNT <= (g_owner == M_VID || (g_owner == M_CPU && cpu_burst && !g_we)) ? 8'd4 : 8'd1;
 			cmd_burst  <= (g_owner == M_CPU && cpu_burst && !g_we);
 			DDRAM_DIN  <= swap64(g_wdata);
@@ -277,11 +281,11 @@ always @(posedge clk) begin
 			if (g_owner == M_LD)  ld_take = 1;
 			if (g_we && g_owner != M_CPU && g_owner != M_LD) begin
 				snoop_we   <= 1;
-				snoop_addr <= {g_addr, g_sub, 1'b0};
+				snoop_addr <= {g_addr[23:3], g_sub, 1'b0};
 			end
 			if (g_we && g_owner != M_CPU) begin
 				owr_we   <= 1;
-				owr_addr <= g_addr;
+				owr_addr <= g_addr[23:3];
 			end
 			if (g_we && g_owner == M_D2) d2_ack <= 1;
 			if (g_we && b_v[0] && b_tag0 == g_addr) b_dat0 <= merge64(b_dat0, g_wdata, g_be);
@@ -318,8 +322,8 @@ always @(posedge clk) begin
 				M_D1:  begin d1_rdata <= rd_be[63 - 16 * sub -: 16]; d1_ack <= 1; st <= S_IDLE; end
 				M_D2:  begin
 					d2_rdata <= rd_be[63 - 16 * sub -: 16]; d2_ack <= 1; st <= S_IDLE;
-					if (b_lru) begin b_dat1 <= rd_be; b_tag1 <= DDRAM_ADDR[20:0]; b_v[1] <= 1; end
-					else       begin b_dat0 <= rd_be; b_tag0 <= DDRAM_ADDR[20:0]; b_v[0] <= 1; end
+					if (b_lru) begin b_dat1 <= rd_be; b_tag1 <= DDRAM_ADDR[22:0]; b_v[1] <= 1; end
+					else       begin b_dat0 <= rd_be; b_tag0 <= DDRAM_ADDR[22:0]; b_v[0] <= 1; end
 					b_lru <= !b_lru;
 				end
 				M_D3:  begin d3_rdata <= rd_be[63 - 16 * sub -: 16]; d3_ack <= 1; st <= S_IDLE; end

@@ -29,6 +29,7 @@ module falcon_m65 #(
 	input             por,            // power on / Falcon not selected: also resets the memory arbiter
 
 	input       [3:0] ram_mb,         // ST-RAM in MB (4 or 14)
+	input       [1:0] fast_n,         // Fast RAM (TT-RAM) at $01000000 in 16 MB blocks, 0..3 (falcon_cpubus.sv)
 	input       [1:0] monitor,        // 0 mono, 1 RGB, 2 VGA, 3 TV
 	input             cpu_turbo,      // 1: CPU at 32 MHz; 0: Falcon 16/8 MHz
 	input       [7:0] tos_lang,       // NVRAM language and keyboard (0 US, 3 UK, see falcon_nvram.sv)
@@ -46,6 +47,8 @@ module falcon_m65 #(
 	input      [31:0] joy1,
 	input      [31:0] pad0,           // enhanced joystick ports A and B (joypads), MiSTer format
 	input      [31:0] pad1,
+	input      [15:0] ana0,           // paddles of the enhanced ports A and B: [7:0] X, [15:8] Y,
+	input      [15:0] ana1,           // signed (MiSTer analog sticks)
 	input      [64:0] rtc,
 
 	// drives 0..3: fdc_bridge.vhd core side
@@ -241,6 +244,16 @@ always @(posedge clk_32) begin
 	nv_init   <= monitor != monitor_d || tos_lang != lang_d;
 end
 
+// the memory configuration changes only with a reset (TOS sizes the memory when it starts)
+reg   [3:0] ram_mb_q = 4'd14;
+reg   [1:0] fast_n_q = 2'd0;
+
+always @(posedge clk_32)
+	if (reset) begin
+		ram_mb_q <= ram_mb;
+		fast_n_q <= fast_n;
+	end
+
 wire        DDRAM_BUSY, DDRAM_DOUT_READY, DDRAM_RD, DDRAM_WE;
 wire  [7:0] DDRAM_BURSTCNT, DDRAM_BE;
 wire [28:0] DDRAM_ADDR;
@@ -248,9 +261,9 @@ wire [63:0] DDRAM_DOUT, DDRAM_DIN;
 
 falcon_system #(.CLK_HZ(CLK_HZ)) system (
 	.clk(clk_32), .reset(reset), .cold_reset(cold_reset), .por(por),
-	.ram_mb(ram_mb), .ram_tos(1'b0), .monitor(monitor), .cpu_turbo(cpu_turbo), .tstat_en(1'b0),
+	.ram_mb(ram_mb_q), .fast_n(fast_n_q), .ram_tos(1'b0), .monitor(monitor), .cpu_turbo(cpu_turbo), .tstat_en(1'b0),
 	.ld_wr(ld_wr), .ld_addr(ld_addr), .ld_data(ld_data), .ld_busy(ld_busy),
-	.ps2_key(ps2_key), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(joy1), .pad0(pad0), .pad1(pad1), .ana0(16'd0), .ana1(16'd0), .rtc(rtc),
+	.ps2_key(ps2_key), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(joy1), .pad0(pad0), .pad1(pad1), .ana0(ana0), .ana1(ana1), .rtc(rtc),
 	.nv_lang(tos_lang), .nv_init(nv_init), .nv_addr(6'd0), .nv_din(8'd0), .nv_wr(1'b0), .nv_dout(), .nv_changed(), .nv_ready(),
 	.img_mounted({3'b000, img_mounted}), .img_readonly(img_readonly), .img_size({32'd0, img_size}),
 	.sd_lba(f_lba), .sd_rd(f_rd), .sd_wr(f_wr), .sd_blk_cnt(f_blk_cnt), .sd_ack({3'b000, sd_ack}),
@@ -281,7 +294,7 @@ fpu_rv fpu (
 
 falcon_sdram sdram (
 	.start_i(sdram_start), .clk_32(clk_32), .clk_96(clk_96),
-	.busy(DDRAM_BUSY), .burstcnt(DDRAM_BURSTCNT[2:0]), .addr(DDRAM_ADDR[20:0]),
+	.busy(DDRAM_BUSY), .burstcnt(DDRAM_BURSTCNT[2:0]), .addr(DDRAM_ADDR[22:0]),
 	.dout(DDRAM_DOUT), .dout_ready(DDRAM_DOUT_READY),
 	.rd(DDRAM_RD), .din(DDRAM_DIN), .be(DDRAM_BE), .we(DDRAM_WE),
 	.sd_cmd_o(sd_cmd_o), .sd_addr_o(sd_addr_o), .sd_ba_o(sd_ba_o), .sd_dqm_o(sd_dqm_o),

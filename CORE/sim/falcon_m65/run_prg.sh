@@ -24,7 +24,7 @@ case "$PROG" in
 	python3 -c "
 import struct,sys
 c=open(sys.argv[1],'rb').read(); c+=b'\0'*(len(c)&1)
-open(sys.argv[2],'wb').write(struct.pack('>HIIIIIIH',0x601A,len(c),0,0,0,0,0,0)+c+b'\0\0\0\0')" \
+open(sys.argv[2],'wb').write(struct.pack('>HIIIIIIH',0x601A,len(c),0,0,0,0,1,0)+c+b'\0\0\0\0')" \
 		"$ST/p.bin" "$ST/root/AUTO/TEST.PRG" ;;
 *)	B=$(basename "$PROG"); cp "$PROG" "$ST/root/AUTO/${B%.*}.PRG" ;;   # \AUTO runs .PRG only
 esac

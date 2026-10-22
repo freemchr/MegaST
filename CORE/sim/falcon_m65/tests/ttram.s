@@ -2,9 +2,10 @@
 | address of a 1 MB TT-RAM block (Mxalloc(1 MB, 1): TT-RAM only), $100008 = the number of longs
 | that did not read back after writing address-dependent patterns (two passes), $10000C = _p_cookies
 | ($5A0), $100010 = ramtop ($5A4). Then the done marker $D0E0600D at $FFFF0.
-|    ./run_prg.sh /tmp/tt tests/ttram.s -- --ms 6000 --done FFFF0 --dump 100000:20 --fastram
+|    ./run_prg.sh /tmp/tt tests/ttram.s -- --ms 6000 --done FFFF0 --dump 100000:20 --fastram 3 --start FFFF4
 | MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
 	.text
+	move.l	#0x57A27000,0xFFFF4	| start marker (sim_main --start FFFF4)
 	move.l	#0x100000,a5
 	move.w	#1,-(sp)		| mode 1: TT-RAM only
 	move.l	#-1,-(sp)

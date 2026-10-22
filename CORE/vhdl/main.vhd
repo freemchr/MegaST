@@ -62,6 +62,7 @@ entity main is
       falcon_monitor_i        : in  std_logic_vector(1 downto 0);  -- Falcon monitor: 00 mono, 01 RGB, 10 VGA, 11 TV
       falcon_turbo_i          : in  std_logic;              -- Falcon CPU at 32 MHz
       falcon_4mb_i            : in  std_logic;              -- Falcon ST-RAM 4 MB instead of 14 MB
+      falcon_fast_i           : in  std_logic;              -- Falcon Fast RAM (TT-RAM) 48 MB at $01000000
 
       -- MEGA65 real time clock (M2M format), used by the Mega ST RTC (rp5c15_m65.sv)
       rtc_i                   : in  std_logic_vector(64 downto 0);
@@ -314,6 +315,7 @@ component falcon_m65 is
       cold_reset      : in    std_logic;
       por             : in    std_logic;
       ram_mb          : in    std_logic_vector(3 downto 0);
+      fast_n          : in    std_logic_vector(1 downto 0);
       monitor         : in    std_logic_vector(1 downto 0);
       cpu_turbo       : in    std_logic;
       tos_lang        : in    std_logic_vector(7 downto 0);
@@ -327,6 +329,8 @@ component falcon_m65 is
       joy1            : in    std_logic_vector(31 downto 0);
       pad0            : in    std_logic_vector(31 downto 0);
       pad1            : in    std_logic_vector(31 downto 0);
+      ana0            : in    std_logic_vector(15 downto 0);
+      ana1            : in    std_logic_vector(15 downto 0);
       rtc             : in    std_logic_vector(64 downto 0);
       img_mounted     : in    std_logic_vector(3 downto 0);
       img_readonly    : in    std_logic;
@@ -405,6 +409,9 @@ signal f_joy0         : std_logic_vector(31 downto 0);
 signal f_joy1         : std_logic_vector(31 downto 0);
 signal f_pad0         : std_logic_vector(31 downto 0);
 signal f_ram_mb       : std_logic_vector(3 downto 0);
+signal f_ana0         : std_logic_vector(15 downto 0);
+signal f_ana1         : std_logic_vector(15 downto 0);
+signal f_fast_n       : std_logic_vector(1 downto 0);
 signal f_tos_lang     : std_logic_vector(7 downto 0);
 signal f_midi_txd     : std_logic := '1';
 signal f_uart_txd     : std_logic := '1';
@@ -785,12 +792,19 @@ begin
       f_joy0       <= (others => '0');
       f_joy1       <= (31 downto 5 => '0') & ste_bits(joy_stick);
       f_ram_mb     <= "0100" when falcon_4mb_i = '1' else "1110";   -- ST-RAM 4 or 14 MB
+      -- Fast RAM: SDRAM 16..64 MB at $01000000 (the Falcon's 24-bit space is the first 16 MB)
+      f_fast_n     <= "11" when falcon_fast_i = '1' else "00";
       -- NVRAM language and keyboard (EmuTOS and TOS 4 take them from there): UK with the menu item
       -- "As printed, UK TOS", else US
       f_tos_lang   <= x"03" when st_kbd_print_i = '1' and st_kbd_uk_i = '1' else x"00";
       -- menu "STe joypads": the MEGA65 joysticks on the enhanced joystick ports, as on the STe
       f_pad0       <= (31 downto 21 => '0') & ste_pad0 when st_ste_pads_i = '1' else (others => '0');
       f_pad1       <= (31 downto 21 => '0') & ste_pad1 when st_ste_pads_i = '1' else (others => '0');
+      -- ... and their paddles (MEGA65 pots, delivered inverted) as signed axes ($FF9210-$FF9216)
+      f_ana0       <= (pot1_y_i & pot1_x_i) xor x"7F7F" when st_ste_pads_i = '1' and st_joy_swap_i = '1' else
+                      (pot2_y_i & pot2_x_i) xor x"7F7F" when st_ste_pads_i = '1' else x"0000";
+      f_ana1       <= (pot2_y_i & pot2_x_i) xor x"7F7F" when st_ste_pads_i = '1' and st_joy_swap_i = '1' else
+                      (pot1_y_i & pot1_x_i) xor x"7F7F" when st_ste_pads_i = '1' else x"0000";
 
       i_falcon : falcon_m65
          generic map (
@@ -803,6 +817,7 @@ begin
             cold_reset      => f_cold_reset,
             por             => f_por,
             ram_mb          => f_ram_mb,
+            fast_n          => f_fast_n,
             monitor         => falcon_monitor_i,
             cpu_turbo       => falcon_turbo_i,
             tos_lang        => f_tos_lang,
@@ -816,6 +831,8 @@ begin
             joy1            => f_joy1,
             pad0            => f_pad0,
             pad1            => f_pad1,
+            ana0            => f_ana0,
+            ana1            => f_ana1,
             rtc             => rtc_i,
             img_mounted     => img_mounted_i,
             img_readonly    => img_readonly_i,

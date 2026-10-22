@@ -13,7 +13,7 @@
 //
 //  Direct mapped, 2^IW lines of 32 bytes (IW = 11: 64 KB), the data as eight
 //  byte lanes (CPU write hits update the bytes written), a tag RAM of
-//  {valid, address[23:5+IW]}.  Reads that miss fill the whole line; the
+//  {valid, address[25:5+IW]} (MEGA65: [25:24] = the Fast RAM block, falcon_cpubus).  Reads that miss fill the whole line; the
 //  word asked for is answered as soon as its beat arrives.  Writes go
 //  through to the DDR3 (and update a line that holds them), never allocate.
 //  Coherence: every write by another master (DMA, the loader) drops the line
@@ -35,7 +35,7 @@ module falcon_l2 #(parameter IW = 11)
 	// CPU side (falcon_cpubus): falcon_memarb's CPU port protocol
 	input             c_req,
 	input             c_we,
-	input      [23:2] c_addr,
+	input      [25:2] c_addr,       // MEGA65: [25:24] Fast RAM block
 	input       [3:0] c_be,         // [3] = lowest address
 	input      [31:0] c_wdata,
 	output     [31:0] c_rdata,
@@ -45,7 +45,7 @@ module falcon_l2 #(parameter IW = 11)
 	// memory side (falcon_memarb's CPU port)
 	output            m_req,
 	output            m_we,
-	output     [23:2] m_addr,
+	output     [25:2] m_addr,
 	output      [3:0] m_be,
 	output     [31:0] m_wdata,
 	output            m_burst,
@@ -59,7 +59,7 @@ module falcon_l2 #(parameter IW = 11)
 	input      [23:3] owr_addr
 );
 
-localparam TW = 19 - IW;                       // tag bits: address[23:5+IW]
+localparam TW = 21 - IW;                       // tag bits: address[25:5+IW]
 localparam NL = 1 << IW;
 
 //----------------------------------------------------------------- storage
@@ -99,18 +99,18 @@ reg         sweep;              // invalidating every line
 reg [IW-1:0] sw_cnt;
 
 reg         q_we;
-reg [23:2]  q_addr;
+reg [25:2]  q_addr;
 reg  [3:0]  q_be;
 reg [31:0]  q_wdata;
 wire [IW-1:0] q_idx = q_addr[IW+4:5];
-wire [TW-1:0] q_tag = q_addr[23:5+IW];
+wire [TW-1:0] q_tag = q_addr[25:5+IW];
 reg         poison;             // the line being filled was written by another master
 reg         stale;              // the tag was read while its line was being dropped
 reg  [1:0]  beat;
 reg         answered;
 
 reg         r_req, r_we, r_burst;
-reg [23:2]  r_addr;
+reg [25:2]  r_addr;
 reg  [3:0]  r_be;
 reg [31:0]  r_wdata;
 reg         r_ack;

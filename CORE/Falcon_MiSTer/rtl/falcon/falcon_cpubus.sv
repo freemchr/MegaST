@@ -33,6 +33,11 @@
 //                   addresses exist; it answers dev_berr for the others)
 //    everything else: bus error
 //  Supervisor only: 000000-0007FF and FF8000-FFFFFF.
+//  MEGA65: with Fast RAM (fast_n > 0) A31..A24 count: 00 and FF are the space
+//  above, 01..fast_n (at most 03) Fast RAM (TT-RAM for TOS) at 01000000, a
+//  32-bit port without the ST-RAM slot (memory word address {A25,A24,A23..}),
+//  everything else a bus error.  EmuTOS then sees a 32-bit address bus and
+//  finds the Fast RAM by itself (detect_32bit_address_bus, ttram_detect).
 //
 //  Timing: every decision is taken on the rising edge.  The CPU samples
 //  DSACKx/BERR/AVEC on falling edges and latches read data with them, so
@@ -90,6 +95,7 @@ module falcon_cpubus
 	input             reset,
 
 	input       [3:0] ram_mb,      // ST-RAM size in MB (4 or 14)
+	input       [1:0] fast_n,      // MEGA65: Fast RAM in 16 MB blocks at 01000000 (0: none, 24-bit bus)
 	input             ram_tos,     // the TOS image is a RAM TOS behind its loader (TOS 4.92)
 
 	// 68030 pins
@@ -111,7 +117,7 @@ module falcon_cpubus
 	// memory arbiter, CPU port
 	output reg        ram_req,
 	output reg        ram_we,
-	output reg [23:2] ram_addr,
+	output reg [25:2] ram_addr,    // MEGA65: [25:24] = Fast RAM block (0: the 24-bit space)
 	output reg  [3:0] ram_be,
 	output reg [31:0] ram_wdata,
 	input      [31:0] ram_rdata,
@@ -204,19 +210,24 @@ always @* begin
 end
 
 wire [23:0] ram_top   = {ram_mb, 20'd0};
-wire is_vec    = (la[23:3] == 21'd0);
-wire is_ram    = (la < ram_top);
-wire is_rom    = (la[23:19] == 5'b11100);           // E00000-E7FFFF
-wire is_cart   = (la[23:17] == 7'b1111101);         // FA0000-FBFFFF
-wire is_ide    = (la[23:16] == 8'hF0);
-wire is_io     = (la[23:15] == 9'b111111111);       // FF8000-FFFFFF
-wire is_prot   = (la[23:11] == 13'd0) || is_io;
+// MEGA65: Fast RAM (see above); lo: the 24-bit space
+wire [7:0] ah      = a[31:24];
+wire lo        = (fast_n == 2'd0) || (ah == 8'h00) || (ah == 8'hFF);
+wire is_fast   = (fast_n != 2'd0) && (ah[7:2] == 6'd0) && (ah[1:0] != 2'd0) && (ah[1:0] <= fast_n);
+wire [1:0] xa  = is_fast ? ah[1:0] : 2'b00;
+wire is_vec    = lo && (la[23:3] == 21'd0);
+wire is_ram    = lo && (la < ram_top);
+wire is_rom    = lo && (la[23:19] == 5'b11100);     // E00000-E7FFFF
+wire is_cart   = lo && (la[23:17] == 7'b1111101);   // FA0000-FBFFFF
+wire is_ide    = lo && (la[23:16] == 8'hF0);
+wire is_io     = lo && (la[23:15] == 9'b111111111); // FF8000-FFFFFF
+wire is_prot   = lo && ((la[23:11] == 13'd0) || is_io);
 wire cpu_space = (fc == 3'd7);
 
 // RAM/ROM address actually used: the reset vectors come from ROM
-function [23:2] mem_addr;
-	input [23:0] x; input rd;
-	mem_addr = (rd && x[23:3] == 21'd0) ? (22'h380000 | {21'd0, x[2]}) : x[23:2];
+function [25:2] mem_addr;
+	input [1:0] xb; input [23:0] x; input rd;
+	mem_addr = (rd && xb == 2'b00 && x[23:3] == 21'd0) ? (24'h380000 | {23'd0, x[2]}) : {xb, x[23:2]};
 endfunction
 
 //----------------------------------------------------------------------------
@@ -235,13 +246,13 @@ reg  [4:0] fw;             // Hatari's wait states for this cycle
 reg  [4:0] ft0;            // processor clock position of S0, mod 20
 // posted RAM write
 reg        wb_valid, wb_inflight;
-reg [23:2] wb_addr;
+reg [25:2] wb_addr;
 reg  [3:0] wb_be;
 reg [31:0] wb_data;
 reg        rd_inflight;
 // read-ahead buffer: the last 64-bit DDR3 word read (guest order)
 reg        rb_valid;
-reg [23:3] rb_tag;
+reg [25:3] rb_tag;
 reg [63:0] rb_data;
 // device wait state memory
 reg        ym_seen, acia_seen;
@@ -401,8 +412,12 @@ function [15:0] word64;        // the 16-bit word i of a 64-bit word (guest orde
 	input [63:0] q; input [1:0] i;
 	word64 = q[63 - 16 * i -: 16];
 endfunction
-wire [23:2] maddr_rd = mem_addr(la, 1'b1);
-wire        rb_hit   = rb_valid && (rb_tag == maddr_rd[23:3]);
+wire [25:2] maddr_rd = mem_addr(xa, la, 1'b1);
+wire        rb_hit   = rb_valid && (rb_tag == maddr_rd[25:3]);
+function [31:0] long64;        // the long i of a 64-bit word (guest order)
+	input [63:0] q; input i;
+	long64 = q[63 - 32 * i -: 32];
+endfunction
 
 task f_start;                  // plan the cycle seen on the bus (S0 at position t0)
 	begin
@@ -455,6 +470,35 @@ task f_start;                  // plan the cycle seen on the bus (S0 at position
 			fready <= 1; fw <= bank_w;
 			if (bank_w == 5'd0) f_assert(K_D16); else fst <= F_RUN;
 		end
+		else if (is_fast && rw) begin
+			// MEGA65: Fast RAM read, a 32-bit port without wait states
+			fw    <= 5'd0;
+			fkind <= K_D32;
+			if (rb_hit) begin
+				d_i    <= long64(rb_data, maddr_rd[2]);
+				fready <= 1;
+				f_assert(K_D32);
+			end
+			else begin
+				fjob <= J_RD;
+				fst  <= F_RUN;
+			end
+		end
+		else if (is_fast) begin
+			// MEGA65: Fast RAM write (posted like ST-RAM writes)
+			fw    <= 5'd0;
+			fkind <= K_D32;
+			if (!wb_valid) begin
+				wb_valid <= 1; wb_addr <= {xa, la[23:2]}; wb_be <= be32; wb_data <= d_o;
+				if (rb_tag == {xa, la[23:3]}) rb_valid <= 0;
+				fready <= 1;
+				f_assert(K_D32);
+			end
+			else begin
+				fjob <= J_WR;
+				fst  <= F_RUN;
+			end
+		end
 		else if ((is_vec && rw) || (is_ram && rw) || ((is_rom || is_cart) && rw)) begin
 			fw    <= bank_w;
 			if (rb_hit) begin
@@ -470,8 +514,8 @@ task f_start;                  // plan the cycle seen on the bus (S0 at position
 		else if (is_ram && !rw) begin
 			fw <= bank_w;
 			if (!wb_valid) begin
-				wb_valid <= 1; wb_addr <= la[23:2]; wb_be <= p16_be; wb_data <= p16_wd;
-				if (rb_tag == la[23:3]) rb_valid <= 0;     // a write to the buffered word
+				wb_valid <= 1; wb_addr <= {2'b00, la[23:2]}; wb_be <= p16_be; wb_data <= p16_wd;
+				if (rb_tag == {2'b00, la[23:3]}) rb_valid <= 0;     // a write to the buffered word
 				fready <= 1;
 				if (bank_w == 5'd0) f_assert(K_D16); else fst <= F_RUN;
 			end
@@ -575,10 +619,10 @@ always @(posedge clk) begin
 				dsack1_n <= 0;
 				st       <= S_HOLD;
 			end
-			else if ((is_vec && rw) || is_ram || ((is_rom || is_cart) && rw)) begin
+			else if ((is_vec && rw) || is_ram || is_fast || ((is_rom || is_cart) && rw)) begin
 				ram_req   <= 1;
 				ram_we    <= !rw;
-				ram_addr  <= mem_addr(la, rw);
+				ram_addr  <= mem_addr(xa, la, rw);
 				ram_be    <= be32;
 				ram_wdata <= d_o;
 				st        <= S_RAM;
@@ -697,16 +741,19 @@ always @(posedge clk) begin
 						ram_req     <= 0;
 						rd_inflight <= 0;
 						rb_valid    <= 1;
-						rb_tag      <= maddr_rd[23:3];
+						rb_tag      <= maddr_rd[25:3];
 						rb_data     <= ram_rdata64;
-						d_i         <= {2{word64(ram_rdata64, {maddr_rd[2], la[1]})}};
+						d_i         <= (fkind == K_D32) ? long64(ram_rdata64, maddr_rd[2]) :
+						               {2{word64(ram_rdata64, {maddr_rd[2], la[1]})}};
 						fready      <= 1;
 						fjob        <= J_NONE;
 					end
 				J_WR:
 					if (!wb_valid) begin
-						wb_valid <= 1; wb_addr <= la[23:2]; wb_be <= p16_be; wb_data <= p16_wd;
-						if (rb_tag == la[23:3]) rb_valid <= 0;
+						wb_valid <= 1; wb_addr <= {xa, la[23:2]};
+						wb_be    <= (fkind == K_D32) ? be32 : p16_be;    // MEGA65: Fast RAM: 32-bit port
+						wb_data  <= (fkind == K_D32) ? d_o : p16_wd;
+						if (rb_tag == {xa, la[23:3]}) rb_valid <= 0;
 						fready <= 1;
 						fjob   <= J_NONE;
 					end
@@ -775,7 +822,7 @@ always @(posedge clk) begin
 
 		endcase
 
-		if (buf_flush || (snoop_we && snoop_addr[23:3] == rb_tag)) rb_valid <= 0;
+		if (buf_flush || (snoop_we && {2'b00, snoop_addr[23:3]} == rb_tag)) rb_valid <= 0;
 		// a new instruction: its first YM/ACIA access waits again (an access
 		// seen on the same clock belongs to the previous instruction)
 		if (inst) begin ym_seen <= 0; acia_seen <= 0; end
@@ -787,6 +834,6 @@ end
 // fdc.c): the CPU is the only writer of the mode register
 always @(posedge clk)
 	if (reset) fdc_mode4 <= 0;
-	else if (as_act && !rw && la[23:1] == 23'h7FC303 && cov_odd) fdc_mode4 <= d_o[20];
+	else if (as_act && !rw && lo && la[23:1] == 23'h7FC303 && cov_odd) fdc_mode4 <= d_o[20];
 
 endmodule

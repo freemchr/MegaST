@@ -16,6 +16,7 @@ module falcon_system #(parameter CLK_HZ = 32000000)
 	input             por,          // power on only (memory arbiter)
 
 	input       [3:0] ram_mb,
+	input       [1:0] fast_n,       // MEGA65: Fast RAM in 16 MB blocks at $01000000 (0: none, falcon_cpubus)
 	input             ram_tos,      // loaded TOS is a RAM TOS behind its loader
 	input       [1:0] monitor,
 	input             cpu_turbo,    // 1: CPU on every clock (32 MHz); 0: Falcon, 16/8 MHz ($FF8007 bit 0)
@@ -201,13 +202,13 @@ ap030_top #(.USE_CE(1)) cpu
 //////////////////////////////////////////////////////////////////
 
 wire        cram_req, cram_we, cram_ack;
-wire [23:2] cram_addr;
+wire [25:2] cram_addr;          // MEGA65: [25:24] Fast RAM block
 wire  [3:0] cram_be;
 wire [31:0] cram_wdata, cram_rdata;
 wire [63:0] cram_rdata64;
 // the same port behind the CPU's line cache (falcon_l2), to falcon_memarb
 wire        mram_req, mram_we, mram_ack, mram_burst, mram_beat;
-wire [23:2] mram_addr;
+wire [25:2] mram_addr;
 wire  [3:0] mram_be;
 wire [31:0] mram_wdata, mram_rdata;
 wire [63:0] mram_rdata64;
@@ -248,7 +249,7 @@ wire [15:0] blt_wdata, blt_rdata;
 falcon_cpubus cpubus
 (
 	.clk(clk), .reset(reset | sv_busy),
-	.ram_mb(ram_mb), .ram_tos(ram_tos),
+	.ram_mb(ram_mb), .ram_tos(ram_tos), .fast_n(fast_n),
 	.a(cpu_a), .fc(cpu_fc), .siz(cpu_siz), .rw(cpu_rw), .as_n(cpu_as_n), .ds_n(cpu_ds_n),
 	.bus_oe(cpu_bus_oe), .d_o(cpu_do), .d_i(cpu_di),
 	.dsack0_n(dsack0_n), .dsack1_n(dsack1_n), .berr_n(berr_n), .avec_n(avec_n), .ciin_n(ciin_n),

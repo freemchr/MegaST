@@ -10,6 +10,7 @@ module tb_top (
 	input             cold_reset,
 	input             por,
 	input       [3:0] ram_mb,
+	input       [1:0] fast_n,
 	input       [1:0] monitor,
 	input             cpu_turbo,
 	input       [7:0] tos_lang,
@@ -61,9 +62,9 @@ wire        e_doe, e_ready;
 
 falcon_m65 #(.CLK_HZ(32083333)) dut (
 	.clk_32(clk_32), .clk_96(clk_96), .reset(reset), .cold_reset(cold_reset), .por(por),
-	.ram_mb(ram_mb), .monitor(monitor), .cpu_turbo(cpu_turbo), .tos_lang(tos_lang),
+	.ram_mb(ram_mb), .fast_n(fast_n), .monitor(monitor), .cpu_turbo(cpu_turbo), .tos_lang(tos_lang),
 	.dio_addr(dio_addr), .dio_data(dio_data), .dio_strobe(dio_strobe), .dio_strobe_ack(dio_strobe_ack),
-	.kbd_matrix_n(kbd_matrix_n), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(joy1), .pad0(pad0), .pad1(pad1),
+	.kbd_matrix_n(kbd_matrix_n), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(joy1), .pad0(pad0), .pad1(pad1), .ana0(16'd0), .ana1(16'd0),
 	.rtc({1'b0, 64'h0000_0042_6101_1200}),
 	.img_mounted(img_mounted), .img_readonly(1'b0), .img_size(img_size),
 	.sd_lba(sd_lba), .sd_rd(sd_rd), .sd_wr(sd_wr), .sd_ack(sd_ack),
@@ -101,13 +102,14 @@ assign dbg_pc        = dut.system.dbg_pc;
 assign dbg_cpu_rst   = dut.system.cpu.rst;
 
 // guest memory for the C++ side (big endian bytes), through the SDRAM model
-function [22:0] sd_idx(input [20:0] q, input [1:0] k);
-	sd_idx = {q[9:8], q[20:10], q[7:0], k};
+// (Fast RAM at $01000000-$03FFFFFF: memory words {a[25:24], a[23:3]}, as in falcon_memarb)
+function [24:0] sd_idx(input [22:0] q, input [1:0] k);
+	sd_idx = {q[9:8], q[22:10], q[7:0], k};
 endfunction
 export "DPI-C" function guest_peek8;
 function byte unsigned guest_peek8(input int unsigned a);
 	reg [15:0] w;
-	w = sdram.mem[sd_idx(a[23:3], a[2:1])];
+	w = sdram.mem[sd_idx(a[25:3], a[2:1])];
 	// falcon_memarb byte-swaps the 64-bit words: DDR byte k (bits 8k+7..8k) = guest byte k,
 	// and the SDRAM beat j holds DDR bytes 2j (low) and 2j+1 (high)
 	guest_peek8 = a[0] ? w[15:8] : w[7:0];

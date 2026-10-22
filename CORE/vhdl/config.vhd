@@ -75,7 +75,7 @@ type WHS_RECORD_ARRAY_TYPE is array (0 to WHS_RECORDS - 1) of WHS_RECORD_TYPE;
 -- window contains the amount of pages, so each zero-terminated string can be up to 4095 bytes = 4094 characters long.
 
 constant SCR_WELCOME : string :=
-   "Atari ST/STe for MEGA65 Version 1.1.4-falcon-test8\n" &
+   "Atari ST/STe for MEGA65 Version 1.1.4-falcon-test9\n" &
    "\n"                           &
    "MEGA65 port by Chris Freeman\n" &
    "Report bugs at:\n" &
@@ -98,7 +98,7 @@ constant SCR_WELCOME : string :=
    "  Press Space to continue.\n";
 
 constant HELP_1 : string :=
-   "\n Atari ST/STe for MEGA65 1.1.4-falcon-test8\n\n" &
+   "\n Atari ST/STe for MEGA65 1.1.4-falcon-test9\n\n" &
    " MEGA65 port by Chris Freeman\n" &
    " github.com/freemchr/MegaST/issues\n" &
    " MiSTer port of the MiSTery core\n" &
@@ -338,7 +338,7 @@ constant OPTM_S_SAVING     : string := "<Saving>";          -- the internal writ
 --             Do use a lower case \n. If you forget one of them or if you use upper case, you will run into undefined behavior.
 --          2. Start each line that contains an actual menu item (multi- or single-select) with a Space character,
 --             otherwise you will experience visual glitches.
-constant OPTM_SIZE         : natural := 117;  -- amount of items including empty lines:
+constant OPTM_SIZE         : natural := 118;  -- amount of items including empty lines:
                                              -- needs to be equal to the number of lines in OPTM_ITEMS and amount of items in OPTM_GROUPS
                                              -- IMPORTANT: If SAVE_SETTINGS is true and OPTM_SIZE changes: Make sure to re-generate and
                                              -- and re-distribute the config file. You can make a new one using M2M/tools/make_config.sh
@@ -459,13 +459,14 @@ constant OPTM_ITEMS        : string :=
    "\n"                           &   -- 107
    " CPU at 32 MHz (turbo)\n"     &   -- 108
    " ST-RAM 4 MB (not 14 MB)\n"   &   -- 109
-   "\n"                           &   -- 110
-   " Back to main menu\n"         &   -- 111
-   "\n"                           &   -- 112
-   " Reset Atari ST\n"            &   -- 113
-   " About & Help\n"              &   -- 114
-   "\n"                           &   -- 115
-   " Close Menu\n"                ;   -- 116
+   " Fast RAM 48 MB (TT-RAM)\n"   &   -- 110
+   "\n"                           &   -- 111
+   " Back to main menu\n"         &   -- 112
+   "\n"                           &   -- 113
+   " Reset Atari ST\n"            &   -- 114
+   " About & Help\n"              &   -- 115
+   "\n"                           &   -- 116
+   " Close Menu\n"                ;   -- 117
 
 -- define your own constants here and choose meaningful names
 -- make sure that your first group uses the value 1 (0 means "no menu item", such as text and line),
@@ -510,6 +511,7 @@ constant OPTM_G_Dsep       : integer := 35;
 constant OPTM_G_FMonitor   : integer := 36;
 constant OPTM_G_FTurbo     : integer := 37;
 constant OPTM_G_F4MB       : integer := 38;
+constant OPTM_G_FFast      : integer := 39;
 
 -- !!! DO NOT TOUCH !!!
 type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC- 1;
@@ -626,13 +628,14 @@ constant OPTM_GROUPS       : OPTM_GTYPE := (
                                              OPTM_G_LINE,                                              -- 107
                                              OPTM_G_FTurbo + OPTM_G_SINGLESEL,                         -- 108 CPU at 32 MHz (turbo)
                                              OPTM_G_F4MB + OPTM_G_SINGLESEL,                           -- 109 ST-RAM 4 MB (not 14 MB)
-                                             OPTM_G_LINE,                                              -- 110
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 111 Back to main menu
-                                             OPTM_G_LINE,                                              -- 112
-                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 113 Reset Atari ST
-                                             OPTM_G_About + OPTM_G_HELP,                               -- 114 About & Help
-                                             OPTM_G_LINE,                                              -- 115
-                                             OPTM_G_CLOSE                                              -- 116 Close Menu
+                                             OPTM_G_FFast + OPTM_G_SINGLESEL,                          -- 110 Fast RAM 48 MB (TT-RAM)
+                                             OPTM_G_LINE,                                              -- 111
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 112 Back to main menu
+                                             OPTM_G_LINE,                                              -- 113
+                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 114 Reset Atari ST
+                                             OPTM_G_About + OPTM_G_HELP,                               -- 115 About & Help
+                                             OPTM_G_LINE,                                              -- 116
+                                             OPTM_G_CLOSE                                              -- 117 Close Menu
                                            );
 
 --------------------------------------------------------------------------------------------------------------------

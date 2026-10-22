@@ -392,7 +392,8 @@ constant C_MENU_F_TV           : natural := 105;
 constant C_MENU_F_MONO         : natural := 106;
 constant C_MENU_F_TURBO        : natural := 108;  -- Falcon CPU at 32 MHz
 constant C_MENU_F_4MB          : natural := 109;  -- Falcon ST-RAM 4 MB instead of 14 MB
--- 113 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
+constant C_MENU_F_FAST         : natural := 110;  -- Falcon Fast RAM (TT-RAM) 48 MB at $01000000
+-- 114 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
@@ -642,6 +643,7 @@ begin
          falcon_monitor_i     => main_f_monitor,
          falcon_turbo_i       => main_osm_control_i(C_MENU_F_TURBO),
          falcon_4mb_i         => main_osm_control_i(C_MENU_F_4MB),
+         falcon_fast_i        => main_osm_control_i(C_MENU_F_FAST),
          rtc_i                => main_rtc_i,
 
          -- TOS loader

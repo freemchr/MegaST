@@ -15,7 +15,7 @@ module sdram_strict (
 );
   localparam CL = 2, T_RCD = 2, T_RAS = 5, T_RP = 2, T_WR = 2, T_RFC = 6, T_REF = 750;
 
-  reg [15:0] mem [0:(1<<23)-1];   // {ba, row[10:0], col[9:0]}: 16 MB
+  reg [15:0] mem [0:(1<<25)-1];   // {ba, row[12:0], col[9:0]}: 64 MB (the whole IS42S16320F)
   integer    errors = 0, refs = 0;
   longint    cyc = 0, last_ref = -1;   // 64 bit: a 32-bit count wraps after 22 s at 96 MHz
   reg        mode_set = 0;
@@ -28,20 +28,20 @@ module sdram_strict (
 
   // read data pipeline: slot = cycle number mod 16
   reg        o_valid [0:15];
-  reg [22:0] o_addr  [0:15];
+  reg [24:0] o_addr  [0:15];
   reg [15:0] dq_out;
   reg        dq_oe = 0;
   assign dq = dq_oe ? dq_out : 16'bz;
 
   // write burst in progress
   integer    w_left = 0;
-  reg [22:0] w_addr;
+  reg [24:0] w_addr;
 
   integer i;
   initial begin
     for (i = 0; i < 16; i = i + 1) o_valid[i] = 0;
     for (i = 0; i < 4; i = i + 1) begin open[i] = 0; t_idle[i] = 0; t_act[i] = 0; end
-    for (i = 0; i < (1<<23); i = i + 1) mem[i] = 16'h0000;
+    for (i = 0; i < (1<<25); i = i + 1) mem[i] = 16'h0000;
   end
 
   task err(input [8*48-1:0] msg); begin
@@ -68,7 +68,7 @@ module sdram_strict (
       if (!fpga_drives) err("write beat without data");
       if (!dqml) mem[w_addr][7:0]  = dq[7:0];
       if (!dqmh) mem[w_addr][15:8] = dq[15:8];
-      w_addr = {w_addr[22:2], w_addr[1:0] + 2'd1};
+      w_addr = {w_addr[24:2], w_addr[1:0] + 2'd1};
       w_left = w_left - 1;
     end
 
@@ -100,7 +100,6 @@ module sdram_strict (
         if (open[ba]) err("ACTIVE on an open bank");
         if (cyc < t_idle[ba]) err("ACTIVE before precharge done (tRP/tWR)");
         if (cyc < t_ref_done) err("ACTIVE during tRFC");
-        if (a[12:11] != 0) err("row outside the 16 MB model");
         row[ba] = a; open[ba] = 1; t_act[ba] = cyc;
       end
       CMD_READ: begin
@@ -110,7 +109,7 @@ module sdram_strict (
         for (i = 0; i < 4; i = i + 1) begin
           if (o_valid[(cyc + CL + i) % 16]) err("read bursts overlap");
           o_valid[(cyc + CL + i) % 16] = 1;
-          o_addr[(cyc + CL + i) % 16]  = {ba, row[ba][10:0], a[9:0]} + i;
+          o_addr[(cyc + CL + i) % 16]  = {ba, row[ba], a[9:0]} + i;
         end
         if (a[10]) begin   // auto precharge after the burst
           if (cyc + 4 - t_act[ba] < T_RAS) err("tRAS violated (read)");
@@ -120,7 +119,7 @@ module sdram_strict (
       CMD_WRITE: begin
         if (!open[ba]) err("WRITE on a closed bank");
         if (cyc - t_act[ba] < T_RCD) err("WRITE before tRCD");
-        w_addr = {ba, row[ba][10:0], a[9:0]};
+        w_addr = {ba, row[ba], a[9:0]};
         if (!fpga_drives) err("WRITE without data");
         if (!dqml) mem[w_addr][7:0]  = dq[7:0];
         if (!dqmh) mem[w_addr][15:8] = dq[15:8];

@@ -1,9 +1,10 @@
 | Enhanced joystick ports (falcon_combel.sv): row 0 of joypad A and B selected ($FF9202 = $EE);
 | every change of {directions ($FF9202 bits 15..8), buttons ($FF9200 bits 7..0)} is logged at
 | $100000 as {_hz_200.l, value.w}, for 4 s. Then the done marker $D0E0600D at $FFFF0.
-|    ./run_prg.sh /tmp/jp tests/joypad.s -- --ms 6000 --done FFFF0 --dump 100000:60 --pad 3000:10:300
+|    ./run_prg.sh /tmp/jp tests/joypad.s -- --ms 9000 --start FFFF4 --done FFFF0 --dump 100000:60 --pad 300:18:200
 | MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
 	.text
+	move.l	#0x57A27000,0xFFFF4	| start marker (sim_main --start FFFF4)
 	clr.l	-(sp)
 	move.w	#0x20,-(sp)
 	trap	#1			| Super

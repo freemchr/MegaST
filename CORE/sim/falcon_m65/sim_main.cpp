@@ -10,10 +10,13 @@
 //     --key IDX:T[:D]     ST matrix position IDX (col*8+row) pressed at T ms for D ms (default 100)
 //     --turbo             CPU at 32 MHz
 //     --lang N            NVRAM language and keyboard (0 US, 3 UK)
+//     --fastram N         Fast RAM (TT-RAM) at $01000000: N blocks of 16 MB (1..3)
 //     --mouse T:DX:DY:B   at T ms a PS/2 mouse packet (B: bit 0 left, bit 1 right)
 //     --reset T:US        at T ms a reset pulse of US microseconds (the menu item "Reset Atari ST")
 //     --pc MS             print the CPU's PC every MS milliseconds (and the CPU's reset edges)
 //     --text ADDR         at the end print the NUL-terminated text at ADDR (hex; FPUTEST's simrom.s: 100000)
+//     --start ADDR        the times of --key, --joy, --pad and --mouse count from when the long at ADDR
+//                         is $57A27000 (a test program's start marker; tests/*.s: FFFF4)
 //     --dump ADDR:LEN     at the end print LEN bytes at ADDR (hex) as hex
 //     --done ADDR         stop when the long at ADDR is $D0E0600D (simrom.s: FFFF0)
 //     --joyflicker T      from T ms on joystick 0 changes every ms (mouse pins seen as a joystick)
@@ -64,14 +67,15 @@ int main(int argc, char **argv) {
     double run_ms = 6000;
     int frame_every = 50, monitor = 2, ram = 14;
     bool turbo = false;
-    int lang = 0;
+    int lang = 0, fast_n = 0;
     std::vector<Key> keys;
     std::vector<Joy> joys;
     std::string wav_name;
     struct Mouse { double t; int dx, dy, b; };
     std::vector<Mouse> mice;
     double joyflicker = -1, pc_every = 0, pc_next = 0;
-    uint32_t text_addr = 0, done_addr = 0, dump_addr = 0, dump_len = 0;
+    uint32_t text_addr = 0, done_addr = 0, dump_addr = 0, dump_len = 0, start_addr = 0;
+    double t_start = 0;     // the event times are relative to this (--start)
     bool prev_cpu_rst = true;
     struct Rst { double t, us; };
     std::vector<Rst> resets;
@@ -87,9 +91,11 @@ int main(int argc, char **argv) {
         else if (a == "--hda") img_name[2] = next();
         else if (a == "--turbo") turbo = true;
         else if (a == "--lang") lang = atoi(next().c_str());
+        else if (a == "--fastram") fast_n = atoi(next().c_str());
         else if (a == "--mouse") { Mouse m{0, 0, 0, 0}; sscanf(next().c_str(), "%lf:%d:%d:%d", &m.t, &m.dx, &m.dy, &m.b); mice.push_back(m); }
         else if (a == "--reset") { Rst r{0, 30}; sscanf(next().c_str(), "%lf:%lf", &r.t, &r.us); resets.push_back(r); }
         else if (a == "--text") text_addr = (uint32_t)strtoul(next().c_str(), nullptr, 16);
+        else if (a == "--start") { start_addr = (uint32_t)strtoul(next().c_str(), nullptr, 16); t_start = 1e30; }
         else if (a == "--dump") sscanf(next().c_str(), "%x:%x", &dump_addr, &dump_len);
         else if (a == "--done") done_addr = (uint32_t)strtoul(next().c_str(), nullptr, 16);
         else if (a == "--pc") pc_every = atof(next().c_str());
@@ -117,7 +123,7 @@ int main(int argc, char **argv) {
 
     top = new Vtb_top;
     svSetScope(svGetScopeFromName("TOP.tb_top"));
-    top->ram_mb = ram; top->monitor = monitor; top->cpu_turbo = turbo; top->tos_lang = lang;
+    top->ram_mb = ram; top->monitor = monitor; top->cpu_turbo = turbo; top->tos_lang = lang; top->fast_n = fast_n;
     for (int i = 0; i < 4; i++) top->kbd_matrix_n[i] = 0xFFFFFFFF;
     top->ps2_mouse = 0; top->joy0 = 0; top->joy1 = 0; top->pad0 = 0; top->pad1 = 0; top->img_mounted = 0; top->img_size = 0; top->sd_ack = 0;
     top->sd_buff_wr = 0; top->sd_buff_addr = 0; top->sd_buff_dout = 0;
@@ -173,17 +179,23 @@ int main(int argc, char **argv) {
     const uint64_t total = cyc + (uint64_t)(run_ms * 1e-3 * CLK_HZ);
     while (cyc < total && !Verilated::gotFinish()) {
         double now_ms = cyc / CLK_HZ * 1e3;
+        if (start_addr && t_start > 1e29 && (cyc & 32767) == 0 &&
+            (guest_peek8(start_addr) << 24 | guest_peek8(start_addr + 1) << 16 | guest_peek8(start_addr + 2) << 8 | guest_peek8(start_addr + 3)) == 0x57A27000) {
+            t_start = now_ms;
+            printf("[%9.3f ms] start marker at %06x\n", now_ms, start_addr);
+        }
+        const double ev_ms = now_ms - t_start;    // the time of the input events
 
         // keys in the ST matrix (low active)
         for (auto &k : keys) {
-            bool down = now_ms >= k.t && now_ms < k.t + k.d;
+            bool down = ev_ms >= k.t && ev_ms < k.t + k.d;
             uint32_t &wd = top->kbd_matrix_n[k.idx / 32];
             uint32_t bit = 1u << (k.idx % 32);
             if (down) wd &= ~bit; else wd |= bit;
         }
 
         // mouse packets (toggle bit 24 like hps_io) and the joystick 0 flicker
-        for (auto &m : mice) if (m.t >= 0 && now_ms >= m.t) {
+        for (auto &m : mice) if (m.t >= 0 && ev_ms >= m.t) {
             int st = (m.b & 3) | 8 | (m.dx < 0 ? 0x10 : 0) | (m.dy < 0 ? 0x20 : 0);
             top->ps2_mouse = ((~top->ps2_mouse >> 24 & 1) << 24) | ((m.dy & 0xFF) << 16) | ((m.dx & 0xFF) << 8) | st;
             printf("[%9.3f ms] mouse packet dx %d dy %d buttons %d\n", now_ms, m.dx, m.dy, m.b);
@@ -191,7 +203,7 @@ int main(int argc, char **argv) {
         }
         {
             uint32_t j1 = 0, p0 = 0;
-            for (auto &j : joys) if (now_ms >= j.t && now_ms < j.t + j.d) (j.pad ? p0 : j1) |= j.bits;
+            for (auto &j : joys) if (ev_ms >= j.t && ev_ms < j.t + j.d) (j.pad ? p0 : j1) |= j.bits;
             if (j1 != top->joy1 || p0 != top->pad0) printf("[%9.3f ms] joystick %X, joypad A %X\n", now_ms, j1, p0);
             top->joy1 = j1; top->pad0 = p0;
         }

@@ -220,6 +220,14 @@ with `MEGA65` comments:
   MEGA65 joystick ports when the menu item "STe joypads" is on. MiSTer: connect `joy0`/`joy1` to both.
 * `rtl/falcon/falcon_system.sv`: input `nv_lang`, the language and keyboard of the NVRAM default image
   (`falcon_nvram` `cfg_lang`/`cfg_kbd`, upstream 0 = US): UK with the menu item "As printed, UK TOS".
+* `rtl/falcon/falcon_cpubus.sv`, `falcon_l2.sv`, `falcon_memarb.sv`, `falcon_system.sv`: Fast RAM
+  (TT-RAM), input `fast_n` (16 MB blocks at `$01000000`, 0 = none: the behaviour of upstream). With
+  Fast RAM, A31..A24 are decoded: `$00`/`$FF` the 24-bit space, `$01..fast_n` Fast RAM (a 32-bit port
+  without the ST-RAM slot, also in the Falcon mode), the rest a bus error. The CPU's memory port, the
+  line cache tags and the arbiter's CPU addresses have two more bits ([25:24]); the Fast RAM is right
+  above the 24-bit space in memory (DDRAM_ADDR[22:21]). DMA, video and the blitter stay in the 24-bit
+  space. EmuTOS finds the Fast RAM by itself (32-bit bus test, `ttram_detect`). On MiSTer the DDR3
+  window would have to grow by 48 MB.
 
 QNICE
 -----

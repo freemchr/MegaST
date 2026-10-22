@@ -15,8 +15,9 @@
 // turns without reprogramming it: a 64-bit write is four WRITE commands in a
 // row, one per beat, each with its byte masks. Every access opens its row and
 // closes it with auto precharge, so all banks are idle between commands and a
-// refresh can always go in. Address: 64-bit word address a[20:0] (16 MB):
-// column {a[7:0], 2'b00}, bank a[9:8], row a[20:10].
+// refresh can always go in. Address: 64-bit word address a[22:0] (64 MB, the whole
+// chip: the 24-bit space in the first 16 MB, the Fast RAM above it): column
+// {a[7:0], 2'b00}, bank a[9:8], row a[22:10].
 //
 // Clocks: the Falcon side runs at clk_32, the SDRAM at clk_96 (same MMCM,
 // rising edges aligned).
@@ -40,7 +41,7 @@ module falcon_sdram (
 	// MiSTer DDRAM port (clk_32)
 	output            busy,
 	input       [2:0] burstcnt,   // 1 or 4
-	input      [20:0] addr,       // 64-bit word address
+	input      [22:0] addr,       // 64-bit word address
 	output reg [63:0] dout,
 	output reg        dout_ready,
 	input             rd,
@@ -70,7 +71,7 @@ localparam CMD_AUTO_REFRESH = 4'b0001;
 
 reg        c_tog = 1'b0;        // toggles with every accepted command
 reg        c_pend = 1'b0;       // a command is in the SDRAM controller
-reg [20:0] c_addr;
+reg [22:0] c_addr;
 reg        c_we;
 reg        c_four;              // 4-word read
 reg [63:0] c_din;
@@ -124,7 +125,7 @@ reg [47:0] cap_sr;
 
 wire [1:0] c_bank = c_addr[9:8];
 wire       last = !c_four || word == 2'd3;   // the READ now is the last one
-wire [12:0] c_row = {2'b00, c_addr[20:10]};
+wire [12:0] c_row = c_addr[22:10];
 
 always @(posedge clk_96) begin
 	sd_cmd_o <= CMD_NOP;

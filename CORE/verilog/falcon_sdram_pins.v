@@ -13,7 +13,7 @@ module falcon_sdram_pins (
 
 	output            busy,
 	input       [2:0] burstcnt,
-	input      [20:0] addr,
+	input      [22:0] addr,
 	output     [63:0] dout,
 	output            dout_ready,
 	input             rd,
