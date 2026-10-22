@@ -471,7 +471,8 @@ _HLP_CA_14      SUB     1, R3                   ; done reading config file?
                 CMP     16, R2
                 RBRA    _HLP_CA_9, !Z
 
-_HLP_CA_15      RBRA    _HLP_S3, 1              ; Case (a) successful
+_HLP_CA_15      RSUB    ROSM_FIXGRP, 1          ; MegaST: rosmfix.asm
+                RBRA    _HLP_S3, 1              ; Case (a) successful
 
                 ; ------------------------------------------------------------
                 ; Case (b): Use standard selectors from config.vhd

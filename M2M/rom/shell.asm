@@ -1673,6 +1673,7 @@ FRAME_FULLSCR   SYSCALL(enter, 1)
 #include "gencfg.asm"
 ; MegaST: remember the mounted images (mntmem.asm)
 #include "mntmem.asm"
+#include "rosmfix.asm"
 #include "options.asm"
 #include "selectfile.asm"
 #include "strings.asm"
