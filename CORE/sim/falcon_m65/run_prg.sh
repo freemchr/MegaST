@@ -4,7 +4,8 @@
 # PROG is a .s file (assembled with the m68k toolchain into a .PRG without relocations, see
 # tests/) or a .PRG/.TOS. DIR (optional) goes into the root of C: (data files of a demo). The image
 # (OUT.img), the frames (OUT/) and the log (OUT.log) are written next to OUT. Without TOS= the
-# EmuTOS of the Falcon test builds is used; SIM= selects the model (default obj_fpu).
+# EmuTOS of the Falcon test builds is used (simrom.py makes a faster booting copy for TOS=);
+# SIM= selects the model (default obj_fpu). Test programs (.s) get the fast load flag (no TPA clear).
 # MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
 set -e
 H=$(cd "$(dirname "$0")" && pwd)

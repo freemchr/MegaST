@@ -428,9 +428,12 @@ falcon_fpu_bridge #(.CLK_HZ(CLK_HZ)) fpu
 `endif
 
 // the CPU's line cache in block RAM (Falcon mode; turbo passes straight through)
+// MEGA65: in both modes. Without it every turbo read was one SDRAM access through
+// falcon_sdram's clock crossing (about 20 clocks): the 32 MHz turbo read memory hardly
+// faster than the Falcon mode.
 falcon_l2 l2
 (
-	.clk(clk), .reset(reset), .en(cpu_fmode),
+	.clk(clk), .reset(reset), .en(1'b1),
 	.c_req(cram_req), .c_we(cram_we), .c_addr(cram_addr), .c_be(cram_be), .c_wdata(cram_wdata),
 	.c_rdata(cram_rdata), .c_rdata64(cram_rdata64), .c_ack(cram_ack),
 	.m_req(mram_req), .m_we(mram_we), .m_addr(mram_addr), .m_be(mram_be), .m_wdata(mram_wdata),

@@ -171,6 +171,8 @@ int main(int argc, char **argv) {
     std::vector<uint8_t> fb(2048 * 1200 * 3);
     int fx = 0, fy = 0, maxx = 0, frame_no = 0;
     bool prev_hb = true, prev_vb = true, prev_kbd_rd = false;
+    int kbd_last = -1;
+    double kbd_last_ms = -1e9;
 
     FILE *wav = nullptr;
     uint64_t wav_next = 0, wav_samples = 0, wav_c0 = cyc;
@@ -271,7 +273,11 @@ int main(int argc, char **argv) {
         }
         if (pc_every > 0 && now_ms >= pc_next) { printf("[%9.3f ms] PC %08X\n", now_ms, top->dbg_pc); pc_next = now_ms + pc_every; }
         if (top->dbg_cpu_rst != prev_cpu_rst) { printf("[%9.3f ms] CPU reset %d, PC %08X\n", now_ms, top->dbg_cpu_rst, top->dbg_pc); prev_cpu_rst = top->dbg_cpu_rst; }
-        if (top->dbg_kbd_rd && !prev_kbd_rd) printf("[%9.3f ms] IKBD byte %02X\n", now_ms, top->dbg_kbd_byte);
+        // the bytes the CPU reads from the IKBD ACIA (a byte read again: at most every 100 ms, programs poll)
+        if (top->dbg_kbd_rd && !prev_kbd_rd && (top->dbg_kbd_byte != kbd_last || now_ms - kbd_last_ms > 100)) {
+            printf("[%9.3f ms] IKBD byte %02X\n", now_ms, top->dbg_kbd_byte);
+            kbd_last = top->dbg_kbd_byte; kbd_last_ms = now_ms;
+        }
         prev_kbd_rd = top->dbg_kbd_rd;
 
         if (top->ce_pix) {

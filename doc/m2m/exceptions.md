@@ -228,6 +228,9 @@ with `MEGA65` comments:
   above the 24-bit space in memory (DDRAM_ADDR[22:21]). DMA, video and the blitter stay in the 24-bit
   space. EmuTOS finds the Fast RAM by itself (32-bit bus test, `ttram_detect`). On MiSTer the DDR3
   window would have to grow by 48 MB.
+* `rtl/falcon/falcon_system.sv`: the CPU's line cache (`falcon_l2`) is on in the turbo mode too
+  (upstream: Falcon mode only). Without it every turbo read was one SDRAM access through the clock
+  crossing of `falcon_sdram.v`; reading memory got about 30 % faster (`tests/membench.s`).
 
 QNICE
 -----
