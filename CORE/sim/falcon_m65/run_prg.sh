@@ -28,7 +28,12 @@ import struct,sys
 c=open(sys.argv[1],'rb').read(); c+=b'\0'*(len(c)&1)
 open(sys.argv[2],'wb').write(struct.pack('>HIIIIIIH',0x601A,len(c),0,0,0,0,int(sys.argv[3]),0)+c+b'\0\0\0\0')" \
 		"$ST/p.bin" "$ST/root/AUTO/TEST.PRG" "${PRGFLAGS:-1}" ;;
-*)	B=$(basename "$PROG"); cp "$PROG" "$ST/root/AUTO/${B%.*}.PRG" ;;   # \AUTO runs .PRG only
+*)	B=$(basename "$PROG"); cp "$PROG" "$ST/root/AUTO/${B%.*}.PRG"     # \AUTO runs .PRG only
+	# FASTLOAD=1: the copy gets the fast load flag (GEMDOS clears the BSS, not the rest of the TPA:
+	# saves seconds of simulated time)
+	[ -n "$FASTLOAD" ] && python3 -c "
+import sys; f=open(sys.argv[1],'r+b'); f.seek(25); b=f.read(1)[0]; f.seek(25); f.write(bytes([b|1]))" \
+		"$ST/root/AUTO/${B%.*}.PRG" ;;
 esac
 if [ -n "$DIR" ]; then
 	# the data files in C:\ and in \AUTO (the current directory of a program from \AUTO), the
