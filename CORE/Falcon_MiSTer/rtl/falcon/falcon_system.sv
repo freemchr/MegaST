@@ -79,6 +79,19 @@ module falcon_system #(parameter CLK_HZ = 32000000)
 	output signed [15:0] audio_r,
 
 	// serial
+	// MEGA65: a real floppy drive as A: (falcon_fdc ext_fd): the WD1772 outside, drive select
+	// and side from the PSG port A (low active)
+	input             ext_fd,
+	output            wd_sel,
+	output      [1:0] wd_addr,
+	output            wd_rw,
+	output      [7:0] wd_din,
+	input       [7:0] wd_dout,
+	input             wd_irq,
+	input             wd_drq,
+	output      [1:0] fd_sel_n,
+	output            fd_side_n,
+
 	input             midi_rx,
 	output            midi_tx,
 	input             ser_rx,
@@ -694,6 +707,9 @@ assign sd_blk_cnt[4] = scsi_blk_cnt; assign sd_blk_cnt[5] = scsi_blk_cnt; assign
 wire  [2:0] hdc_rs;
 wire  [7:0] hdc_wdata, hdc_rdata, hdc_push_byte, hdc_pull_byte;
 wire        hdc_push_req, hdc_push_ack, hdc_pull_req, hdc_pull_ack, hdc_flush;
+assign fd_sel_n  = porta[2:1];   // MEGA65
+assign fd_side_n = porta[0];
+
 falcon_fdc #(.CLK_HZ(CLK_HZ), .EXT_SCSI(1)) fdc
 (
 	.clk(clk), .reset(dev_reset),
@@ -707,6 +723,8 @@ falcon_fdc #(.CLK_HZ(CLK_HZ), .EXT_SCSI(1)) fdc
 	.sd_buff_addr(sd_buff_addr[8:0]), .sd_buff_dout(sd_buff_dout),
 	.sd_buff_din0(sd_buff_din[0]), .sd_buff_din1(sd_buff_din[1]), .sd_buff_wr(sd_buff_wr),
 	.led(fdd_led),
+	.ext_fd(ext_fd), .wd_sel(wd_sel), .wd_addr(wd_addr), .wd_rw(wd_rw), .wd_din(wd_din),   // MEGA65
+	.wd_dout(wd_dout), .wd_irq(wd_irq), .wd_drq(wd_drq),
 	.hdc_acc(hdc_acc), .hdc_we(hdc_we), .hdc_rs(hdc_rs), .hdc_wdata(hdc_wdata),
 	.hdc_rdata(hdc_rdata), .hdc_irq_set(hdc_irq_set), .hdc_irq_clr(hdc_irq_clr),
 	.hdc_push_req(hdc_push_req), .hdc_push_byte(hdc_push_byte), .hdc_push_ack(hdc_push_ack),

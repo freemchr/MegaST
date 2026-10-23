@@ -6,6 +6,8 @@
 //     --frames DIR        write frames as DIR/frame_NNNN.ppm   --frame-every N (default 50)
 //     --monitor M         0 mono, 1 RGB, 2 VGA (default), 3 TV     --ram MB (4 or 14, default 14)
 //     --fda FILE          floppy A (.st), served like fdc_bridge.vhd (16-bit words, even byte low)
+//     --rfloppy FILE      the .st image in the flux level model of the internal drive (realdrive.h),
+//                         drive A: is that drive (menu "Real floppy drive as A:")
 //     --hda FILE          hard disk on drive 2 (IDE master), served the same way
 //     --key IDX:T[:D]     ST matrix position IDX (col*8+row) pressed at T ms for D ms (default 100)
 //     --turbo             CPU at 32 MHz
@@ -31,6 +33,7 @@
 // MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
 #include "Vtb_top.h"
 #include "Vtb_top__Dpi.h"
+#include "../realdrive.h"
 #include "verilated.h"
 #include "svdpi.h"
 #include <cstdio>
@@ -70,7 +73,7 @@ int main(int argc, char **argv) {
     int lang = 0, fast_n = 0;
     std::vector<Key> keys;
     std::vector<Joy> joys;
-    std::string wav_name;
+    std::string wav_name, rfd_name;
     struct Mouse { double t; int dx, dy, b; };
     std::vector<Mouse> mice;
     double joyflicker = -1, pc_every = 0, pc_next = 0;
@@ -102,6 +105,7 @@ int main(int argc, char **argv) {
         else if (a == "--joyflicker") joyflicker = atof(next().c_str());
         else if (a == "--joy" || a == "--pad") { Joy j{0, 0, 100, a == "--pad"}; sscanf(next().c_str(), "%lf:%x:%lf", &j.t, &j.bits, &j.d); joys.push_back(j); }
         else if (a == "--wav") wav_name = next();
+        else if (a == "--rfloppy") rfd_name = next();
         else if (a == "--key") { Key k{0, 0, 100}; sscanf(next().c_str(), "%d:%lf:%lf", &k.idx, &k.t, &k.d); keys.push_back(k); }
     }
     std::vector<uint8_t> tos, img[4];
@@ -120,6 +124,15 @@ int main(int argc, char **argv) {
         fclose(f);
     }
     if (!frames_dir.empty()) mkdir(frames_dir.c_str(), 0755);
+    RealDrive rd;
+    if (!rfd_name.empty()) {
+        FILE *f = fopen(rfd_name.c_str(), "rb");
+        if (!f) { perror(rfd_name.c_str()); return 1; }
+        std::vector<uint8_t> d; uint8_t buf[65536]; size_t n;
+        while ((n = fread(buf, 1, sizeof buf, f)) > 0) d.insert(d.end(), buf, buf + n);
+        fclose(f);
+        rd.load(d);
+    }
 
     top = new Vtb_top;
     svSetScope(svGetScopeFromName("TOP.tb_top"));
@@ -128,6 +141,8 @@ int main(int argc, char **argv) {
     top->ps2_mouse = 0; top->joy0 = 0; top->joy1 = 0; top->pad0 = 0; top->pad1 = 0; top->img_mounted = 0; top->img_size = 0; top->sd_ack = 0;
     top->sd_buff_wr = 0; top->sd_buff_addr = 0; top->sd_buff_dout = 0;
     top->dio_strobe = 0;
+    top->real_fd = !rfd_name.empty();
+    top->rfd_rdata = 0; top->rfd_index = 0; top->rfd_track0 = 0; top->rfd_wprot = 0;
 
     // power on: init, por, then TOS through the loader while the machine is in reset
     top->init = 1; top->por = 1; top->cold_reset = 1; top->reset = 1;
@@ -264,6 +279,25 @@ int main(int argc, char **argv) {
             break;
         }
 
+        if (top->real_fd) {
+            // the WD1772's commands, interrupts and first status reads after each command
+            static int wd_prev = 0, wd_cmds = 0, wd_bytes = 0;
+            int w = top->dbg_wd;
+            bool sel = w >> 15 & 1, rw = w >> 14 & 1, irq = w >> 11 & 1;
+            int ad = w >> 12 & 3, dat = w & 0xFF;
+            if (sel && !(wd_prev >> 15 & 1)) {
+                if (!rw && ad == 0) { printf("[%9.3f ms] WD1772 command %02X (head %d)\n", now_ms, dat, rd.head); wd_cmds++; }
+                else if (!rw) printf("[%9.3f ms] WD1772 reg %d = %02X\n", now_ms, ad, dat);
+                else if (ad == 3) wd_bytes++;
+            }
+            if (irq != (bool)(wd_prev >> 11 & 1)) printf("[%9.3f ms] WD1772 INTRQ %d (%d data bytes so far)\n", now_ms, irq, wd_bytes);
+            wd_prev = w;
+            bool rdata, index, track0, wprot;
+            rd.step(top->rfd_sel_a, top->rfd_motor, top->rfd_side, top->rfd_dir_in, top->rfd_step, frame_no,
+                    rdata, index, track0, wprot);
+            top->rfd_rdata = rdata; top->rfd_index = index; top->rfd_track0 = track0; top->rfd_wprot = wprot;
+        }
+
         tick();
 
         if (done_addr && (cyc & 32767) == 0 &&
@@ -271,7 +305,14 @@ int main(int argc, char **argv) {
             printf("[%9.3f ms] done marker at %06x\n", now_ms, done_addr);
             break;
         }
-        if (pc_every > 0 && now_ms >= pc_next) { printf("[%9.3f ms] PC %08X\n", now_ms, top->dbg_pc); pc_next = now_ms + pc_every; }
+        if (pc_every > 0 && now_ms >= pc_next) {
+            // with the DSP (falcon_system dbg): PC, R6, host interface status ISR and HSR, SSI status
+            const uint32_t *f = top->dbg_f.data();
+            printf("[%9.3f ms] PC %08X  DSP PC %04X R6 %04X R7 %04X LC %04X ISR %02X HSR %02X SSISR %02X\n", now_ms,
+                   top->dbg_pc, f[2] & 0xFFFF, f[2] >> 16, f[3] & 0xFFFF, f[3] >> 16,
+                   f[4] >> 24, (f[4] >> 16) & 0xFF, (f[4] >> 8) & 0xFF);
+            pc_next = now_ms + pc_every;
+        }
         if (top->dbg_cpu_rst != prev_cpu_rst) { printf("[%9.3f ms] CPU reset %d, PC %08X\n", now_ms, top->dbg_cpu_rst, top->dbg_pc); prev_cpu_rst = top->dbg_cpu_rst; }
         // the bytes the CPU reads from the IKBD ACIA (a byte read again: at most every 100 ms, programs poll)
         if (top->dbg_kbd_rd && !prev_kbd_rd && (top->dbg_kbd_byte != kbd_last || now_ms - kbd_last_ms > 100)) {

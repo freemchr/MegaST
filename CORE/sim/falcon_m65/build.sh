@@ -18,12 +18,17 @@ fi
 # the .mem tables ($readmemb with the file name only) are read from the directory the test runs in
 ln -sf $F/falcon_psg_vol.mem falcon_psg_vol.mem
 ln -sf $F/falcon_optbl.mem falcon_optbl.mem
+# the WD1772 of the real floppy drive (wd1772_m65.v): WF1772IP (VHDL) converted to Verilog by GHDL
+mkdir -p $MDIR
+ghdl --synth --std=08 -fsynopsys -frelaxed --out=verilog \
+	$(for f in pkg am_detector control crc_logic digital_pll registers transceiver top_soc; do
+		echo ../../vhdl/floppy/wf1772ip/wf1772ip_$f.vhd; done) -e WF1772IP_TOP_SOC > $MDIR/wf1772ip.v
 verilator --cc --exe --build -j 8 -O3 --x-assign fast --x-initial fast \
 	-Wno-fatal -Wno-WIDTH -Wno-CASEINCOMPLETE -Wno-PINMISSING -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN -Wno-UNOPTFLAT \
 	-Wno-INITIALDLY -Wno-BLKANDNBLK -Wno-LATCH \
 	--top-module tb_top -Mdir $MDIR $DEFS \
 	-I$R/AP68030/rtl -I$R/AP68030/rtl/core -I$F -I$F/dsp \
-	tb_top.sv $V/falcon_m65.sv $V/falcon_kbd_map.v $V/falcon_sdram.v $V/sdram_pinstage.v $EXTRA \
+	tb_top.sv $V/falcon_m65.sv $V/wd1772_m65.v $MDIR/wf1772ip.v $V/falcon_kbd_map.v $V/falcon_sdram.v $V/sdram_pinstage.v $EXTRA \
 	../falcon_sdram/sdram_strict.v ../sim_stubs.v \
 	$R/AP68030/rtl/*.v $F/*.sv $F/dsp/*.sv sim_main.cpp
 echo "Done: $MDIR/Vtb_top"

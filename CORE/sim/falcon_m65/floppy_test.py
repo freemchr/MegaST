@@ -2,6 +2,7 @@
 """Floppy test image for the falcon_m65 test bench.
 
     python3 floppy_test.py make disk.st     720 KB FAT12 disk with \\AUTO\\WRTEST.PRG
+    python3 floppy_test.py make disk.st P   ... with the program P (a .PRG) as \\AUTO\\WRTEST.PRG instead
     python3 floppy_test.py check disk.st.out  is A:\\OUT.TXT there with the expected text?
 
 WRTEST.PRG (68000, hand assembled, PC relative): Fcreate("A:\\OUT.TXT"), Fwrite(TEXT),
@@ -49,11 +50,11 @@ def wrtest_prg(drive=b"A"):
     if len(code) & 1: code.append(0)
     for off, lab in fixups:           # displacement from the extension word
         struct.pack_into('>h', code, off, labels[lab] - off)
-    hdr = struct.pack('>HIIIIIIH', 0x601A, len(code), 0, 0, 0, 0, 0, 0)
+    hdr = struct.pack('>HIIIIIIH', 0x601A, len(code), 0, 0, 0, 0, 1, 0)   # fast load: no TPA clear
     return hdr + bytes(code) + b'\0\0\0\0'   # no relocations
 
 
-def make(path):
+def make(path, prg_file=None):
     img = bytearray(SECTORS * 512)
     bs = bytearray(512)
     bs[0:2] = b'\x60\x38'             # bra (not executable: checksum not $1234)
@@ -76,7 +77,7 @@ def make(path):
     def entry(name, ext, attr, clus, size):
         return name.ljust(8).encode() + ext.ljust(3).encode() + bytes([attr]) + bytes(10) + \
             struct.pack('<HHHI', 0, 0x5994, clus, size)   # date 2024-12-20
-    prg = wrtest_prg()
+    prg = open(prg_file, 'rb').read() if prg_file else wrtest_prg()
     auto = bytearray(SPC * 512)
     auto_clus = alloc(auto)           # placeholder, filled below
     prg_clus = alloc(prg)
@@ -128,6 +129,6 @@ def check(path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3 or sys.argv[1] not in ('make', 'check'):
+    if len(sys.argv) not in (3, 4) or sys.argv[1] not in ('make', 'check'):
         sys.exit(__doc__)
-    sys.exit(make(sys.argv[2]) if sys.argv[1] == 'make' else check(sys.argv[2]))
+    sys.exit(make(*sys.argv[2:]) if sys.argv[1] == 'make' else check(sys.argv[2]))

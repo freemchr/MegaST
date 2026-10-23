@@ -231,6 +231,11 @@ with `MEGA65` comments:
 * `rtl/falcon/falcon_system.sv`: the CPU's line cache (`falcon_l2`) is on in the turbo mode too
   (upstream: Falcon mode only). Without it every turbo read was one SDRAM access through the clock
   crossing of `falcon_sdram.v`; reading memory got about 30 % faster (`tests/membench.s`).
+* `rtl/falcon/falcon_fdc.sv`, `falcon_system.sv`: input `ext_fd` and the `wd_*` port: the MEGA65's
+  internal floppy drive as A: (menu "Real floppy drive as A:"). The WD1772 is then `wd1772_m65.v` (the
+  ST's, flux level, at the drive), `falcon_fdc` keeps the DMA chip: register accesses go out (the CPU's
+  acknowledge after the access), DRQ moves the data register through the FIFO, INTRQ comes back.
+  `fd_sel_n`/`fd_side_n`: PSG port A bits 2..0 for the drive. With `ext_fd = 0` as upstream.
 
 QNICE
 -----

@@ -112,8 +112,8 @@ module falcon_fdc #(
 	input             bus_uds,
 	input             bus_lds,
 	input      [15:0] bus_din,
-	output reg [15:0] bus_dout,
-	output reg        bus_ack,
+	output     [15:0] bus_dout,
+	output            bus_ack,
 	output reg        bus_berr,
 
 	output            irq,
@@ -147,6 +147,20 @@ module falcon_fdc #(
 	input             sd_buff_wr,
 
 	output            led,          // floppy activity (WD1772 busy or image access)
+
+	// MEGA65: a real drive (ext_fd = 1): the WD1772 is outside (wd1772_m65.v at the MEGA65's floppy
+	// drive), this module keeps the DMA chip. Its register accesses go out (wd_sel held for 4
+	// clocks, the CPU's access is acknowledged after it), DRQ moves the data register through the
+	// FIFO (disk -> RAM: read DR, push; RAM -> disk: pull, write DR), INTRQ is wd_irq. The image
+	// WD1772 here gets no commands then.
+	input             ext_fd,
+	output            wd_sel,
+	output      [1:0] wd_addr,
+	output            wd_rw,        // 1 = read
+	output      [7:0] wd_din,
+	input       [7:0] wd_dout,
+	input             wd_irq,
+	input             wd_drq,
 
 	// HDC side: external NCR 5380 (falcon_scsi), used when EXT_SCSI = 1
 	output            hdc_acc,
@@ -295,8 +309,8 @@ reg  [3:0] int_cond;
 reg        irq_forced;
 reg        irq_other;            // complete / index / HDC sources
 reg  [3:0] ip_cnt;
-assign irq = irq_forced | irq_other;
-assign led = STR[0] | h_act;
+assign irq = ext_fd ? (wd_irq | irq_other) : (irq_forced | irq_other);
+assign led = ext_fd ? 1'b0 : (STR[0] | h_act);
 
 wire motor_on = STR[7];
 wire ip_drive = motor_on & drv_ok & inserted[sel] & geo_valid[sel];
@@ -459,12 +473,86 @@ end
 
 wire [15:0] reg8604_rd = dmode[4] ? recent : dmode[3] ? {8'h00, ncr_rdata} : {8'h00, fdc_reg_rd};
 
+// MEGA65: the FDC side of the FIFO handshake: the image WD1772, or the bridge to the real one
+reg        x_push_req, x_pull_req;
+reg  [7:0] x_push_byte;
+wire       pq = ext_fd ? x_push_req  : push_req;
+wire [7:0] pb = ext_fd ? x_push_byte : push_byte;
+wire       lq = ext_fd ? x_pull_req  : pull_req;
+reg        bus_ack_i;
+reg [15:0] bus_dout_i;
+reg        x_ack;
+reg  [7:0] x_rdata;
+assign bus_ack  = bus_ack_i | x_ack;
+assign bus_dout = x_ack ? {8'h00, x_rdata} : bus_dout_i;
+// a CPU access to the WD1772 registers goes to the real one
+wire ext_acc = ext_fd & a_8604 & ~dmode[4] & ~dmode[3] & ~(bus_we & bytew);
+
 integer i;
 reg [15:0] new_recent;
 
+// MEGA65: the bridge to the real WD1772 (ext_fd). One access at a time, 4 clocks of wd_sel (the
+// IP samples on its 16 MHz enable), then 6 clocks without (wd1772_m65 stretches a select by 3) and
+// time for DRQ to drop. CPU accesses first, then a pulled byte for DR, then DRQ.
+reg        x_busy, x_rw, x_cpu, x_pend, x_prw, x_wpend;
+reg  [1:0] x_addr, x_paddr;
+reg  [7:0] x_din, x_pdin, x_wbyte;
+reg  [2:0] x_cnt;
+reg  [3:0] x_cool;
+assign wd_sel  = x_busy;
+assign wd_addr = x_addr;
+assign wd_rw   = x_rw;
+assign wd_din  = x_din;
+always @(posedge clk) begin
+	x_ack <= 1'b0;
+	if (reset || !ext_fd) begin
+		x_busy <= 1'b0; x_pend <= 1'b0; x_wpend <= 1'b0; x_cool <= 4'd0;
+		x_push_req <= 1'b0; x_pull_req <= 1'b0;
+	end else begin
+		if (bus_stb && ext_acc) begin
+			x_pend <= 1'b1; x_prw <= !bus_we; x_paddr <= dmode[2:1]; x_pdin <= bus_din[7:0];
+		end
+		if (x_cool != 4'd0) x_cool <= x_cool - 4'd1;
+		if (x_push_req && push_ack) x_push_req <= 1'b0;
+		if (x_pull_req && pull_ack) begin
+			x_pull_req <= 1'b0; x_wpend <= 1'b1; x_wbyte <= pull_byte;
+		end
+		if (x_busy) begin
+			x_cnt <= x_cnt + 3'd1;
+			if (x_cnt == 3'd3) begin
+				x_busy <= 1'b0;
+				x_cool <= 4'd6;
+				if (x_cpu) begin
+					x_ack <= 1'b1; x_rdata <= wd_dout;
+				end else if (x_rw) begin
+					x_push_req <= 1'b1; x_push_byte <= wd_dout;    // DR read for DRQ: to the FIFO
+				end
+			end
+		end else if (x_cool == 4'd0) begin
+			if (x_pend) begin
+				x_busy <= 1'b1; x_cnt <= 3'd0; x_cpu <= 1'b1;
+				x_rw <= x_prw; x_addr <= x_paddr; x_din <= x_pdin;
+				x_pend <= 1'b0;
+			end else if (x_wpend) begin
+				x_busy <= 1'b1; x_cnt <= 3'd0; x_cpu <= 1'b0;
+				x_rw <= 1'b0; x_addr <= 2'd3; x_din <= x_wbyte;
+				x_wpend <= 1'b0;
+			end else if (wd_drq && !x_push_req && !x_pull_req) begin
+				if (!dmode[8]) begin
+					x_busy <= 1'b1; x_cnt <= 3'd0; x_cpu <= 1'b0;
+					x_rw <= 1'b1; x_addr <= 2'd3;
+				end else begin
+					x_pull_req <= 1'b1;
+					x_cool <= 4'd15;              // (the DR write follows the pull)
+				end
+			end
+		end
+	end
+end
+
 // FIFO accesses: pushes (disk -> RAM) and fills (RAM -> disk) never happen
 // in the same DMA direction, so one write port per lane is enough.
-wire push_take = push_req & ~push_ack & ~dmode[8] & (scount != 14'd0) & ~half_full[wh];
+wire push_take = pq & ~push_ack & ~dmode[8] & (scount != 14'd0) & ~half_full[wh];
 wire fill_take = xf_act & dma_ack & ~dma_we & ~xf_abort;
 // HDC (5380) DMA: bytes not yet counted by the sector counter (FIFO halves
 // waiting for RAM plus the half being filled) must leave room in the count
@@ -472,14 +560,14 @@ wire       hdc_dma   = ~dmode[7] & ~dmode[6] & (EXT_SCSI != 0);
 wire [5:0] hdc_infl  = {(half_full[0] & half_full[1]), (half_full[0] ^ half_full[1]), 4'd0} + {2'b00, wb};
 wire       hdc_room  = (scount > 14'd1) || ((scount == 14'd1) && (bis > {4'd0, hdc_infl}));
 wire hdc_push_take = hdc_push_req & ~hdc_push_ack & hdc_dma & ~dmode[8] & hdc_room & ~half_full[wh] &
-                     ~(push_req & ~push_ack);
+                     ~(pq & ~push_ack);
 wire hdc_pull_take = hdc_pull_req & ~hdc_pull_ack & hdc_dma & dmode[8] & half_full[rh] &
-                     ~(pull_req & ~pull_ack);
+                     ~(lq & ~pull_ack);
 assign ff_raddr = dmode[8] ? {rh, rb[3:1]} : {xf_half, xf_word};
 always @* begin
 	ffe_we = 1'b0; ffo_we = 1'b0;
 	ff_waddr = {wh, wb[3:1]};
-	ffe_wd = push_byte; ffo_wd = push_byte;
+	ffe_wd = pb; ffo_wd = pb;
 	if (push_take) begin
 		ffe_we = ~wb[0];
 		ffo_we = wb[0];
@@ -497,7 +585,7 @@ always @* begin
 end
 
 always @(posedge clk) begin
-	bus_ack <= 1'b0;
+	bus_ack_i <= 1'b0;
 	bus_berr <= 1'b0;
 	f_wr <= 1'b0;
 	f_rd_st <= 1'b0;
@@ -523,14 +611,14 @@ always @(posedge clk) begin
 		dma_addr <= 23'd0;
 		dma_wdata <= 16'h0000;
 		density <= 16'h0000;
-		bus_dout <= 16'hFFFF;
+		bus_dout_i <= 16'hFFFF;
 	end else begin
 		new_recent = recent;
 
 		// ----------------------------------------------------------------
 		// register accesses (side effects on bus_stb, ack on the next clock)
 		if (bus_stb) begin
-			bus_ack <= 1'b1;
+			bus_ack_i <= !ext_acc;                    // MEGA65: x_ack (below) for the real WD1772
 			if (bus_we) begin
 				if ((a_8604 | a_8606) & bytew) begin
 					bus_berr <= 1'b1;
@@ -541,7 +629,7 @@ always @(posedge clk) begin
 						new_recent = {new_recent[15:8], bus_din[7:0]};
 						if (dmode[3]) begin
 							ncr_acc <= 1'b1; ncr_we <= 1'b1; ncr_rs <= dmode[2:0]; ncr_wdata <= bus_din[7:0];
-						end else begin
+						end else if (!ext_fd) begin
 							f_wr <= 1'b1; f_wr_reg <= dmode[2:1]; f_wr_val <= bus_din[7:0];
 						end
 					end
@@ -566,36 +654,36 @@ always @(posedge clk) begin
 				end
 			end else begin
 				if (a_8604) begin
-					bus_dout <= reg8604_rd;
+					bus_dout_i <= reg8604_rd;
 					if (!dmode[4]) begin
 						new_recent = {new_recent[15:8], reg8604_rd[7:0]};
 						if (dmode[3]) begin
 							ncr_acc <= 1'b1; ncr_we <= 1'b0; ncr_rs <= dmode[2:0];
-						end else if (dmode[2:1] == 2'd0)
+						end else if (dmode[2:1] == 2'd0 && !ext_fd)
 							f_rd_st <= 1'b1;
 					end
 				end else if (a_8606) begin
-					bus_dout <= {recent[15:3], 1'b0, (scount != 14'd0), dstat[0]};
-				end else if (a_ahi)  bus_dout <= {8'hFF, dma_addr[23:16]};
-				else if (a_amid) bus_dout <= {8'hFF, dma_addr[15:8]};
-				else if (a_alo)  bus_dout <= {8'hFF, dma_addr[7:1], 1'b0};
-				else if (a_860e) bus_dout <= density;
-				else bus_dout <= 16'hFFFF;
+					bus_dout_i <= {recent[15:3], 1'b0, (scount != 14'd0), dstat[0]};
+				end else if (a_ahi)  bus_dout_i <= {8'hFF, dma_addr[23:16]};
+				else if (a_amid) bus_dout_i <= {8'hFF, dma_addr[15:8]};
+				else if (a_alo)  bus_dout_i <= {8'hFF, dma_addr[7:1], 1'b0};
+				else if (a_860e) bus_dout_i <= density;
+				else bus_dout_i <= 16'hFFFF;
 			end
 		end
 
 		// ----------------------------------------------------------------
 		// FDC byte push (disk -> RAM direction)
-		if (push_req && !push_ack) begin
+		if (pq && !push_ack) begin
 			if (dmode[8]) begin
 				push_ack <= 1'b1;                     // wrong direction: lost
 			end else if (scount == 14'd0) begin
-				new_recent = {new_recent[15:8], push_byte};
+				new_recent = {new_recent[15:8], pb};
 				dstat[0] <= 1'b0;
 				push_ack <= 1'b1;
 			end else if (!half_full[wh]) begin
 				// push_take: the byte is written to the FIFO RAM
-				new_recent = {new_recent[15:8], push_byte};
+				new_recent = {new_recent[15:8], pb};
 				dstat[0] <= 1'b1;
 				if (wb == 4'd15) begin
 					half_full[wh] <= 1'b1;
@@ -607,7 +695,7 @@ always @(posedge clk) begin
 		end
 
 		// FDC byte pull (RAM -> disk direction)
-		if (pull_req && !pull_ack) begin
+		if (lq && !pull_ack) begin
 			if (!dmode[8]) begin
 				pull_byte <= 8'h00;
 				pull_ack <= 1'b1;
@@ -639,7 +727,7 @@ always @(posedge clk) begin
 			wb <= wb + 4'd1;
 			hdc_push_ack <= 1'b1;
 		end else if (hdc_flush && hdc_dma && !dmode[8] && wb != 4'd0 && !half_full[wh] &&
-		             !(push_req && !push_ack)) begin
+		             !(pq && !push_ack)) begin
 			// end of the data in phase: the partly filled half goes to RAM
 			half_full[wh] <= 1'b1;
 			wh <= ~wh;

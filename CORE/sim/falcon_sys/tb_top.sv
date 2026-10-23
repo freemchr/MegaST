@@ -120,7 +120,7 @@ falcon_system #(.CLK_HZ(32000000)) system
 	.clk(clk), .reset(reset), .cold_reset(cold_reset), .por(por),
 	.ram_mb(ram_mb), .fast_n(2'd0), .ram_tos(ram_tos), .monitor(monitor), .cpu_turbo(cpu_turbo), .tstat_en(tstat_en),
 	.ld_wr(1'b0), .ld_addr(24'd0), .ld_data(8'd0), .ld_busy(),
-	.ps2_key(ps2_key), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(32'd0), .pad0(32'd0), .pad1(32'd0), .ana0(16'd0), .ana1(16'd0), .rtc(rtc),
+	.ps2_key(ps2_key), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(32'd0), .pad0(32'd0), .pad1(32'd0), .ext_fd(1'b0), .wd_dout(8'd0), .wd_irq(1'b0), .wd_drq(1'b0), .ana0(16'd0), .ana1(16'd0), .rtc(rtc),
 	.nv_lang(8'd0), .nv_init(1'b0), .nv_addr(6'd0), .nv_din(8'd0), .nv_wr(1'b0),
 	.nv_dout(), .nv_changed(), .nv_ready(),
 	.img_mounted(img_mounted), .img_readonly(img_readonly), .img_size(img_size),

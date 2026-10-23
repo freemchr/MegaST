@@ -76,6 +76,21 @@ module falcon_m65 #(
 	output     [15:0] audio_l,
 	output     [15:0] audio_r,
 	output            fdd_led,
+	// the MEGA65's internal floppy drive as A: (real_fd, menu "Real floppy drive as A:"): its
+	// WD1772 is wd1772_m65.v (as in the ST), all signals active high (m65_floppy_port.vhd)
+	input             real_fd,
+	input             fd_retry,       // menu "Floppy read assist"
+	output            rfd_sel_a,
+	output            rfd_motor,
+	output            rfd_side,       // 1 = side 1
+	output            rfd_dir_in,     // 1 = step in
+	output            rfd_step,
+	output            rfd_wgate,
+	output            rfd_wdata,
+	input             rfd_rdata,
+	input             rfd_index,
+	input             rfd_track0,
+	input             rfd_wprot,
 	input             midi_rx,        // MIDI and the serial port (MFP USART), idle 1
 	output            midi_tx,
 	input             ser_rx,
@@ -254,6 +269,24 @@ always @(posedge clk_32)
 		fast_n_q <= fast_n;
 	end
 
+// real floppy drive
+wire        wd_sel, wd_rw, wd_irq, wd_drq, fd_side_n;
+wire  [1:0] wd_addr, fd_sel_n;
+wire  [7:0] wd_din, wd_dout;
+
+wd1772_m65 wd1772 (
+	.clk_32(clk_32), .reset(reset | ~real_fd),
+	.cpu_sel(wd_sel & real_fd), .cpu_addr(wd_addr), .cpu_rw(wd_rw), .cpu_din(wd_din), .cpu_dout(wd_dout),
+	.irq(wd_irq), .drq(wd_drq),
+	.motor(rfd_motor), .step(rfd_step), .dir_in(rfd_dir_in), .wgate(rfd_wgate), .wdata(rfd_wdata),
+	.rdata(rfd_rdata), .index(rfd_index), .track0(rfd_track0), .wprot(rfd_wprot), .side(rfd_side),
+	.retry(fd_retry),
+	.absent(~fd_sel_n[1] & fd_sel_n[0]),   // drive B: (not connected while the internal drive is A:)
+	.dbg_idx(8'd0), .dbg_entry(), .dbg_count()
+);
+assign rfd_sel_a = real_fd & ~fd_sel_n[0];
+assign rfd_side  = ~fd_side_n;
+
 wire        DDRAM_BUSY, DDRAM_DOUT_READY, DDRAM_RD, DDRAM_WE;
 wire  [7:0] DDRAM_BURSTCNT, DDRAM_BE;
 wire [28:0] DDRAM_ADDR;
@@ -270,6 +303,8 @@ falcon_system #(.CLK_HZ(CLK_HZ)) system (
 	.sd_buff_addr(f_buff_addr), .sd_buff_dout(f_buff_dout), .sd_buff_din(f_buff_din), .sd_buff_wr(f_buff_wr),
 	.r(r), .g(g), .b(b), .hsync(hsync), .vsync(vsync), .hblank(hblank), .vblank(vblank), .ce_pix(ce_pix),
 	.audio_l(audio_l), .audio_r(audio_r),
+	.ext_fd(real_fd), .wd_sel(wd_sel), .wd_addr(wd_addr), .wd_rw(wd_rw), .wd_din(wd_din),
+	.wd_dout(wd_dout), .wd_irq(wd_irq), .wd_drq(wd_drq), .fd_sel_n(fd_sel_n), .fd_side_n(fd_side_n),
 	.midi_rx(midi_rx), .midi_tx(midi_tx), .ser_rx(ser_rx), .ser_tx(ser_tx),
 	.fdd_led(fdd_led), .hdd_led(hdd_led), .dbg(dbg),
 	.DDRAM_BUSY(DDRAM_BUSY), .DDRAM_BURSTCNT(DDRAM_BURSTCNT), .DDRAM_ADDR(DDRAM_ADDR),

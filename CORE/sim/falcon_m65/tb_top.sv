@@ -25,6 +25,16 @@ module tb_top (
 	input      [31:0] joy0,
 	input      [31:0] joy1,
 	input      [31:0] pad0,
+	input             real_fd,
+	output            rfd_sel_a,
+	output            rfd_motor,
+	output            rfd_side,
+	output            rfd_dir_in,
+	output            rfd_step,
+	input             rfd_rdata,
+	input             rfd_index,
+	input             rfd_track0,
+	input             rfd_wprot,
 	input      [31:0] pad1,
 
 	input       [3:0] img_mounted,
@@ -51,6 +61,8 @@ module tb_top (
 	output      [7:0] dbg_kbd_byte,
 	output            dbg_sdram_err,
 	output     [31:0] dbg_pc,           // CPU program counter
+	output     [15:0] dbg_wd,           // real floppy WD1772: {sel, rw, addr[1:0], irq, drq, 2'b0, data}
+	output    [159:0] dbg_f,            // falcon_system dbg (JTAG probe): DSP PC [79:64], host ISR [159:152]
 	output            dbg_cpu_rst       // the CPU's synchronized reset
 );
 
@@ -70,8 +82,11 @@ falcon_m65 #(.CLK_HZ(32083333)) dut (
 	.sd_lba(sd_lba), .sd_rd(sd_rd), .sd_wr(sd_wr), .sd_ack(sd_ack),
 	.sd_buff_addr(sd_buff_addr), .sd_buff_dout(sd_buff_dout), .sd_buff_din(sd_buff_din), .sd_buff_wr(sd_buff_wr),
 	.r(r), .g(g), .b(b), .hsync(), .vsync(), .hblank(hblank), .vblank(vblank), .ce_pix(ce_pix),
-	.audio_l(audio_l), .audio_r(audio_r), .fdd_led(), .hdd_led(),
+	.audio_l(audio_l), .audio_r(audio_r), .fdd_led(), .hdd_led(), .dbg(dbg_f),
 	.midi_rx(1'b1), .midi_tx(), .ser_rx(1'b1), .ser_tx(),
+	.real_fd(real_fd), .fd_retry(1'b1), .rfd_sel_a(rfd_sel_a), .rfd_motor(rfd_motor), .rfd_side(rfd_side),
+	.rfd_dir_in(rfd_dir_in), .rfd_step(rfd_step), .rfd_wgate(), .rfd_wdata(),
+	.rfd_rdata(rfd_rdata), .rfd_index(rfd_index), .rfd_track0(rfd_track0), .rfd_wprot(rfd_wprot),
 	.sdram_start(e_ready), .sd_cmd_o(e_cmd), .sd_addr_o(e_addr), .sd_ba_o(e_ba), .sd_dqm_o(e_dqm),
 	.sd_dout_o(e_dout), .sd_doe_o(e_doe), .sd_din_i(e_din)
 );
@@ -99,6 +114,8 @@ assign dbg_kbd_rd    = dut.system.acia.ik_rd_dr;
 assign dbg_kbd_byte  = dut.system.acia.rdr_ikbd;
 assign dbg_sdram_err = (sdram.errors != 0);
 assign dbg_pc        = dut.system.dbg_pc;
+assign dbg_wd        = {dut.wd_sel, dut.wd_rw, dut.wd_addr, dut.wd_irq, dut.wd_drq, 2'b00,
+                        dut.wd_rw ? dut.wd_dout : dut.wd_din};
 assign dbg_cpu_rst   = dut.system.cpu.rst;
 
 // guest memory for the C++ side (big endian bytes), through the SDRAM model

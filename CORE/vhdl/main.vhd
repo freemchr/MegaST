@@ -354,6 +354,19 @@ component falcon_m65 is
       audio_l         : out   std_logic_vector(15 downto 0);
       audio_r         : out   std_logic_vector(15 downto 0);
       fdd_led         : out   std_logic;
+      real_fd         : in    std_logic;
+      fd_retry        : in    std_logic;
+      rfd_sel_a       : out   std_logic;
+      rfd_motor       : out   std_logic;
+      rfd_side        : out   std_logic;
+      rfd_dir_in      : out   std_logic;
+      rfd_step        : out   std_logic;
+      rfd_wgate       : out   std_logic;
+      rfd_wdata       : out   std_logic;
+      rfd_rdata       : in    std_logic;
+      rfd_index       : in    std_logic;
+      rfd_track0      : in    std_logic;
+      rfd_wprot       : in    std_logic;
       midi_rx         : in    std_logic;
       midi_tx         : out   std_logic;
       ser_rx          : in    std_logic;
@@ -409,6 +422,9 @@ signal f_joy0         : std_logic_vector(31 downto 0);
 signal f_joy1         : std_logic_vector(31 downto 0);
 signal f_pad0         : std_logic_vector(31 downto 0);
 signal f_ram_mb       : std_logic_vector(3 downto 0);
+-- the internal floppy drive: the ST's or the Falcon's WD1772 (wd1772_m65.v)
+signal st_rfd_sel_a, st_rfd_motor, st_rfd_side, st_rfd_dir_in, st_rfd_step, st_rfd_wgate, st_rfd_wdata : std_logic;
+signal f_rfd_sel_a, f_rfd_motor, f_rfd_side, f_rfd_dir_in, f_rfd_step, f_rfd_wgate, f_rfd_wdata : std_logic := '0';
 signal f_ana0         : std_logic_vector(15 downto 0);
 signal f_ana1         : std_logic_vector(15 downto 0);
 signal f_fast_n       : std_logic_vector(1 downto 0);
@@ -709,13 +725,13 @@ begin
 
          floppy_led      => st_floppy_led,
          hd_led          => st_hd_led,
-         rfd_sel_a       => rfd_sel_a_o,
-         rfd_motor       => rfd_motor_o,
-         rfd_side        => rfd_side_o,
-         rfd_dir_in      => rfd_dir_in_o,
-         rfd_step        => rfd_step_o,
-         rfd_wgate       => rfd_wgate_o,
-         rfd_wdata       => rfd_wdata_o,
+         rfd_sel_a       => st_rfd_sel_a,
+         rfd_motor       => st_rfd_motor,
+         rfd_side        => st_rfd_side,
+         rfd_dir_in      => st_rfd_dir_in,
+         rfd_step        => st_rfd_step,
+         rfd_wgate       => st_rfd_wgate,
+         rfd_wdata       => st_rfd_wdata,
          rfd_rdata       => rfd_rdata_i,
          rfd_index       => rfd_index_i,
          rfd_track0      => rfd_track0_i,
@@ -856,6 +872,19 @@ begin
             audio_l         => f_audio_l,
             audio_r         => f_audio_r,
             fdd_led         => f_fdd_led,
+            real_fd         => st_real_floppy_i,      -- menu "Real floppy drive as A:"
+            fd_retry        => st_fdc_retry_i,
+            rfd_sel_a       => f_rfd_sel_a,
+            rfd_motor       => f_rfd_motor,
+            rfd_side        => f_rfd_side,
+            rfd_dir_in      => f_rfd_dir_in,
+            rfd_step        => f_rfd_step,
+            rfd_wgate       => f_rfd_wgate,
+            rfd_wdata       => f_rfd_wdata,
+            rfd_rdata       => rfd_rdata_i,
+            rfd_index       => rfd_index_i,
+            rfd_track0      => rfd_track0_i,
+            rfd_wprot       => rfd_wprot_i,
             midi_rx         => midi_rxd,
             midi_tx         => f_midi_txd,
             ser_rx          => uart_rxd,
@@ -901,6 +930,13 @@ begin
    end generate g_no_falcon;
 
    sd_lba_o       <= f_sd_lba       when falcon = '1' else st_sd_lba;
+   rfd_sel_a_o    <= f_rfd_sel_a    when falcon = '1' else st_rfd_sel_a;
+   rfd_motor_o    <= f_rfd_motor    when falcon = '1' else st_rfd_motor;
+   rfd_side_o     <= f_rfd_side     when falcon = '1' else st_rfd_side;
+   rfd_dir_in_o   <= f_rfd_dir_in   when falcon = '1' else st_rfd_dir_in;
+   rfd_step_o     <= f_rfd_step     when falcon = '1' else st_rfd_step;
+   rfd_wgate_o    <= f_rfd_wgate    when falcon = '1' else st_rfd_wgate;
+   rfd_wdata_o    <= f_rfd_wdata    when falcon = '1' else st_rfd_wdata;
    sd_rd_o        <= f_sd_rd        when falcon = '1' else st_sd_rd;
    sd_wr_o        <= f_sd_wr        when falcon = '1' else st_sd_wr;
    sd_buff_din_o  <= f_sd_buff_din  when falcon = '1' else st_sd_buff_din;
