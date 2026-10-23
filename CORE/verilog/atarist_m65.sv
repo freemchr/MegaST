@@ -616,8 +616,9 @@ gstshifter gstshifter (
 
 // viking/sm194 is enabled and max 8MB memory may be enabled. In steroids mode
 // video memory is moved to $e80000 and all stram up to 14MB may be used
+// MEGA65: the menu item also switches the card in the STEroids mode (MiSTer: always on)
 wire viking_mem_ok = MEM512K || MEM1M || MEM2M || MEM4M || MEM8M;
-wire viking_enable = (viking_en && viking_mem_ok) || steroids;
+wire viking_enable = viking_en && (viking_mem_ok || steroids);
 
 // check for cpu access to 0xcxxxxx with viking enabled to switch video
 // output once the driver loads. 256 accesses to the viking memory range
@@ -627,7 +628,8 @@ reg [7:0] viking_in_use;
 reg       viking_active;
 
 always @(posedge clk_32) begin
-	if(reset) begin
+	// MEGA65: switching the card off in the menu also switches the picture back
+	if(reset || !viking_enable) begin
 		viking_in_use <= 8'h00;
 		viking_active <= 1'b0;
 	end else begin
