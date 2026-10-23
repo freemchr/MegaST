@@ -57,6 +57,8 @@ reg        done_bank;            // bank of the last completed line pair
 reg        done_active;
 
 wire [1:0] pair = {1'b0, first_pix} + {1'b0, in_pix};
+// x of the current pixel: the first pixel of a line comes with the falling edge of hblank
+wire [10:0] x = (in_hblankD & ~in_hblank) ? 11'd0 : in_x;
 
 always @(posedge clk_96) begin
 	in_hblankD <= in_hblank;
@@ -68,17 +70,14 @@ always @(posedge clk_96) begin
 		in_odd <= 1'b0;
 	end
 
-	// start of an active line
-	if (in_hblankD & ~in_hblank) in_x <= 11'd0;
-
 	if (~in_hblank & ~in_vblank) begin
-		in_x <= in_x + 1'd1;
-		if (!in_x[0]) begin
+		in_x <= x + 1'd1;
+		if (!x[0]) begin
 			first_pix <= in_pix;
 		end else if (!in_odd) begin
-			line_sum[in_x[10:1]] <= pair;
+			line_sum[x[10:1]] <= pair;
 		end else begin
-			out_mem[{in_bank, in_x[10:1]}] <= {1'b0, line_sum[in_x[10:1]]} + {1'b0, pair};
+			out_mem[{in_bank, x[10:1]}] <= {1'b0, line_sum[x[10:1]]} + {1'b0, pair};
 		end
 	end
 
