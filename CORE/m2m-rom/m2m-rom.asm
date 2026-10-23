@@ -227,6 +227,7 @@ _PLI_RET        MOVE    R0, R8
 ;   R9: 0=OK, else error code
 PREP_START      INCRB
                 RSUB    NV_RESTORE, 1           ; MegaST: Falcon NVRAM (nvram.asm)
+                RSUB    FC_INIT, 1              ; MegaST: machine of the TOS
                 XOR     R8, R8
                 XOR     R9, R9
                 DECRB
@@ -257,7 +258,12 @@ PREP_START      INCRB
 ; MegaST: "Reset Atari ST" is an action, not a setting: pulse the reset of the core
 ; and remove the selection marker again (like the help menu item).
 OSM_SEL_POST    INCRB
-                CMP     OPTM_G_RESET, R8        ; "Reset Atari ST" (globals.asm)
+                CMP     OPTM_G_MACHINE, R8      ; MegaST: ST <-> Falcon
+                RBRA    _OSP_RESET, !Z          ; (fcswitch.asm)
+                RSUB    FC_CHECK, 1
+                RBRA    _OSP_RET, 1
+
+_OSP_RESET      CMP     OPTM_G_RESET, R8        ; "Reset Atari ST" (globals.asm)
                 RBRA    _OSP_RET, !Z
                 CMP     1, R9                   ; selected (not unselected)?
                 RBRA    _OSP_RET, !Z
@@ -269,10 +275,13 @@ OSM_SEL_POST    INCRB
                 MOVE    0x0100, R1
 _OSP_WAIT       SUB     1, R1
                 RBRA    _OSP_WAIT, !Z
+                MOVE    FC_HOLD, R1             ; not while the TOS of the
+                CMP     0, @R1                  ; other machine is due
+                RBRA    _OSP_UNSEL, !Z          ; (fcswitch.asm)
                 AND     M2M$CSR_UN_RESET, @R0
 
                 ; Find the menu index of the item and unselect it
-                MOVE    OPTM_DATA, R0
+_OSP_UNSEL      MOVE    OPTM_DATA, R0
                 MOVE    @R0, R0
                 ADD     OPTM_IR_GROUPS, R0
                 MOVE    @R0, R0                 ; R0: menu groups
@@ -303,7 +312,11 @@ _OSP_RET        XOR     R8, R8
 ; called before the functionality and semantics associated with a certain
 ; menu item has been handled by the framework.
 OSM_SEL_PRE     INCRB
-                XOR     R8, R8
+                CMP     OPTM_G_MACHINE, R8      ; MegaST: Machine group: the
+                RBRA    _OSPR_RET, !Z           ; core waits in reset for
+                MOVE    M2M$CSR, R0             ; FC_CHECK (fcswitch.asm)
+                OR      M2M$CSR_RESET, @R0
+_OSPR_RET       XOR     R8, R8
                 XOR     R9, R9
                 DECRB
                 RET
@@ -378,11 +391,14 @@ _MCE_RET        DECRB
 ;   R8: 0=no custom message available, otherwise pointer to string
 
 ; CORE_LOOP callback function (MegaST, called by the main loop of the shell):
-; MegaST saves the Falcon NVRAM when it changed (nvram.asm)
+; MegaST saves the Falcon NVRAM when it changed (nvram.asm) and loads the TOS
+; again after a switch between the ST and the Falcon (fcswitch.asm)
 CORE_LOOP       RSUB    NV_POLL, 1
+                RSUB    FC_SWITCH, 1            ; ST <-> Falcon (fcswitch.asm)
                 RET
 
 #include "nvram.asm"
+#include "fcswitch.asm"
 
 CUSTOM_MSG      XOR     R8, R8
                 RET              
@@ -412,6 +428,9 @@ NV_FDH          .BLOCK  FAT32$FDH_STRUCT_SIZE   ; file handle
 NV_ON           .BLOCK  1                       ; the file is there
 NV_LAST         .BLOCK  1                       ; counter of the last save
 NV_COUNT        .BLOCK  1                       ; main loop runs to the check
+; MegaST: switching between the ST and the Falcon (fcswitch.asm)
+FC_MACH         .BLOCK  1                       ; 1: the TOS in the SDRAM is for the Falcon
+FC_HOLD         .BLOCK  1                       ; 1: the core waits for the TOS of the other machine
 
 ; M2M Shell variables (only include, if you included "shell.asm" above)
 #include "../../M2M/rom/shell_vars.asm"

@@ -28,6 +28,13 @@
 //     --joyflicker T      from T ms on joystick 0 changes every ms (mouse pins seen as a joystick)
 //     --joy T:BITS[:D]    joystick port 1 (MiSTer bits, hex: 1 right 2 left 4 down 8 up 10 fire) at T ms for D ms
 //     --pad T:BITS[:D]    the same on the enhanced joystick port A (joypad; 80 Pause, 100 Option, ...)
+//     --switch            like a switch from the ST to the Falcon in the menu: por, cold_reset and reset
+//                         fall in the same cycle (the SDRAM was initialized long before)
+//     --reload            like --switch with the TOS loaded again by the firmware (fcswitch.asm):
+//                         por and cold_reset fall, the core stays in reset (M2M) while TOS comes
+//                         through the loader
+//     --junk              no TOS through the loader: $E00000.. holds what the ST left there (pseudo
+//                         random bytes), like a switch without reloading TOS
 //     --wav FILE          the audio (audio_l/r) as a 16-bit stereo WAV file at 50 kHz
 //
 // TOS goes in like tos_loader.vhd sends it (68000 word address from $E00000, even byte in bits
@@ -73,7 +80,7 @@ int main(int argc, char **argv) {
     std::string tos_name = argv[1], frames_dir, img_name[4];
     double run_ms = 6000;
     int frame_every = 50, monitor = 2, ram = 14;
-    bool turbo = false;
+    bool turbo = false, sw = false, junk = false, reload = false;
     int lang = 0, fast_n = 0;
     std::vector<Key> keys;
     std::vector<Joy> joys;
@@ -109,6 +116,9 @@ int main(int argc, char **argv) {
         else if (a == "--pc") pc_every = atof(next().c_str());
         else if (a == "--joyflicker") joyflicker = atof(next().c_str());
         else if (a == "--joy" || a == "--pad") { Joy j{0, 0, 100, a == "--pad"}; sscanf(next().c_str(), "%lf:%x:%lf", &j.t, &j.bits, &j.d); joys.push_back(j); }
+        else if (a == "--switch") sw = true;
+        else if (a == "--junk") junk = true;
+        else if (a == "--reload") reload = true;
         else if (a == "--wav") wav_name = next();
         else if (a == "--rfloppy") rfd_name = next();
         else if (a == "--cart") cart_name = next();
@@ -167,6 +177,27 @@ int main(int argc, char **argv) {
         printf("NVRAM buffer from %s: valid %s, counter %d\n", nvram_name.c_str(), b[63] == 0xA5 ? "yes" : "no", b[62]);
     }
     for (int i = 0; i < 300; i++) tick();
+    if (reload) {
+        // the ST ran for a while; the Falcon gets por and cold_reset, the firmware holds the reset
+        for (int i = 0; i < 20000; i++) tick();
+        printf("[%9.3f ms] switch to the Falcon: por and cold_reset fall, TOS through the loader in reset\n",
+               cyc / CLK_HZ * 1e3);
+        top->por = 0; top->cold_reset = 0;
+    }
+    if (sw) {
+        // the ST ran for a while: the SDRAM is initialized, then the Falcon gets everything in one cycle
+        // (its TOS is put into the SDRAM model directly, or the ST's leftovers with --junk)
+        for (int i = 0; i < 20000; i++) tick();
+        uint32_t x = 12345;
+        for (size_t a = 0; a < tos.size(); a++) {
+            x = x * 1103515245 + 12345;
+            guest_poke8(0xE00000 + a, junk ? x >> 16 : tos[a]);
+        }
+        printf("[%9.3f ms] switch to the Falcon: por, cold_reset and reset fall%s\n", cyc / CLK_HZ * 1e3,
+               junk ? " (no TOS)" : "");
+        top->por = 0; top->cold_reset = 0; top->reset = 0;
+        tos.clear();
+    }
     top->por = 0;
     uint64_t t0 = cyc;
     for (size_t w = 0; w < tos.size() / 2; w++) {
@@ -202,9 +233,12 @@ int main(int argc, char **argv) {
             printf("ERROR: TOS byte %06zx in the SDRAM: %02x, expected %02x\n", a, guest_peek8(0xE00000 + a), tos[a]);
     printf("TOS in the SDRAM: %s (%d bytes differ)\n", bad ? "WRONG" : "verified", bad);
 
-    top->cold_reset = 0;
-    for (int i = 0; i < 200; i++) tick();
-    top->reset = 0;
+    if (!sw) {
+        if (reload) tick();
+        top->cold_reset = 0;
+        for (int i = 0; i < 200; i++) tick();
+        top->reset = 0;
+    }
 
     // mount the images (one clock pulse each, like the firmware)
     for (int d = 0; d < 4; d++) if (!img[d].empty()) {

@@ -154,6 +154,12 @@ function byte unsigned guest_peek8(input int unsigned a);
 	guest_peek8 = a[0] ? w[15:8] : w[7:0];
 endfunction
 
+export "DPI-C" function guest_poke8;
+function void guest_poke8(input int unsigned a, input byte unsigned d);
+	if (a[0]) sdram.mem[sd_idx(a[25:3], a[2:1])][15:8] = d;
+	else      sdram.mem[sd_idx(a[25:3], a[2:1])][7:0]  = d;
+endfunction
+
 final $display("SDRAM: %0d refreshes, %0d timing errors", sdram.refs, sdram.errors);
 
 endmodule
