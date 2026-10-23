@@ -423,8 +423,13 @@ Viking/SM194 card
 -----------------
 
 Enable "Viking 1280x1024 card" in the system settings and load a Viking driver (memory must be
-8 MB or less, the card uses $C00000). As soon as the driver accesses the card, the video
-output switches to the card. The MEGA65's video pipeline cannot handle 1280x1024 at 96 MHz, so
+8 MB or less, the card uses $C00000; with more memory the menu item has no effect). The MiST
+driver works: put `mist_vhi.prg` from
+[mist-board/tools/mist_vhi](https://github.com/mist-devel/mist-board/tree/master/tools/mist_vhi)
+into the AUTO folder, or boot from
+[mist_vhi.st](https://github.com/mist-devel/mist-board/blob/master/tools/mist_vhi.st). In the
+STEroids mode the card is at $E80000 (the driver finds it there). As soon as the driver accesses
+the card, the video output switches to the card. The MEGA65's video pipeline cannot handle 1280x1024 at 96 MHz, so
 2x2 pixels are averaged into one of five grey levels: 640x512 @ 60 Hz, 31 kHz.
 
 PMOD headers (serial port, MIDI, printer)
