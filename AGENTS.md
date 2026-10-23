@@ -84,6 +84,12 @@ Simulate first. Every hardware round trip costs the maintainer time.
 * `CORE/sim/fastseek/run.sh`: firmware fast seek in the QNICE emulator.
 * `CORE/sim/mntmem/run.sh`: remembering the mounted images (`/atarist/stmount`) in the QNICE emulator.
 * `CORE/sim/rosmfix/run.sh [stcfg]`: the check of a loaded settings file (`/atarist/stcfg`) against the menu, QNICE emulator.
+* `CORE/sim/falcon_m65/build.sh` (`FPU=1 MDIR=obj_fpu`): Verilator bench of the Falcon as the core uses it
+  (`falcon_m65.sv`). `run_prg.sh OUT PROG [DIR] -- [options]` runs a program from `C:\AUTO` (tests in
+  `tests/*.s`: joypad, ttram, membench, dsp; or an NF4 demo with its directory, `FASTLOAD=1`);
+  `simrom.py` makes a faster booting EmuTOS copy for `TOS=`. Options: `--monitor`, `--turbo`, `--fastram`,
+  `--rfloppy`, `--pad`, `--joy`, `--wav`, `--nvram`, `--cart`, `--start`/`--done`/`--dump`.
+* `CORE/sim/nvram/run.sh`: the Falcon NVRAM file (`/atarist/fcnvram`, `CORE/m2m-rom/nvram.asm`), QNICE emulator.
 * `CORE/sim/acsi_write/run.sh <emutos tos.img> [delay]`: hard disk writes (64 KB, every sector checked).
 * After a Vivado build check: timing met (WNS/WHS >= 0), no new critical warnings, no block RAM
   demoted to LUTRAM (Synth 8-5835).
