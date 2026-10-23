@@ -28,10 +28,10 @@ NV_MARK         .EQU    63                      ; $A5: the image is valid
 NV_TICKS        .EQU    20000                   ; main loop runs between checks
 
 NV_FNAME        .ASCII_W "/atarist/fcnvram"
-LOG_NV_ON       .ASCII_W "Falcon NVRAM: /atarist/fcnvram loaded\n\r"
-LOG_NV_OFF      .ASCII_W "Falcon NVRAM: no /atarist/fcnvram with 64 bytes, not saved\n\r"
-LOG_NV_SAVED    .ASCII_W "Falcon NVRAM: saved\n\r"
-LOG_NV_EWRITE   .ASCII_W "Falcon NVRAM: write error, not saved any more\n\r"
+LOG_NV_ON       .ASCII_W "Falcon NVRAM: /atarist/fcnvram loaded\n"
+LOG_NV_OFF      .ASCII_W "Falcon NVRAM: no /atarist/fcnvram with 64 bytes, not saved\n"
+LOG_NV_SAVED    .ASCII_W "Falcon NVRAM: saved\n"
+LOG_NV_EWRITE   .ASCII_W "Falcon NVRAM: write error, not saved any more\n"
 
 ; ----------------------------------------------------------------------------
 ; Load the file into the buffer of the core
