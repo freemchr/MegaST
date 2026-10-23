@@ -5,7 +5,8 @@
 # tests/) or a .PRG/.TOS. DIR (optional) goes into the root of C: (data files of a demo). The image
 # (OUT.img), the frames (OUT/) and the log (OUT.log) are written next to OUT. Without TOS= the
 # EmuTOS of the Falcon test builds is used (simrom.py makes a faster booting copy for TOS=);
-# SIM= selects the model (default obj_fpu). Test programs (.s) get the fast load flag (no TPA clear).
+# SIM= selects the model (default obj_fpu). Test programs (.s) get the program flags PRGFLAGS (default
+# 1: fast load, no TPA clear; 7: also loaded into and Malloc from TT-RAM).
 # MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
 set -e
 H=$(cd "$(dirname "$0")" && pwd)
@@ -25,8 +26,8 @@ case "$PROG" in
 	python3 -c "
 import struct,sys
 c=open(sys.argv[1],'rb').read(); c+=b'\0'*(len(c)&1)
-open(sys.argv[2],'wb').write(struct.pack('>HIIIIIIH',0x601A,len(c),0,0,0,0,1,0)+c+b'\0\0\0\0')" \
-		"$ST/p.bin" "$ST/root/AUTO/TEST.PRG" ;;
+open(sys.argv[2],'wb').write(struct.pack('>HIIIIIIH',0x601A,len(c),0,0,0,0,int(sys.argv[3]),0)+c+b'\0\0\0\0')" \
+		"$ST/p.bin" "$ST/root/AUTO/TEST.PRG" "${PRGFLAGS:-1}" ;;
 *)	B=$(basename "$PROG"); cp "$PROG" "$ST/root/AUTO/${B%.*}.PRG" ;;   # \AUTO runs .PRG only
 esac
 if [ -n "$DIR" ]; then

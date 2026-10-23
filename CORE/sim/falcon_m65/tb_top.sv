@@ -19,6 +19,7 @@ module tb_top (
 	input      [15:0] dio_data,
 	input             dio_strobe,
 	output            dio_strobe_ack,
+	input             cart_loaded,
 
 	input     [119:0] kbd_matrix_n,
 	input      [24:0] ps2_mouse,
@@ -75,7 +76,7 @@ wire        e_doe, e_ready;
 falcon_m65 #(.CLK_HZ(32083333)) dut (
 	.clk_32(clk_32), .clk_96(clk_96), .reset(reset), .cold_reset(cold_reset), .por(por),
 	.ram_mb(ram_mb), .fast_n(fast_n), .monitor(monitor), .cpu_turbo(cpu_turbo), .tos_lang(tos_lang),
-	.dio_addr(dio_addr), .dio_data(dio_data), .dio_strobe(dio_strobe), .dio_strobe_ack(dio_strobe_ack),
+	.dio_addr(dio_addr), .dio_data(dio_data), .dio_strobe(dio_strobe), .dio_strobe_ack(dio_strobe_ack), .cart_loaded(cart_loaded),
 	.kbd_matrix_n(kbd_matrix_n), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(joy1), .pad0(pad0), .pad1(pad1), .ana0(16'd0), .ana1(16'd0),
 	.rtc({1'b0, 64'h0000_0042_6101_1200}),
 	.img_mounted(img_mounted), .img_readonly(1'b0), .img_size(img_size),

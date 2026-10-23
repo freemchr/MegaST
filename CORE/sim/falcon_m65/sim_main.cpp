@@ -11,6 +11,8 @@
 //     --hda FILE          hard disk on drive 2 (IDE master), served the same way
 //     --key IDX:T[:D]     ST matrix position IDX (col*8+row) pressed at T ms for D ms (default 100)
 //     --turbo             CPU at 32 MHz
+//     --cart FILE         a cartridge image at $FA0000 (loaded like TOS, cart_loaded = 1)
+//     --eject T           at T ms the cartridge is ejected (cart_loaded = 0)
 //     --lang N            NVRAM language and keyboard (0 US, 3 UK)
 //     --fastram N         Fast RAM (TT-RAM) at $01000000: N blocks of 16 MB (1..3)
 //     --mouse T:DX:DY:B   at T ms a PS/2 mouse packet (B: bit 0 left, bit 1 right)
@@ -73,7 +75,8 @@ int main(int argc, char **argv) {
     int lang = 0, fast_n = 0;
     std::vector<Key> keys;
     std::vector<Joy> joys;
-    std::string wav_name, rfd_name;
+    std::string wav_name, rfd_name, cart_name;
+    double eject_ms = -1;
     struct Mouse { double t; int dx, dy, b; };
     std::vector<Mouse> mice;
     double joyflicker = -1, pc_every = 0, pc_next = 0;
@@ -106,6 +109,8 @@ int main(int argc, char **argv) {
         else if (a == "--joy" || a == "--pad") { Joy j{0, 0, 100, a == "--pad"}; sscanf(next().c_str(), "%lf:%x:%lf", &j.t, &j.bits, &j.d); joys.push_back(j); }
         else if (a == "--wav") wav_name = next();
         else if (a == "--rfloppy") rfd_name = next();
+        else if (a == "--cart") cart_name = next();
+        else if (a == "--eject") eject_ms = atof(next().c_str());
         else if (a == "--key") { Key k{0, 0, 100}; sscanf(next().c_str(), "%d:%lf:%lf", &k.idx, &k.t, &k.d); keys.push_back(k); }
     }
     std::vector<uint8_t> tos, img[4];
@@ -160,6 +165,23 @@ int main(int argc, char **argv) {
         if (timeout >= 100000) { printf("ERROR: TOS loader timeout at word %zu\n", w); return 1; }
     }
     printf("TOS loaded: %zu bytes in %.3f ms\n", tos.size(), (cyc - t0) / CLK_HZ * 1e3);
+    top->cart_loaded = 0;
+    if (!cart_name.empty()) {
+        FILE *f = fopen(cart_name.c_str(), "rb");
+        if (!f) { perror(cart_name.c_str()); return 1; }
+        std::vector<uint8_t> c; uint8_t buf[65536]; size_t n;
+        while ((n = fread(buf, 1, sizeof buf, f)) > 0) c.insert(c.end(), buf, buf + n);
+        fclose(f);
+        for (size_t w = 0; w < c.size() / 2; w++) {
+            top->dio_addr = 0x7D0000 + w;        // word address of $FA0000 + 2w
+            top->dio_data = c[2 * w] << 8 | c[2 * w + 1];
+            top->dio_strobe = !top->dio_strobe;
+            int timeout = 0;
+            do { tick(); } while (top->dio_strobe_ack != top->dio_strobe && ++timeout < 100000);
+        }
+        top->cart_loaded = 1;
+        printf("cartridge loaded: %zu bytes\n", c.size());
+    }
     for (int i = 0; i < 200; i++) tick();        // the last byte reaches the SDRAM
     int bad = 0;
     for (size_t a = 0; a < tos.size(); a++)
@@ -237,6 +259,8 @@ int main(int argc, char **argv) {
             if (r != (bool)top->reset) printf("[%9.3f ms] reset %d\n", now_ms, r);
             top->reset = r;
         }
+
+        if (eject_ms >= 0 && now_ms >= eject_ms && top->cart_loaded) { top->cart_loaded = 0; printf("[%9.3f ms] cartridge ejected\n", now_ms); }
 
         // drive A
         top->sd_buff_wr = 0;

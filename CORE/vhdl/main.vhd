@@ -323,6 +323,7 @@ component falcon_m65 is
       dio_data        : in    std_logic_vector(15 downto 0);
       dio_strobe      : in    std_logic;
       dio_strobe_ack  : out   std_logic;
+      cart_loaded     : in    std_logic;
       kbd_matrix_n    : in    std_logic_vector(119 downto 0);
       ps2_mouse       : in    std_logic_vector(24 downto 0);
       joy0            : in    std_logic_vector(31 downto 0);
@@ -841,6 +842,7 @@ begin
             dio_data        => dio_data_i,
             dio_strobe      => f_dio_strobe,
             dio_strobe_ack  => f_dio_ack,
+            cart_loaded     => cart_loaded_i,
             kbd_matrix_n    => st_matrix_n,
             ps2_mouse       => ps2_mouse,
             joy0            => f_joy0,

@@ -39,6 +39,7 @@ module falcon_m65 #(
 	input      [15:0] dio_data,
 	input             dio_strobe,     // toggles for each word
 	output reg        dio_strobe_ack, // follows dio_strobe when the word is written
+	input             cart_loaded,    // a cartridge image is loaded at $FA0000 (0: ejected or none)
 
 	// keyboard, mouse, joysticks, clock
 	input     [119:0] kbd_matrix_n,   // ST keyboard matrix, low active, bit col*8+row
@@ -119,10 +120,26 @@ reg  [7:0] ld_data;
 wire       ld_busy;
 reg  [1:0] ld_step = 2'd0;      // 0 idle, 1 even byte, 2 odd byte
 
+// Without a cartridge its magic long at $FA0000 is cleared (after an eject the image would still
+// be in the SDRAM and TOS would start it): 4 zero bytes through the loader, at the end of a power-on
+// or when the cartridge is ejected
+reg       cart_d = 1'b0, por_d = 1'b1;
+reg [2:0] cclr = 3'd0;          // bytes still to clear (4..1)
+
 always @(posedge clk_32) begin
 	ld_wr <= 1'b0;
+	cart_d <= cart_loaded;
+	por_d  <= por;
+	if (!cart_loaded && ((cart_d && !cart_loaded) || (por_d && !por))) cclr <= 3'd4;
+	if (cart_loaded) cclr <= 3'd0;      // a cartridge came first (its own bytes are there)
 	case (ld_step)
 		2'd0: if (dio_strobe != dio_strobe_ack) ld_step <= 2'd1;
+		      else if (cclr != 3'd0 && !cart_loaded && !ld_busy && !ld_wr) begin
+			ld_wr   <= 1'b1;
+			ld_addr <= 24'hFA0004 - {21'd0, cclr};
+			ld_data <= 8'h00;
+			cclr    <= cclr - 3'd1;
+		      end
 		2'd1: if (!ld_busy && !ld_wr) begin
 			ld_wr   <= 1'b1;
 			ld_addr <= {dio_addr, 1'b0};
