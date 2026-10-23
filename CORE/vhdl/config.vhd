@@ -346,7 +346,7 @@ constant OPTM_SIZE         : natural := 118;  -- amount of items including empty
 -- Net size of the Options menu on the screen in characters (excluding the frame, which is hardcoded to two characters)
 -- Without submenus: Use OPTM_SIZE as height, otherwise count how large the actually visible main menu is.
 constant OPTM_DX           : natural := 28;
-constant OPTM_DY           : natural := 24;
+constant OPTM_DY           : natural := 23;
 
 constant OPTM_ITEMS        : string :=
    " Atari ST/STe\n"              &   --  0
@@ -365,7 +365,7 @@ constant OPTM_ITEMS        : string :=
    " Atari STe\n"                 &   -- 13
    " Mega STe (16 MHz)\n"         &   -- 14
    " STEroids (turbo)\n"          &   -- 15
-   " Falcon030 (R4-R6, test)\n"   &   -- 16
+   " Falcon030\n"                 &   -- 16
    " Back to main menu\n"         &   -- 17
    " Memory (ST only): %s\n"      &   -- 18
    " Memory (ST only)\n"          &   -- 19
@@ -461,8 +461,8 @@ constant OPTM_ITEMS        : string :=
    " ST-RAM 4 MB (not 14 MB)\n"   &   -- 109
    " Fast RAM 48 MB (TT-RAM)\n"   &   -- 110
    "\n"                           &   -- 111
-   " Back to main menu\n"         &   -- 112
-   "\n"                           &   -- 113
+   "\n"                           &   -- 112
+   " Back to main menu\n"         &   -- 113
    " Reset Atari ST\n"            &   -- 114
    " About & Help\n"              &   -- 115
    "\n"                           &   -- 116
@@ -534,7 +534,7 @@ constant OPTM_GROUPS       : OPTM_GTYPE := (
                                              OPTM_G_Machine,                                           -- 13 Atari STe
                                              OPTM_G_Machine,                                           -- 14 Mega STe (16 MHz)
                                              OPTM_G_Machine,                                           -- 15 STEroids (turbo)
-                                             OPTM_G_Machine,                                           -- 16 Falcon030 (R4-R6, test)
+                                             OPTM_G_Machine,                                           -- 16 Falcon030
                                              OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 17 Back to main menu
                                              OPTM_G_SUBMENU,                                           -- 18 Memory: %s
                                              OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 19 Memory
@@ -630,8 +630,8 @@ constant OPTM_GROUPS       : OPTM_GTYPE := (
                                              OPTM_G_F4MB + OPTM_G_SINGLESEL,                           -- 109 ST-RAM 4 MB (not 14 MB)
                                              OPTM_G_FFast + OPTM_G_SINGLESEL,                          -- 110 Fast RAM 48 MB (TT-RAM)
                                              OPTM_G_LINE,                                              -- 111
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 112 Back to main menu
-                                             OPTM_G_LINE,                                              -- 113
+                                             OPTM_G_LINE,                                              -- 112 (in the submenu: the main menu has 23 lines)
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 113 Back to main menu
                                              OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 114 Reset Atari ST
                                              OPTM_G_About + OPTM_G_HELP,                               -- 115 About & Help
                                              OPTM_G_LINE,                                              -- 116
