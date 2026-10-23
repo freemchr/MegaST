@@ -67,6 +67,26 @@ module tb_top (
 	output            dbg_cpu_rst       // the CPU's synchronized reset
 );
 
+// the NVRAM buffer (mega65.vhd's dual port RAM, port B; the C++ side is the firmware: nvb_peek/poke)
+wire  [5:0] nvb_addr;
+wire  [7:0] nvb_din;
+wire        nvb_we;
+reg   [7:0] nvb_dout;
+reg   [7:0] nvb [0:63];
+initial for (int i = 0; i < 64; i++) nvb[i] = 8'hFF;
+always @(posedge clk_32) begin
+	if (nvb_we) nvb[nvb_addr] <= nvb_din;
+	nvb_dout <= nvb[nvb_addr];
+end
+export "DPI-C" function nvb_peek;
+function byte unsigned nvb_peek(input int unsigned a);
+	nvb_peek = nvb[a[5:0]];
+endfunction
+export "DPI-C" function nvb_poke;
+function void nvb_poke(input int unsigned a, input byte unsigned d);
+	nvb[a[5:0]] = d;
+endfunction
+
 wire  [3:0] e_cmd;
 wire [12:0] e_addr;
 wire  [1:0] e_ba, e_dqm;
@@ -77,6 +97,7 @@ falcon_m65 #(.CLK_HZ(32083333)) dut (
 	.clk_32(clk_32), .clk_96(clk_96), .reset(reset), .cold_reset(cold_reset), .por(por),
 	.ram_mb(ram_mb), .fast_n(fast_n), .monitor(monitor), .cpu_turbo(cpu_turbo), .tos_lang(tos_lang),
 	.dio_addr(dio_addr), .dio_data(dio_data), .dio_strobe(dio_strobe), .dio_strobe_ack(dio_strobe_ack), .cart_loaded(cart_loaded),
+	.nvb_addr(nvb_addr), .nvb_din(nvb_din), .nvb_we(nvb_we), .nvb_dout(nvb_dout),
 	.kbd_matrix_n(kbd_matrix_n), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(joy1), .pad0(pad0), .pad1(pad1), .ana0(16'd0), .ana1(16'd0),
 	.rtc({1'b0, 64'h0000_0042_6101_1200}),
 	.img_mounted(img_mounted), .img_readonly(1'b0), .img_size(img_size),

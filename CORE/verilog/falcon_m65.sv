@@ -41,6 +41,15 @@ module falcon_m65 #(
 	output reg        dio_strobe_ack, // follows dio_strobe when the word is written
 	input             cart_loaded,    // a cartridge image is loaded at $FA0000 (0: ejected or none)
 
+	// NVRAM on the SD card (/atarist/fcnvram, firmware nvram.asm): port B of a 64 byte dual port
+	// RAM (mega65.vhd) that the firmware fills from the file before the machine starts and saves
+	// when byte 62 changes. Bytes 0..49 = NVRAM bytes 14..63, 62 = change counter, 63 = $A5 when
+	// bytes 0..49 are valid. One clock of read latency.
+	output reg  [5:0] nvb_addr,
+	output reg  [7:0] nvb_din,
+	output reg        nvb_we,
+	input       [7:0] nvb_dout,
+
 	// keyboard, mouse, joysticks, clock
 	input     [119:0] kbd_matrix_n,   // ST keyboard matrix, low active, bit col*8+row
 	input      [24:0] ps2_mouse,      // MiSTer format
@@ -304,6 +313,82 @@ wd1772_m65 wd1772 (
 assign rfd_sel_a = real_fd & ~fd_sel_n[0];
 assign rfd_side  = ~fd_side_n;
 
+// NVRAM persistence (see nvb_* above): after a power-on the saved image (if valid) goes into the
+// NVRAM while the machine is still in reset; every change of the NVRAM (CPU writes, 10 ms after
+// the last one; a new default image) goes into the buffer with the next counter value
+localparam N_WAIT = 3'd0, N_CHK = 3'd1, N_REST = 3'd2, N_IDLE = 3'd3, N_COPY = 3'd4, N_CNT0 = 3'd5, N_CNT = 3'd6, N_MARK = 3'd7;
+reg   [2:0] nst = N_WAIT;
+reg   [5:0] n_i;
+reg   [1:0] n_lat;              // read latency of the buffer
+reg  [18:0] n_quiet;            // clocks until the copy (10 ms after the last change)
+reg         n_pend = 1'b0;
+reg         nv_ready_d = 1'b0;
+wire        nv_ready, nv_changed;
+wire  [7:0] nv_dout;
+reg   [5:0] nv_addr;
+reg   [7:0] nv_din;
+reg         nv_wr;
+
+always @(posedge clk_32) begin
+	nvb_we <= 1'b0;
+	nv_wr  <= 1'b0;
+	nv_ready_d <= nv_ready;
+	if (por) begin
+		nst <= N_WAIT; n_pend <= 1'b0;
+	end
+	else case (nst)
+		N_WAIT:                          // the default image is built during the first reset
+			if (nv_ready && !nv_init) begin
+				nvb_addr <= 6'd63; n_lat <= 2'd2; nst <= N_CHK;
+			end
+		N_CHK:
+			if (n_lat != 2'd0) n_lat <= n_lat - 2'd1;
+			else if (nvb_dout == 8'hA5) begin
+				n_i <= 6'd0; nvb_addr <= 6'd0; n_lat <= 2'd2; nst <= N_REST;
+			end
+			else begin                   // no saved image: save the defaults
+				n_i <= 6'd0; nst <= N_COPY;
+			end
+		N_REST:
+			if (n_lat != 2'd0) n_lat <= n_lat - 2'd1;
+			else begin
+				nv_addr <= n_i; nv_din <= nvb_dout; nv_wr <= 1'b1;
+				if (n_i == 6'd49) nst <= N_IDLE;
+				else begin n_i <= n_i + 6'd1; nvb_addr <= n_i + 6'd1; n_lat <= 2'd2; end
+			end
+		N_IDLE: begin
+			if (nv_changed || (nv_ready && !nv_ready_d)) begin
+				n_pend <= 1'b1; n_quiet <= CLK_HZ / 100;
+			end
+			else if (n_pend && n_quiet != 19'd0) n_quiet <= n_quiet - 19'd1;
+			else if (n_pend && nv_ready) begin
+				n_pend <= 1'b0; n_i <= 6'd0; nst <= N_COPY;
+			end
+		end
+		N_COPY: begin                    // NVRAM -> buffer (nv_dout is combinational)
+			nv_addr <= n_i;
+			if (nv_addr == n_i && n_lat == 2'd1) begin
+				nvb_addr <= n_i; nvb_din <= nv_dout; nvb_we <= 1'b1;
+				n_lat <= 2'd0;
+				if (n_i == 6'd49) nst <= N_CNT0;
+				else n_i <= n_i + 6'd1;
+			end
+			else n_lat <= 2'd1;
+		end
+		N_CNT0: begin                    // (byte 49 is written now)
+			nvb_addr <= 6'd62; n_lat <= 2'd2; nst <= N_CNT;
+		end
+		N_CNT:                           // counter + 1
+			if (n_lat != 2'd0) n_lat <= n_lat - 2'd1;
+			else begin
+				nvb_addr <= 6'd62; nvb_din <= nvb_dout + 8'd1; nvb_we <= 1'b1; nst <= N_MARK;
+			end
+		N_MARK: begin
+			nvb_addr <= 6'd63; nvb_din <= 8'hA5; nvb_we <= 1'b1; nst <= N_IDLE;
+		end
+	endcase
+end
+
 wire        DDRAM_BUSY, DDRAM_DOUT_READY, DDRAM_RD, DDRAM_WE;
 wire  [7:0] DDRAM_BURSTCNT, DDRAM_BE;
 wire [28:0] DDRAM_ADDR;
@@ -314,7 +399,8 @@ falcon_system #(.CLK_HZ(CLK_HZ)) system (
 	.ram_mb(ram_mb_q), .fast_n(fast_n_q), .ram_tos(1'b0), .monitor(monitor), .cpu_turbo(cpu_turbo), .tstat_en(1'b0),
 	.ld_wr(ld_wr), .ld_addr(ld_addr), .ld_data(ld_data), .ld_busy(ld_busy),
 	.ps2_key(ps2_key), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(joy1), .pad0(pad0), .pad1(pad1), .ana0(ana0), .ana1(ana1), .rtc(rtc),
-	.nv_lang(tos_lang), .nv_init(nv_init), .nv_addr(6'd0), .nv_din(8'd0), .nv_wr(1'b0), .nv_dout(), .nv_changed(), .nv_ready(),
+	.nv_lang(tos_lang), .nv_init(nv_init), .nv_addr(nv_addr), .nv_din(nv_din), .nv_wr(nv_wr), .nv_dout(nv_dout),
+	.nv_changed(nv_changed), .nv_ready(nv_ready),
 	.img_mounted({3'b000, img_mounted}), .img_readonly(img_readonly), .img_size({32'd0, img_size}),
 	.sd_lba(f_lba), .sd_rd(f_rd), .sd_wr(f_wr), .sd_blk_cnt(f_blk_cnt), .sd_ack({3'b000, sd_ack}),
 	.sd_buff_addr(f_buff_addr), .sd_buff_dout(f_buff_dout), .sd_buff_din(f_buff_din), .sd_buff_wr(f_buff_wr),

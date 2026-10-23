@@ -128,6 +128,9 @@ The framework does not remember mounted images (issue #13). Changes:
   menu with the same size (a Falcon test build had written `stcfg` with its fifth Machine item) or a
   damaged one made `OPTM_CB_SHOW` stop the firmware with "No selected menu group item" when the menu was
   opened. Test: `CORE/sim/rosmfix/run.sh` (QNICE emulator). Generic, a candidate for upstream.
+* `M2M/rom/shell.asm`: the main loop calls `CORE_LOOP`, a callback of the core (`CORE/m2m-rom/m2m-rom.asm`;
+  a core without anything to do there just returns). MegaST saves the Falcon's NVRAM there when it changed
+  (`CORE/m2m-rom/nvram.asm`, file `/atarist/fcnvram`, 64 bytes). Generic, a candidate for upstream.
 * `M2M/rom/shell.asm`: in CRT/ROM mode `HANDLE_MOUNTING` first calls `MNT_CRT_EJECT`
   (`CORE/m2m-rom/m2m-rom.asm`): Space on the line of a loaded cartridge removes it (status "loading",
   then "idle" in the device, so the ST restarts without it) and forgets it, instead of opening the browser.

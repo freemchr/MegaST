@@ -401,6 +401,15 @@ constant C_MENU_F_FAST         : natural := 110;  -- Falcon Fast RAM (TT-RAM) 48
 
 signal main_st_mem            : std_logic_vector(2 downto 0);
 signal main_f_monitor         : std_logic_vector(1 downto 0);
+-- Falcon NVRAM buffer (C_DEV_FC_NVRAM): port A QNICE, port B the Falcon (falcon_m65.sv)
+signal qnice_nv_ce            : std_logic;
+signal qnice_nv_we            : std_logic;
+signal qnice_nv_q             : std_logic_vector(7 downto 0);
+signal qnice_nv_rd_done       : std_logic;
+signal main_nvb_addr          : std_logic_vector(5 downto 0);
+signal main_nvb_din           : std_logic_vector(7 downto 0);
+signal main_nvb_we            : std_logic;
+signal main_nvb_dout          : std_logic_vector(7 downto 0);
 signal main_st_ste            : std_logic;
 signal main_st_mste           : std_logic;
 
@@ -644,6 +653,10 @@ begin
          falcon_turbo_i       => main_osm_control_i(C_MENU_F_TURBO),
          falcon_4mb_i         => main_osm_control_i(C_MENU_F_4MB),
          falcon_fast_i        => main_osm_control_i(C_MENU_F_FAST),
+         falcon_nvb_addr_o    => main_nvb_addr,
+         falcon_nvb_din_o     => main_nvb_din,
+         falcon_nvb_we_o      => main_nvb_we,
+         falcon_nvb_dout_i    => main_nvb_dout,
          rtc_i                => main_rtc_i,
 
          -- TOS loader
@@ -838,8 +851,17 @@ begin
       qnice_vd_ce          <= '0';
       qnice_vd_we          <= '0';
       qnice_buf_cs         <= '0';
+      qnice_nv_ce          <= '0';
+      qnice_nv_we          <= '0';
 
       case qnice_dev_id_i is
+
+         -- Falcon NVRAM buffer (reads: one wait state, the RAM is registered)
+         when C_DEV_FC_NVRAM =>
+            qnice_nv_ce          <= qnice_dev_ce_i;
+            qnice_nv_we          <= qnice_dev_we_i;
+            qnice_dev_data_o     <= x"00" & qnice_nv_q;
+            qnice_dev_wait_o     <= qnice_dev_ce_i and not qnice_dev_we_i and not qnice_nv_rd_done;
 
          -- TOS loader (write only)
          when C_DEV_ST_TOS =>
@@ -881,6 +903,36 @@ begin
          when others => null;
       end case;
    end process core_specific_devices;
+
+   ---------------------------------------------------------------------------------------
+   -- Falcon NVRAM buffer: the firmware loads /atarist/fcnvram into it before the core starts
+   -- and saves it when the Falcon changed it (nvram.asm, falcon_m65.sv)
+   ---------------------------------------------------------------------------------------
+
+   p_nv_rd : process (qnice_clk_i)
+   begin
+      if rising_edge(qnice_clk_i) then
+         qnice_nv_rd_done <= qnice_nv_ce and not qnice_nv_we;
+      end if;
+   end process p_nv_rd;
+
+   i_fc_nvram : entity work.dualport_2clk_ram
+      generic map (
+         ADDR_WIDTH        => 6,
+         DATA_WIDTH        => 8
+      )
+      port map (
+         clock_a           => qnice_clk_i,
+         address_a         => qnice_dev_addr_i(5 downto 0),
+         data_a            => qnice_dev_data_i(7 downto 0),
+         wren_a            => qnice_nv_ce and qnice_nv_we,
+         q_a               => qnice_nv_q,
+         clock_b           => main_clk,
+         address_b         => main_nvb_addr,
+         data_b            => main_nvb_din,
+         wren_b            => main_nvb_we,
+         q_b               => main_nvb_dout
+      ); -- i_fc_nvram
 
    ---------------------------------------------------------------------------------------
    -- TOS loader

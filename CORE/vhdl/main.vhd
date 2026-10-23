@@ -63,6 +63,11 @@ entity main is
       falcon_turbo_i          : in  std_logic;              -- Falcon CPU at 32 MHz
       falcon_4mb_i            : in  std_logic;              -- Falcon ST-RAM 4 MB instead of 14 MB
       falcon_fast_i           : in  std_logic;              -- Falcon Fast RAM (TT-RAM) 48 MB at $01000000
+      -- Falcon NVRAM buffer (mega65.vhd, port B; see falcon_m65.sv)
+      falcon_nvb_addr_o       : out std_logic_vector(5 downto 0);
+      falcon_nvb_din_o        : out std_logic_vector(7 downto 0);
+      falcon_nvb_we_o         : out std_logic;
+      falcon_nvb_dout_i       : in  std_logic_vector(7 downto 0);
 
       -- MEGA65 real time clock (M2M format), used by the Mega ST RTC (rp5c15_m65.sv)
       rtc_i                   : in  std_logic_vector(64 downto 0);
@@ -324,6 +329,10 @@ component falcon_m65 is
       dio_strobe      : in    std_logic;
       dio_strobe_ack  : out   std_logic;
       cart_loaded     : in    std_logic;
+      nvb_addr        : out   std_logic_vector(5 downto 0);
+      nvb_din         : out   std_logic_vector(7 downto 0);
+      nvb_we          : out   std_logic;
+      nvb_dout        : in    std_logic_vector(7 downto 0);
       kbd_matrix_n    : in    std_logic_vector(119 downto 0);
       ps2_mouse       : in    std_logic_vector(24 downto 0);
       joy0            : in    std_logic_vector(31 downto 0);
@@ -843,6 +852,10 @@ begin
             dio_strobe      => f_dio_strobe,
             dio_strobe_ack  => f_dio_ack,
             cart_loaded     => cart_loaded_i,
+            nvb_addr        => falcon_nvb_addr_o,
+            nvb_din         => falcon_nvb_din_o,
+            nvb_we          => falcon_nvb_we_o,
+            nvb_dout        => falcon_nvb_dout_i,
             kbd_matrix_n    => st_matrix_n,
             ps2_mouse       => ps2_mouse,
             joy0            => f_joy0,
@@ -923,6 +936,9 @@ begin
       f_fdd_led      <= '0';
       f_hdd_led      <= '0';
       dbg_falcon_o   <= (others => '0');
+      falcon_nvb_addr_o <= (others => '0');
+      falcon_nvb_din_o  <= (others => '0');
+      falcon_nvb_we_o   <= '0';
       sdram_ext_cmd  <= (others => '1');
       sdram_ext_a    <= (others => '0');
       sdram_ext_ba   <= (others => '0');

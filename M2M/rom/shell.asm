@@ -191,6 +191,7 @@ MAIN_LOOP       RSUB    HANDLE_IO, 1            ; IO handling (e.g. vdrives)
 
                 RSUB    CHECK_DEBUG, 1          ; (Run/Stop+Cursor Up) + Help
                 RSUB    HELP_MENU, 1            ; check/manage help menu
+                RSUB    CORE_LOOP, 1            ; MegaST: callback of the core
                 RSUB    LOG_COREINFO, 1         ; once: log core info
 
                 RBRA    MAIN_LOOP, 1

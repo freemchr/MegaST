@@ -11,6 +11,8 @@
 //     --hda FILE          hard disk on drive 2 (IDE master), served the same way
 //     --key IDX:T[:D]     ST matrix position IDX (col*8+row) pressed at T ms for D ms (default 100)
 //     --turbo             CPU at 32 MHz
+//     --nvram FILE        the NVRAM buffer (/atarist/fcnvram, 64 bytes) loaded before the start and
+//                         written back at the end when byte 62 (the change counter) changed
 //     --cart FILE         a cartridge image at $FA0000 (loaded like TOS, cart_loaded = 1)
 //     --eject T           at T ms the cartridge is ejected (cart_loaded = 0)
 //     --lang N            NVRAM language and keyboard (0 US, 3 UK)
@@ -75,7 +77,7 @@ int main(int argc, char **argv) {
     int lang = 0, fast_n = 0;
     std::vector<Key> keys;
     std::vector<Joy> joys;
-    std::string wav_name, rfd_name, cart_name;
+    std::string wav_name, rfd_name, cart_name, nvram_name;
     double eject_ms = -1;
     struct Mouse { double t; int dx, dy, b; };
     std::vector<Mouse> mice;
@@ -110,6 +112,7 @@ int main(int argc, char **argv) {
         else if (a == "--wav") wav_name = next();
         else if (a == "--rfloppy") rfd_name = next();
         else if (a == "--cart") cart_name = next();
+        else if (a == "--nvram") nvram_name = next();
         else if (a == "--eject") eject_ms = atof(next().c_str());
         else if (a == "--key") { Key k{0, 0, 100}; sscanf(next().c_str(), "%d:%lf:%lf", &k.idx, &k.t, &k.d); keys.push_back(k); }
     }
@@ -153,6 +156,16 @@ int main(int argc, char **argv) {
     top->init = 1; top->por = 1; top->cold_reset = 1; top->reset = 1;
     for (int i = 0; i < 10; i++) tick();
     top->init = 0;
+    // (after the first clocks: the model's initial block has run)
+    uint8_t nv_cnt0 = 0xFF;
+    if (!nvram_name.empty()) {      // like nvram.asm (NV_RESTORE) before the core starts
+        FILE *f = fopen(nvram_name.c_str(), "rb");
+        uint8_t b[64]; memset(b, 0xFF, 64);
+        if (f) { if (fread(b, 1, 64, f) != 64) printf("NVRAM file: not 64 bytes\n"); fclose(f); }
+        for (int i = 0; i < 64; i++) nvb_poke(i, b[i]);
+        nv_cnt0 = b[62];
+        printf("NVRAM buffer from %s: valid %s, counter %d\n", nvram_name.c_str(), b[63] == 0xA5 ? "yes" : "no", b[62]);
+    }
     for (int i = 0; i < 300; i++) tick();
     top->por = 0;
     uint64_t t0 = cyc;
@@ -381,6 +394,17 @@ int main(int argc, char **argv) {
         fwrite(&align, 2, 1, wav); fwrite(&bits, 2, 1, wav); fwrite("data", 1, 4, wav); fwrite(&n, 4, 1, wav);
         fclose(wav);
         printf("audio: %llu samples in %s\n", (unsigned long long)wav_samples, wav_name.c_str());
+    }
+    if (!nvram_name.empty()) {      // like nvram.asm (NV_POLL): save when the counter changed
+        printf("NVRAM buffer: counter %d, valid %s, bytes 14..:", nvb_peek(62), nvb_peek(63) == 0xA5 ? "yes" : "no");
+        for (int i = 0; i < 50; i++) printf(" %02x", nvb_peek(i));
+        printf("\n");
+        if (nvb_peek(62) != nv_cnt0) {
+            FILE *f = fopen(nvram_name.c_str(), "wb");
+            for (int i = 0; i < 64; i++) fputc(nvb_peek(i), f);
+            fclose(f);
+            printf("NVRAM buffer saved to %s\n", nvram_name.c_str());
+        }
     }
     printf("simulated %.0f ms; SDRAM errors: %s\n", cyc / CLK_HZ * 1e3, top->dbg_sdram_err ? "YES" : "none");
     for (int d = 0; d < 4; d++) if (!img[d].empty()) {

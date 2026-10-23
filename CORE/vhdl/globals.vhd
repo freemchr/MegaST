@@ -99,6 +99,7 @@ constant C_DEV_ST_VD0_BUF     : std_logic_vector(15 downto 0) := x"0102";     --
 constant C_DEV_ST_VD1_BUF     : std_logic_vector(15 downto 0) := x"0103";     -- disk image buffer drive B: (HyperRAM)
 constant C_DEV_ST_CART        : std_logic_vector(15 downto 0) := x"0104";     -- cartridge loader (tos_loader.vhd)
 constant C_DEV_ST_TOSMAN      : std_logic_vector(15 downto 0) := x"0105";     -- TOS loader, TOS chosen in the menu (tos_loader.vhd)
+constant C_DEV_FC_NVRAM       : std_logic_vector(15 downto 0) := x"0106";     -- Falcon NVRAM buffer, 64 bytes (nvram.asm, falcon_m65.sv)
 
 -- Unbuffered virtual drive: the image is accessed directly on the SD card (M2M/rom/shell.asm: VD_NOBUFFER)
 constant C_VD_NOBUFFER        : std_logic_vector(15 downto 0) := x"AAAA";

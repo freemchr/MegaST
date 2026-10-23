@@ -226,6 +226,7 @@ _PLI_RET        MOVE    R0, R8
 ;   R8: 0=OK, else pointer to string with error message
 ;   R9: 0=OK, else error code
 PREP_START      INCRB
+                RSUB    NV_RESTORE, 1           ; MegaST: Falcon NVRAM (nvram.asm)
                 XOR     R8, R8
                 XOR     R9, R9
                 DECRB
@@ -376,6 +377,13 @@ _MCE_RET        DECRB
 ; Output:
 ;   R8: 0=no custom message available, otherwise pointer to string
 
+; CORE_LOOP callback function (MegaST, called by the main loop of the shell):
+; MegaST saves the Falcon NVRAM when it changed (nvram.asm)
+CORE_LOOP       RSUB    NV_POLL, 1
+                RET
+
+#include "nvram.asm"
+
 CUSTOM_MSG      XOR     R8, R8
                 RET              
 
@@ -399,6 +407,11 @@ END_OF_ROM      .DW 0
 ;
 ; add your own variables here
 ;
+; MegaST: the Falcon NVRAM on the SD card (nvram.asm)
+NV_FDH          .BLOCK  FAT32$FDH_STRUCT_SIZE   ; file handle
+NV_ON           .BLOCK  1                       ; the file is there
+NV_LAST         .BLOCK  1                       ; counter of the last save
+NV_COUNT        .BLOCK  1                       ; main loop runs to the check
 
 ; M2M Shell variables (only include, if you included "shell.asm" above)
 #include "../../M2M/rom/shell_vars.asm"
