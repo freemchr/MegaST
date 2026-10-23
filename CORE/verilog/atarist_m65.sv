@@ -362,6 +362,7 @@ wire       mde60         = cfg_mde60;
 // synchronized reset signal
 reg       reset;
 reg [7:0] reset_cnt = 8'd0;
+reg       viking_chg;          // MEGA65: the Viking card was switched on or off (see below)
 always @(posedge clk_32) begin
 	reg m8_en;
 
@@ -372,7 +373,7 @@ always @(posedge clk_32) begin
 		reset <= 1;
 		reset_cnt <= reset_cnt + 1'd1;
 	end
-	if(reset_in | init) reset_cnt <= 0;
+	if(reset_in | init | viking_chg) reset_cnt <= 0;
 end
 
 reg peripheral_reset;
@@ -608,6 +609,14 @@ gstshifter gstshifter (
 // MEGA65: the menu item also switches the card in the STEroids mode (MiSTer: always on)
 wire viking_mem_ok = MEM512K || MEM1M || MEM2M || MEM4M || MEM8M;
 wire viking_enable = viking_en && (viking_mem_ok || steroids);
+
+// MEGA65: switching the card on or off resets the ST. Without the reset, the driver and GEM
+// go on drawing into the card's memory, which is gone after switching off: bus error, crash.
+reg viking_enable_d;
+always @(posedge clk_32) begin
+	viking_enable_d <= viking_enable;
+	viking_chg      <= viking_enable != viking_enable_d;
+end
 
 // check for cpu access to 0xcxxxxx with viking enabled to switch video
 // output once the driver loads. 256 accesses to the viking memory range
