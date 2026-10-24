@@ -530,7 +530,10 @@ with other FreeMiNT setups are welcome.
 * 68882 FPU (it runs on a small RISC-V CPU in the FPGA, so FPU-heavy programs are slower than on a
   real Falcon)
 * VIDEL graphics: the ST modes and the Falcon modes with 2 to 256 colours and True Color; monitor
-  type VGA, RGB, TV or mono (SM124)
+  type VGA, RGB, TV or mono (SM124). **The "Monitor" setting is the monitor the Falcon believes is
+  connected, not the MEGA65 output you use:** it decides which video modes TOS and programs offer.
+  The picture goes to HDMI and to the VGA connector with every setting, so "VGA (31 kHz)", the
+  default, also works with an HDMI TV or monitor only (tested on an R6 over HDMI).
 * DSP56001, DMA sound, the sound matrix and the YM2149
 * 14 MB ST-RAM (or 4 MB) and optionally 48 MB of Fast RAM (TT-RAM) at $01000000
 * Two floppy drives (`.st` images) and the MEGA65's internal drive as A:
