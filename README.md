@@ -16,10 +16,10 @@ runs games and GEM programs from floppy and hard disk images. Download the core 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
-**Latest version: [1.1.4](https://github.com/freemchr/MegaST/releases/tag/v1.1.4)**
-(October 22, 2026): no more bombs after a reset (mostly STEroids), a cartridge can be removed
-(Space on the "Cartridge:" line), and no more coloured stripes behind the welcome screen (all
-tester reports, tested on an R6). 1.1.3 fixed the monochrome flicker on HDMI at 720p.
+**Latest version: [1.1.5](https://github.com/freemchr/MegaST/releases/tag/v1.1.5)**
+(October 24, 2026): the Viking 1280x1024 card works (see [Viking/SM194 card](#vikingsm194-card)):
+on HDMI the desktop is shown sharp, 1:1 at 1280x1024 (tested on an R6). 1.1.4 fixed the bombs after
+a reset, the cartridge removal and the stripes behind the welcome screen.
 Since 1.1 (October 16, 2026) **the MEGA65's internal floppy drive** works as the ST's drive A:
 (read only, issue #15, see [Real floppy drive](#real-floppy-drive)). Original ST disks, including copy
 protected games with 10 sectors and 82 tracks, are read as on a real ST. Core files for the
@@ -57,7 +57,8 @@ Tested on a MEGA65 R6
 | Internal floppy drive with EmuTOS (drive A: on the desktop) | works since 1.1.1 (no drive icons in 1.1, issue #24); R3-R5 not tested with the drive |
 | Games: Golden Axe, Great Giana Sisters, Turrican | work |
 | Games: Buggy Boy, Goldrunner, Goldrunner II, The Hitchhiker's Guide to the Galaxy, Lemmings | work (tester report, issue #21) |
-| Cartridges, PMOD serial/MIDI/printer, Cubase dongles, Viking card, mono monitor | not tested yet |
+| Viking card with `mist_vhi.prg` (TOS 1.04/2.06): sharp 1280x1024 desktop on HDMI, MEGA65 menu, switching off | works (since 1.1.5, R6) |
+| Cartridges, PMOD serial/MIDI/printer, Cubase dongles, mono monitor | not tested yet |
 | 1351 mouse | works (tester report on the R3, issue #22) |
 | HDMI "DVI mode (no sound)" with a DVI monitor | works (tester report, issue #4) |
 | R3 and R3A boards (`CORE-R3.xpr`, 512 KB) | work, including hard disk images (tester reports, issues #2, #22) |
