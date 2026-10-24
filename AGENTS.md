@@ -48,10 +48,11 @@ reported it.
   Generic fixes are candidates for upstream.
 * **Menu changes ripple.** The menu line index is the OSM bit, so after inserting or removing a line in
   `OPTM_ITEMS` / `OPTM_GROUPS` (`config.vhd`), every `C_MENU_*` in `mega65.vhd` below it shifts.
-  `top_mega65-r*.vhd` also hard-code `main_osm_control_m(53)` (`C_MENU_MOUSE1351`). `OPTM_SIZE` is the
-  size of the settings file `/atarist/stcfg`. If it changes, ship a new `stcfg` (all `0xFF`) and say so
-  in `VERSIONS.md` and the README. Likewise `/atarist/stmount` (remembered images) has
-  `(C_VDNUM + C_CRTROMS_MAN_NUM) * 256` bytes (`globals.vhd`, currently 1536): ship a new one if that changes.
+  `top_mega65-r*.vhd` also hard-code `main_osm_control_m(69)` (`C_MENU_MOUSE1351`). `OPTM_SIZE` is the
+  size of the settings file `/atarist/fccfg` (up to 1.1.5 `stcfg`). If it changes, ship a new `fccfg` (all `0xFF`) and say so
+  in `VERSIONS.md` and the README. Likewise `/atarist/fcmount` (remembered images) has
+  `(C_VDNUM + C_CRTROMS_MAN_NUM + 1) * 256` bytes (`globals.vhd`; the extra entry is the manual TOS of the
+  machine that does not run, `fcswitch.asm`; currently 1792): ship a new one if that changes.
 * **ST memory must stay fast.** The ST bus needs RAM read data within about 175 ns. In the simulator,
   TOS 1.04 survives 10 extra 96 MHz cycles and crashes at 11. Video, DMA and the blitter cannot wait.
   That rules out HyperRAM (about 90 ns average, much more while ascal bursts) for ST RAM.
@@ -82,8 +83,17 @@ Simulate first. Every hardware round trip costs the maintainer time.
 * `CORE/sim/{keyboard,tos_loader,floppy_swap,fdc_bridge,rmb_guard,real_floppy}/run.sh`: GHDL unit tests.
 * `CORE/sim/real_floppy/run_wf1772.sh`: WF1772 floppy controller, original vs. clock enable version (4 min).
 * `CORE/sim/fastseek/run.sh`: firmware fast seek in the QNICE emulator.
-* `CORE/sim/mntmem/run.sh`: remembering the mounted images (`/atarist/stmount`) in the QNICE emulator.
-* `CORE/sim/rosmfix/run.sh [stcfg]`: the check of a loaded settings file (`/atarist/stcfg`) against the menu, QNICE emulator.
+* `CORE/sim/mntmem/run.sh`: remembering the mounted images (`/atarist/fcmount`) in the QNICE emulator.
+* `CORE/sim/rosmfix/run.sh [fccfg]`: the check of a loaded settings file (`/atarist/fccfg`) against the menu, QNICE emulator.
+* `CORE/sim/falcon_m65/build.sh` (`FPU=1 MDIR=obj_fpu`): Verilator bench of the Falcon as the core uses it
+  (`falcon_m65.sv`). `run_prg.sh OUT PROG [DIR] -- [options]` runs a program from `C:\AUTO` (tests in
+  `tests/*.s`: joypad, ttram, membench, dsp; or an NF4 demo with its directory, `FASTLOAD=1`);
+  `simrom.py` makes a faster booting EmuTOS copy for `TOS=`. Options: `--monitor`, `--turbo`, `--fastram`,
+  `--rfloppy`, `--pad`, `--joy`, `--wav`, `--nvram`, `--cart`, `--start`/`--done`/`--dump`; a switch from the ST
+  in the menu: `--reload` (TOS loaded again, fcswitch.asm), `--switch` (all resets at once), `--junk` (no TOS).
+* `CORE/sim/nvram/run.sh`: the Falcon NVRAM file (`/atarist/fcnvram`, `CORE/m2m-rom/nvram.asm`), QNICE emulator.
+* `CORE/sim/fcswitch/run.sh`: which TOS the firmware loads again after a switch between ST and Falcon
+  (`CORE/m2m-rom/fcswitch.asm`), QNICE emulator.
 * `CORE/sim/acsi_write/run.sh <emutos tos.img> [delay]`: hard disk writes (64 KB, every sector checked).
 * After a Vivado build check: timing met (WNS/WHS >= 0), no new critical warnings, no block RAM
   demoted to LUTRAM (Synth 8-5835).
@@ -93,4 +103,4 @@ Simulate first. Every hardware round trip costs the maintainer time.
 The version is in `config.vhd` (welcome and help texts), `VERSIONS.md` and the README. The `.cor`
 comes from `bit2core mega65r6 <bit> "MegaST" <version> <file>` (`mega65r3`/`r4`/`r5` for the other
 boards). The release zip holds the `.cor`, `README.txt` and `atarist/` (EmuTOS `tos.img` plus its
-license files, `stcfg`). Posting releases or issue comments needs the maintainer's OK.
+license files, `fccfg`, `fcmount`, `fcnvram`, `tosfalc.img`). Posting releases or issue comments needs the maintainer's OK.

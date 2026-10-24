@@ -277,8 +277,9 @@ type jp_cnt_t is array (0 to 4) of unsigned(7 downto 0);
 signal jp_cnt       : jp_cnt_t := (others => (others => '0'));
 signal jp_old       : std_logic_vector(4 downto 0) := (others => '1');
 signal jp_free      : unsigned(23 downto 0) := (others => '0');
-signal jp_snap      : std_logic_vector(95 downto 0);
-signal jp_sr        : std_logic_vector(95 downto 0);
+signal jp_snap      : std_logic_vector(255 downto 0);
+signal jp_sr        : std_logic_vector(255 downto 0);
+signal jp_falcon    : std_logic_vector(159 downto 0);
 signal jp_capture, jp_sel, jp_shift, jp_tck, jp_tdi : std_logic;
 
 -- JTAG probe of the keyboard (USER3 data register, 176 bits, see below)
@@ -352,53 +353,70 @@ constant C_MENU_ST             : natural := 12;
 constant C_MENU_STE            : natural := 13;
 constant C_MENU_MSTE           : natural := 14;
 constant C_MENU_STEROIDS       : natural := 15;
-constant C_MENU_MEM_512K       : natural := 21;
-constant C_MENU_MEM_1M         : natural := 22;
-constant C_MENU_MEM_2M         : natural := 23;
-constant C_MENU_MEM_4M         : natural := 24;
-constant C_MENU_MEM_8M         : natural := 25;
-constant C_MENU_MEM_14M        : natural := 26;
-constant C_MENU_BLITTER        : natural := 32;
-constant C_MENU_MONO           : natural := 33;
-constant C_MENU_MONO60         : natural := 34;
-constant C_MENU_BORDER         : natural := 35;
-constant C_MENU_VIKING         : natural := 36;
-constant C_MENU_STEREO         : natural := 37;
-constant C_MENU_WPROT          : natural := 38;
-constant C_MENU_FDSWAP         : natural := 39;
-constant C_MENU_REALFD         : natural := 40;
-constant C_MENU_DSEP          : natural := 41;
-constant C_MENU_AMIGAMOUSE     : natural := 52;   -- mouse type: 51 Atari (default), 52 Amiga, 53 1351
-constant C_MENU_MOUSE1351      : natural := 53;
-constant C_MENU_JOYSWAP        : natural := 57;   -- mouse port: 56 port 1 (default), 57 port 2
-constant C_MENU_STEPADS        : natural := 59;
-constant C_MENU_PMOD           : natural := 60;
-constant C_MENU_CUBASE         : natural := 61;
-constant C_MENU_KBD_US         : natural := 65;   -- keyboard: 64 positional (default), 65 as printed US, 66 UK
-constant C_MENU_KBD_UK         : natural := 66;
-constant C_MENU_HDMI_16_9_50   : natural := 72;
-constant C_MENU_HDMI_16_9_60   : natural := 73;
-constant C_MENU_HDMI_4_3_50    : natural := 74;
-constant C_MENU_HDMI_5_4_50    : natural := 75;
-constant C_MENU_HDMI_640_60    : natural := 76;
-constant C_MENU_HDMI_720_5994  : natural := 77;
-constant C_MENU_SVGA_800_60    : natural := 78;
-constant C_MENU_HDMI_DVI       : natural := 80;
-constant C_MENU_VGA_15KHZ      : natural := 87;
-constant C_MENU_VGA_CSYNC      : natural := 88;
-constant C_MENU_SCANLINES_25   : natural := 91;
-constant C_MENU_SCANLINES_50   : natural := 92;
-constant C_MENU_SCANLINES_75   : natural := 93;
-constant C_MENU_CRT_EMULATION  : natural := 96;
-constant C_MENU_HDMI_ZOOM      : natural := 97;
-constant C_MENU_IMPROVE_AUDIO  : natural := 98;
--- 98 "Reset Atari ST" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
+constant C_MENU_FALCON         : natural := 16;   -- Falcon030 (falcon_m65.sv), not on the R3
+constant C_MENU_MEM_512K       : natural := 22;
+constant C_MENU_MEM_1M         : natural := 23;
+constant C_MENU_MEM_2M         : natural := 24;
+constant C_MENU_MEM_4M         : natural := 25;
+constant C_MENU_MEM_8M         : natural := 26;
+constant C_MENU_MEM_14M        : natural := 27;
+constant C_MENU_BLITTER        : natural := 29;
+constant C_MENU_MONO           : natural := 30;
+constant C_MENU_MONO60         : natural := 31;
+constant C_MENU_BORDER         : natural := 32;
+constant C_MENU_VIKING         : natural := 33;
+constant C_MENU_STEREO         : natural := 34;
+constant C_MENU_WPROT          : natural := 54;
+constant C_MENU_FDSWAP         : natural := 55;
+constant C_MENU_REALFD         : natural := 56;
+constant C_MENU_DSEP          : natural := 57;
+constant C_MENU_AMIGAMOUSE     : natural := 68;   -- mouse type: 67 Atari (default), 68 Amiga, 69 1351
+constant C_MENU_MOUSE1351      : natural := 69;
+constant C_MENU_JOYSWAP        : natural := 73;   -- mouse port: 72 port 1 (default), 73 port 2
+constant C_MENU_STEPADS        : natural := 75;
+constant C_MENU_PMOD           : natural := 76;
+constant C_MENU_CUBASE         : natural := 77;
+constant C_MENU_KBD_US         : natural := 81;   -- keyboard: 80 positional (default), 81 as printed US, 82 UK
+constant C_MENU_KBD_UK         : natural := 82;
+constant C_MENU_HDMI_16_9_50   : natural := 88;
+constant C_MENU_HDMI_16_9_60   : natural := 89;
+constant C_MENU_HDMI_4_3_50    : natural := 90;
+constant C_MENU_HDMI_5_4_50    : natural := 91;
+constant C_MENU_HDMI_640_60    : natural := 92;
+constant C_MENU_HDMI_720_5994  : natural := 93;
+constant C_MENU_SVGA_800_60    : natural := 94;
+constant C_MENU_HDMI_DVI       : natural := 96;
+constant C_MENU_VGA_15KHZ      : natural := 103;
+constant C_MENU_VGA_CSYNC      : natural := 104;
+constant C_MENU_SCANLINES_25   : natural := 107;
+constant C_MENU_SCANLINES_50   : natural := 108;
+constant C_MENU_SCANLINES_75   : natural := 109;
+constant C_MENU_CRT_EMULATION  : natural := 112;
+constant C_MENU_HDMI_ZOOM      : natural := 113;
+constant C_MENU_IMPROVE_AUDIO  : natural := 114;
+constant C_MENU_F_RGB          : natural := 42;  -- Falcon monitor: 41 VGA (default), 42 RGB, 43 TV, 44 mono
+constant C_MENU_F_TV           : natural := 43;
+constant C_MENU_F_MONO         : natural := 44;
+constant C_MENU_F_TURBO        : natural := 46;  -- Falcon CPU at 32 MHz
+constant C_MENU_F_4MB          : natural := 47;  -- Falcon ST-RAM 4 MB instead of 14 MB
+constant C_MENU_F_FAST         : natural := 48;  -- Falcon Fast RAM (TT-RAM) 48 MB at $01000000
+-- 115 "Reset" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
 ---------------------------------------------------------------------------------------------
 
 signal main_st_mem            : std_logic_vector(2 downto 0);
+signal main_f_monitor         : std_logic_vector(1 downto 0);
+-- Falcon NVRAM buffer (C_DEV_FC_NVRAM): port A QNICE, port B the Falcon (falcon_m65.sv)
+signal qnice_nv_ce            : std_logic;
+signal qnice_nv_we            : std_logic;
+signal qnice_nv_q             : std_logic_vector(7 downto 0);
+signal qnice_nv_rd_done       : std_logic;
+signal main_nvb_addr          : std_logic_vector(5 downto 0);
+signal main_nvb_din           : std_logic_vector(7 downto 0);
+signal main_nvb_we            : std_logic;
+signal main_nvb_dout          : std_logic_vector(7 downto 0);
 signal main_st_ste            : std_logic;
 signal main_st_mste           : std_logic;
 
@@ -592,6 +610,12 @@ begin
                    "101" when main_osm_control_i(C_MENU_MEM_14M)  = '1' else
                    "001";   -- 1 MB
 
+   -- Falcon monitor (Falcon's monitor type bits): 00 mono, 01 RGB, 10 VGA, 11 TV
+   main_f_monitor <= "01" when main_osm_control_i(C_MENU_F_RGB)  = '1' else
+                     "11" when main_osm_control_i(C_MENU_F_TV)   = '1' else
+                     "00" when main_osm_control_i(C_MENU_F_MONO) = '1' else
+                     "10";    -- VGA
+
    -- main.vhd contains the actual MiSTer core
    i_main : entity work.main
       generic map (
@@ -633,6 +657,15 @@ begin
          st_cubase_i          => main_osm_control_i(C_MENU_CUBASE),
          st_kbd_print_i       => main_osm_control_i(C_MENU_KBD_US) or main_osm_control_i(C_MENU_KBD_UK),
          st_kbd_uk_i          => main_osm_control_i(C_MENU_KBD_UK),
+         falcon_i             => main_osm_control_i(C_MENU_FALCON),
+         falcon_monitor_i     => main_f_monitor,
+         falcon_turbo_i       => main_osm_control_i(C_MENU_F_TURBO),
+         falcon_4mb_i         => main_osm_control_i(C_MENU_F_4MB),
+         falcon_fast_i        => main_osm_control_i(C_MENU_F_FAST),
+         falcon_nvb_addr_o    => main_nvb_addr,
+         falcon_nvb_din_o     => main_nvb_din,
+         falcon_nvb_we_o      => main_nvb_we,
+         falcon_nvb_dout_i    => main_nvb_dout,
          rtc_i                => main_rtc_i,
 
          -- TOS loader
@@ -734,7 +767,8 @@ begin
          dbg_kbd_bytes_o      => kp_kbd_bytes,
          dbg_fdc_idx_i        => fp_log_idx,
          dbg_fdc_entry_o      => fp_log_entry,
-         dbg_fdc_count_o      => fp_log_count
+         dbg_fdc_count_o      => fp_log_count,
+         dbg_falcon_o         => jp_falcon
       ); -- i_main
 
    ---------------------------------------------------------------------------------------------
@@ -849,8 +883,17 @@ begin
       qnice_vd_ce          <= '0';
       qnice_vd_we          <= '0';
       qnice_buf_cs         <= '0';
+      qnice_nv_ce          <= '0';
+      qnice_nv_we          <= '0';
 
       case qnice_dev_id_i is
+
+         -- Falcon NVRAM buffer (reads: one wait state, the RAM is registered)
+         when C_DEV_FC_NVRAM =>
+            qnice_nv_ce          <= qnice_dev_ce_i;
+            qnice_nv_we          <= qnice_dev_we_i;
+            qnice_dev_data_o     <= x"00" & qnice_nv_q;
+            qnice_dev_wait_o     <= qnice_dev_ce_i and not qnice_dev_we_i and not qnice_nv_rd_done;
 
          -- TOS loader (write only)
          when C_DEV_ST_TOS =>
@@ -894,6 +937,36 @@ begin
    end process core_specific_devices;
 
    ---------------------------------------------------------------------------------------
+   -- Falcon NVRAM buffer: the firmware loads /atarist/fcnvram into it before the core starts
+   -- and saves it when the Falcon changed it (nvram.asm, falcon_m65.sv)
+   ---------------------------------------------------------------------------------------
+
+   p_nv_rd : process (qnice_clk_i)
+   begin
+      if rising_edge(qnice_clk_i) then
+         qnice_nv_rd_done <= qnice_nv_ce and not qnice_nv_we;
+      end if;
+   end process p_nv_rd;
+
+   i_fc_nvram : entity work.dualport_2clk_ram
+      generic map (
+         ADDR_WIDTH        => 6,
+         DATA_WIDTH        => 8
+      )
+      port map (
+         clock_a           => qnice_clk_i,
+         address_a         => qnice_dev_addr_i(5 downto 0),
+         data_a            => qnice_dev_data_i(7 downto 0),
+         wren_a            => qnice_nv_ce and qnice_nv_we,
+         q_a               => qnice_nv_q,
+         clock_b           => main_clk,
+         address_b         => main_nvb_addr,
+         data_b            => main_nvb_din,
+         wren_b            => main_nvb_we,
+         q_b               => main_nvb_dout
+      ); -- i_fc_nvram
+
+   ---------------------------------------------------------------------------------------
    -- TOS loader
    ---------------------------------------------------------------------------------------
 
@@ -907,7 +980,7 @@ begin
          qnice_cart_ce_i   => qnice_cart_ce,
          qnice_tosm_ce_i   => qnice_tosm_ce,
          qnice_we_i        => qnice_tos_we,
-         qnice_sys_cfg_i   => qnice_osm_control_i(C_MENU_STEROIDS downto C_MENU_ST) &
+         qnice_sys_cfg_i   => qnice_osm_control_i(C_MENU_FALCON downto C_MENU_ST) &
                               qnice_osm_control_i(C_MENU_MEM_14M downto C_MENU_MEM_512K),
          qnice_wait_o      => qnice_tos_wait,
          qnice_csr_data_o  => qnice_csr_data,
@@ -1154,6 +1227,10 @@ begin
    -- data register scan (LSB first) returns: 4..0: port 1 (fire, right, left, down, up; low active),
    -- 9..5: port 2, 12..10: menu Amiga mouse, 1351 mouse, swap ports, 23..16: pot 1 x, 31..24: pot 1 y,
    -- 71..32: edges of port 1 up, down, left, right, fire (8 bits each), 95..72: free running counter.
+   -- Bits 255..96 (scan 256 bits, tools/probe5.tcl): the Falcon (falcon_system.sv): 127..96 the last
+   -- program space address of the 68030, 152..128 the last device access (bit 152: write),
+   -- 175..160 DSP PC, 191..176 R6, 207..192 R7, 223..208 LC, 231..224 DSP writes to SSI TX,
+   -- 239..232 SSISR, 247..240 HSR, 255..248 ISR (host port).
    jp_sample : process (main_clk)
       variable j1 : std_logic_vector(4 downto 0);
    begin
@@ -1166,7 +1243,7 @@ begin
                jp_cnt(i) <= jp_cnt(i) + 1;
             end if;
          end loop;
-         jp_snap <= std_logic_vector(jp_free) &
+         jp_snap <= jp_falcon & std_logic_vector(jp_free) &
                     std_logic_vector(jp_cnt(4)) & std_logic_vector(jp_cnt(3)) & std_logic_vector(jp_cnt(2)) &
                     std_logic_vector(jp_cnt(1)) & std_logic_vector(jp_cnt(0)) &
                     main_pot1_y_i & main_pot1_x_i & "000" &
@@ -1201,7 +1278,7 @@ begin
          if jp_sel = '1' and jp_capture = '1' then
             jp_sr <= jp_snap;
          elsif jp_sel = '1' and jp_shift = '1' then
-            jp_sr <= jp_tdi & jp_sr(95 downto 1);
+            jp_sr <= jp_tdi & jp_sr(255 downto 1);
          end if;
       end if;
    end process jp_shiftreg;

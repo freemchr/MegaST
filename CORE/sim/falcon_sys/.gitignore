@@ -1,0 +1,5 @@
+obj_dir/
+falcon_psg_vol.mem
+falcon_optbl.mem
+build.log
+*.hex

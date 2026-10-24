@@ -37,11 +37,17 @@ awk '/constant C_CRTROMS_MAN_NUM/ {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); 
 awk '/constant C_CRTROMS_AUTO_NUM/ {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); val=a[1]; if (val+0 == 0) val=1; printf("CRTROM_AUT_MAX              .EQU %s\n", val)}' ../vhdl/globals.vhd >> globals.asm
 # MegaST: menu group of "Reset Atari ST" (OSM_SEL_POST in m2m-rom.asm), taken from ../vhdl/config.vhd
 awk '/constant OPTM_G_Reset / {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); printf("OPTM_G_RESET                .EQU %s\n", a[1])}' ../vhdl/config.vhd >> globals.asm
+# MegaST: menu group "Machine" and the menu line of the Falcon030 in it (fcswitch.asm)
+awk '/constant OPTM_G_Machine / {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); printf("OPTM_G_MACHINE              .EQU %s\n", a[1])}' ../vhdl/config.vhd >> globals.asm
+awk '/constant OPTM_GROUPS/ {g=1; i=0; next}
+     g && /OPTM_G_/ {if ($0 ~ /OPTM_G_Machine/ && $0 ~ /Falcon030/) printf("MENU_FALCON                 .EQU %d\n", i); i++}
+     g && /\);/ {g=0}' ../vhdl/config.vhd >> globals.asm
 # MegaST: entries of the file that remembers the mounted images (M2M/rom/mntmem.asm): one per vdrive and
-# per manually loadable CRT/ROM, 256 bytes each (qasm cannot compute expressions, so we do it here)
+# per manually loadable CRT/ROM, plus one for the manual TOS of the machine that does not run (ST or Falcon,
+# fcswitch.asm), 256 bytes each (qasm cannot compute expressions, so we do it here)
 awk '/constant C_VDNUM/ {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); vd=a[1]+0; if (vd == 0) vd=1}
      /constant C_CRTROMS_MAN_NUM/ {gsub(/.*:=|;.*/, "", $0); split($0, a, " "); cr=a[1]+0; if (cr == 0) cr=1}
-     END {printf("MNT_ENTRIES                 .EQU %d\nMNT_BUF_SIZE                .EQU %d\n", vd+cr, (vd+cr)*256)}' ../vhdl/globals.vhd >> globals.asm
+     END {printf("MNT_ENTRIES                 .EQU %d\nMNT_BUF_SIZE                .EQU %d\n", vd+cr+1, (vd+cr+1)*256)}' ../vhdl/globals.vhd >> globals.asm
 # MegaST: menu lines "Remember floppies" and "Remember TOS/cartridge" (index in OPTM_GROUPS of ../vhdl/config.vhd)
 # and the number of floppy drives (C_MNT_FD_NUM in ../vhdl/globals.vhd), used by MNT_RESTORE
 awk '/constant OPTM_GROUPS/ {g=1; i=0; next}

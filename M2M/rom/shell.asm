@@ -191,6 +191,7 @@ MAIN_LOOP       RSUB    HANDLE_IO, 1            ; IO handling (e.g. vdrives)
 
                 RSUB    CHECK_DEBUG, 1          ; (Run/Stop+Cursor Up) + Help
                 RSUB    HELP_MENU, 1            ; check/manage help menu
+                RSUB    CORE_LOOP, 1            ; MegaST: callback of the core
                 RSUB    LOG_COREINFO, 1         ; once: log core info
 
                 RBRA    MAIN_LOOP, 1
@@ -463,6 +464,9 @@ _HM_SDMOUNTED3  MOVE    R8, R0                  ; R8: selected file name
                 ; error message on screen
                 CMP     1, R5                   ; CRT/ROM: switch device..
                 RBRA    _HM_SDMOUNTED5S, !Z     ; ..to make string visible
+                CMP     M2M$RAMROM_DATA, R1     ; MegaST: unless the string
+                RBRA    _HM_SDMOUNTED5S, N      ; is in the QNICE ROM (from
+                                                ; PREP_LOAD_IMAGE)
 
                 MOVE    SCRATCH_HEX, R8         ; save screen device
                 RSUB    SAVE_DEVSEL, 1

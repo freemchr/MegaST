@@ -142,6 +142,11 @@ def main():
     if variant in sizes:
         fill = 0xFF if variant == "ff" else 0x00
         at_ents += entries("STMOUNT", short_name("STMOUNT"), 0x20, add_file(sizes[variant], fill), sizes[variant])
+    if variant == "nv":        # nvram test (../nvram): /atarist/fcnvram, 64 bytes, see nvram_test.asm
+        nv = bytes((i * 7 + 3) & 0xFF for i in range(62)) + bytes([5, 0xA5])
+        c = add_file(64, 0)
+        img[off(c):off(c) + 64] = nv
+        at_ents += entries("FCNVRAM", short_name("FCNVRAM"), 0x20, c, 64)
     write_dir(atarist, at_ents)
 
     write_dir(games, dots(games, atarist) + entries("DISK1.ST", short_name("DISK1.ST"), 0x20,

@@ -178,14 +178,23 @@ _FFILES_RET     MOVE    R2, R9                  ; restore R9
 ;   R9: image type if R8=0, otherwise 0 or optional ptr to  error msg string
 ; Atari ST: cartridge images in the .STC format have a 4 byte header in front
 ; of the 128 kB ROM image: skip it (file size = 131076 = 0x00020004)
+; MegaST: a TOS that the machine cannot run is refused (FC_TOS_CHECK)
 PREP_LOAD_IMAGE INCRB
                 MOVE    R8, R0                  ; R0: file handle
                 XOR     R4, R4                  ; R4: error code
+                XOR     R5, R5                  ; R5: error message
 
                 MOVE    R9, R1                  ; loading a ROM/cartridge?
                 AND     CTX_MASK_CTX, R1
                 CMP     CTX_LOAD_ROM, R1
                 RBRA    _PLI_RET, !Z            ; no
+
+                MOVE    R0, R8                  ; MegaST: a TOS for the
+                RSUB    FC_TOS_CHECK, 1         ; other machine? (fcswitch.asm)
+                MOVE    R8, R4
+                MOVE    R9, R5
+                CMP     0, R4
+                RBRA    _PLI_RET, !Z
 
                 MOVE    R0, R1                  ; file size = 0x00020004?
                 ADD     FAT32$FDH_SIZE_HI, R1
@@ -204,10 +213,9 @@ PREP_LOAD_IMAGE INCRB
                 MOVE    R9, R4                  ; R4: error code of the seek
                 MOVE    R2, R10
 
-_PLI_RET        MOVE    R0, R8
-                MOVE    R4, R8                  ; R8: 0 = no errors
-                XOR     R9, R9                  ; image type hardcoded to 0
-                DECRB
+_PLI_RET        MOVE    R4, R8                  ; R8: 0 = no errors
+                MOVE    R5, R9                  ; R9: image type 0 or the
+                DECRB                           ; error message
                 RET
 
 ; ----------------------------------------------------------------------------
@@ -226,6 +234,8 @@ _PLI_RET        MOVE    R0, R8
 ;   R8: 0=OK, else pointer to string with error message
 ;   R9: 0=OK, else error code
 PREP_START      INCRB
+                RSUB    NV_RESTORE, 1           ; MegaST: Falcon NVRAM (nvram.asm)
+                RSUB    FC_INIT, 1              ; MegaST: machine of the TOS
                 XOR     R8, R8
                 XOR     R9, R9
                 DECRB
@@ -256,7 +266,12 @@ PREP_START      INCRB
 ; MegaST: "Reset Atari ST" is an action, not a setting: pulse the reset of the core
 ; and remove the selection marker again (like the help menu item).
 OSM_SEL_POST    INCRB
-                CMP     OPTM_G_RESET, R8        ; "Reset Atari ST" (globals.asm)
+                CMP     OPTM_G_MACHINE, R8      ; MegaST: ST <-> Falcon
+                RBRA    _OSP_RESET, !Z          ; (fcswitch.asm)
+                RSUB    FC_CHECK, 1
+                RBRA    _OSP_RET, 1
+
+_OSP_RESET      CMP     OPTM_G_RESET, R8        ; "Reset Atari ST" (globals.asm)
                 RBRA    _OSP_RET, !Z
                 CMP     1, R9                   ; selected (not unselected)?
                 RBRA    _OSP_RET, !Z
@@ -268,10 +283,13 @@ OSM_SEL_POST    INCRB
                 MOVE    0x0100, R1
 _OSP_WAIT       SUB     1, R1
                 RBRA    _OSP_WAIT, !Z
+                MOVE    FC_HOLD, R1             ; not while the TOS of the
+                CMP     0, @R1                  ; other machine is due
+                RBRA    _OSP_UNSEL, !Z          ; (fcswitch.asm)
                 AND     M2M$CSR_UN_RESET, @R0
 
                 ; Find the menu index of the item and unselect it
-                MOVE    OPTM_DATA, R0
+_OSP_UNSEL      MOVE    OPTM_DATA, R0
                 MOVE    @R0, R0
                 ADD     OPTM_IR_GROUPS, R0
                 MOVE    @R0, R0                 ; R0: menu groups
@@ -302,7 +320,11 @@ _OSP_RET        XOR     R8, R8
 ; called before the functionality and semantics associated with a certain
 ; menu item has been handled by the framework.
 OSM_SEL_PRE     INCRB
-                XOR     R8, R8
+                CMP     OPTM_G_MACHINE, R8      ; MegaST: Machine group: the
+                RBRA    _OSPR_RET, !Z           ; core waits in reset for
+                MOVE    M2M$CSR, R0             ; FC_CHECK (fcswitch.asm)
+                OR      M2M$CSR_RESET, @R0
+_OSPR_RET       XOR     R8, R8
                 XOR     R9, R9
                 DECRB
                 RET
@@ -376,6 +398,16 @@ _MCE_RET        DECRB
 ; Output:
 ;   R8: 0=no custom message available, otherwise pointer to string
 
+; CORE_LOOP callback function (MegaST, called by the main loop of the shell):
+; MegaST saves the Falcon NVRAM when it changed (nvram.asm) and loads the TOS
+; again after a switch between the ST and the Falcon (fcswitch.asm)
+CORE_LOOP       RSUB    NV_POLL, 1
+                RSUB    FC_SWITCH, 1            ; ST <-> Falcon (fcswitch.asm)
+                RET
+
+#include "nvram.asm"
+#include "fcswitch.asm"
+
 CUSTOM_MSG      XOR     R8, R8
                 RET              
 
@@ -399,6 +431,14 @@ END_OF_ROM      .DW 0
 ;
 ; add your own variables here
 ;
+; MegaST: the Falcon NVRAM on the SD card (nvram.asm)
+NV_FDH          .BLOCK  FAT32$FDH_STRUCT_SIZE   ; file handle
+NV_ON           .BLOCK  1                       ; the file is there
+NV_LAST         .BLOCK  1                       ; counter of the last save
+NV_COUNT        .BLOCK  1                       ; main loop runs to the check
+; MegaST: switching between the ST and the Falcon (fcswitch.asm)
+FC_MACH         .BLOCK  1                       ; 1: the TOS in the SDRAM is for the Falcon
+FC_HOLD         .BLOCK  1                       ; 1: the core waits for the TOS of the other machine
 
 ; M2M Shell variables (only include, if you included "shell.asm" above)
 #include "../../M2M/rom/shell_vars.asm"
@@ -423,8 +463,8 @@ MENU_HEAP_SIZE  .EQU 2560
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-; MegaST: 2048 words less for remembering the mounted images (mntmem.asm)
-HEAP_SIZE       .EQU 2560                       ; 7168 - 2560 - 2048 = 2560
+; MegaST: 2304 words less for remembering the mounted images (mntmem.asm)
+HEAP_SIZE       .EQU 2304                       ; 7168 - 2560 - 2304 = 2304
 HEAP            .BLOCK 1
 
 ; in RELEASE mode: 28k of heap which leads to a better user experience when
@@ -432,9 +472,9 @@ HEAP            .BLOCK 1
 #else
 
 ; MegaST: 2560 words less for the checkpoint tables of the fast seek of the
-; hard disks (VD_UB_CP in shell_vars.asm, 2052 words) and 2048 words less for
-; remembering the mounted images (MNT_PATHS etc. in shell_vars.asm, ~1900 words)
-HEAP_SIZE       .EQU 22528                      ; 29696 - 2560 - 2560 - 2048
+; hard disks (VD_UB_CP in shell_vars.asm, 2052 words) and 2304 words less for
+; remembering the mounted images (MNT_PATHS etc. in shell_vars.asm, ~2150 words)
+HEAP_SIZE       .EQU 22272                      ; 29696 - 2560 - 2560 - 2304
 HEAP            .BLOCK 1
 
 ; The monitor variables use 22 words, round to 32 for being safe and subtract

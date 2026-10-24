@@ -128,6 +128,15 @@ The framework does not remember mounted images (issue #13). Changes:
   menu with the same size (a Falcon test build had written `stcfg` with its fifth Machine item) or a
   damaged one made `OPTM_CB_SHOW` stop the firmware with "No selected menu group item" when the menu was
   opened. Test: `CORE/sim/rosmfix/run.sh` (QNICE emulator). Generic, a candidate for upstream.
+* `M2M/rom/shell.asm`: the main loop calls `CORE_LOOP`, a callback of the core (`CORE/m2m-rom/m2m-rom.asm`;
+  a core without anything to do there just returns). MegaST saves the Falcon's NVRAM there when it changed
+  (`CORE/m2m-rom/nvram.asm`, file `/atarist/fcnvram`, 64 bytes). Generic, a candidate for upstream.
+* `M2M/rom/crts-and-roms.asm` (`CRTROM_AUTOLOAD`): before opening an auto-load ROM, it calls
+  `FC_AUT_NAME` (`CORE/m2m-rom/fcswitch.asm`), which may return another file name: the TOS of the Falcon
+  (`/atarist/tosfalc.img`, if it exists) while the Falcon030 is selected, else the name from `globals.vhd`.
+  `CORE/m2m-rom/make_rom.sh` gives the remembered images one entry more (`MNT_ENTRIES`, file `fcmount`
+  1792 bytes) for the manual TOS of the machine that does not run; `FC_SWITCH` swaps it with the TOS entry
+  on a switch between ST and Falcon. Test: `CORE/sim/fcswitch/run.sh` (QNICE emulator).
 * `M2M/rom/shell.asm`: in CRT/ROM mode `HANDLE_MOUNTING` first calls `MNT_CRT_EJECT`
   (`CORE/m2m-rom/m2m-rom.asm`): Space on the line of a loaded cartridge removes it (status "loading",
   then "idle" in the device, so the ST restarts without it) and forgets it, instead of opening the browser.
@@ -145,6 +154,24 @@ The framework does not remember mounted images (issue #13). Changes:
   test defines `MNT_CFM_STUB` and replaces `_MNT_CFM_GET`.
 
 Generic, a candidate for upstream.
+
+### The menu can be closed by the core (Shell firmware)
+
+`M2M/rom/menu.asm` (`OPTM_RUN`), `M2M/rom/menu_vars.asm`: a select callback may set `OPTM_CLOSE_REQ` to 1,
+then the menu closes after the callback as if the close key (Help) was pressed. `OPTM_RUN` clears it when
+it starts. MegaST closes the menu when Atari ST and Falcon030 are switched (`FC_CHECK`,
+`CORE/m2m-rom/fcswitch.asm`): the TOS of the new machine can only be loaded with the menu closed, and in
+between nothing else may be chosen (a TOS, switching back, "Reset Atari ST"). Before, a manual TOS plus a
+switch made `M2M$FORCE_MENU` run with the menu closed, and `OPTM_SET` stopped the firmware ("menu.asm:
+OPTM_RUN is not running", 0003). Generic, a candidate for upstream.
+
+### Error messages of PREP_LOAD_IMAGE for CRTs/ROMs (Shell firmware)
+
+`M2M/rom/shell.asm` (`HANDLE_MOUNTING`): for a CRT/ROM the error string was always copied from the window
+of the CRT/ROM device (where the core puts its own messages). A string below `M2M$RAMROM_DATA` (`0x7000`)
+is in the QNICE ROM, like the ones `PREP_LOAD_IMAGE` returns, and is printed directly. MegaST refuses a
+TOS the selected machine cannot run (`FC_TOS_CHECK`, `CORE/m2m-rom/fcswitch.asm`: the ST no 512 KB TOS,
+the Falcon no 192/256 KB one). Generic, a candidate for upstream.
 
 ### Bug fix: saving the settings with more than one virtual drive
 
@@ -210,6 +237,58 @@ The core selects the SXGA mode while the Viking picture is shown (`mega65.vhd`).
 `M2M/vhdl/QNICE/qnice.vhd`: a `BSCANE2` (USER1) returns a 64 bit snapshot of the QNICE CPU bus, for
 debugging firmware hangs on the real hardware without a logic analyser (see `tools/JTAG.md`).
 Debugging aid; it can be removed without any effect on the core.
+
+Falcon core Falcon_MiSTer
+-------------------------
+
+`CORE/Falcon_MiSTer` is a copy of Falcon_MiSTer and AP68030 (see its `ORIGIN.md`). Changes, marked
+with `MEGA65` comments:
+
+* `rtl/falcon/falcon_psg.sv`, `falcon_pipescan.sv`: the `.mem` tables by file name only (Vivado finds
+  project files by name).
+* `rtl/falcon/falcon_system.sv`: `FALCON_FPU_LOCAL`: the FPU bridge's mailbox port (d3) goes out of the
+  module to the RISC-V that runs the 68882 service (`CORE/verilog/fpu_rv.v`) instead of to
+  `falcon_memarb` (no ARM, no DDR3 mailbox).
+* `rtl/falcon/falcon_cpubus.sv`: `hold` is never active during a reset. The reset holds the bridge in
+  `F_IDLE`; a bus cycle the processor had started then stopped its clock for good, and the AP68030
+  (which counts the reset only on `cpu_ce` clocks) never took the reset while the devices did: the
+  program ran on with reset video registers (garbage on the screen). Found in simulation (20 of 50
+  resets missed the CPU, 0 with the fix). Generic, a candidate for upstream.
+* `rtl/falcon/falcon_cpuclk.sv`, `falcon_system.sv`: after a 68030 access to the DSP host port the
+  processor runs at the Falcon rate for 512 clocks (`sync`, restarted by every access; the debt is
+  kept and caught up afterwards). While the processor caught up at 32 MHz, the code between two host
+  port accesses ran in half its Falcon time, and the DSP (real time) lost words the 68030 wrote
+  without handshake: ATRIS (bITmASTER DSP Protracker) froze with the DSP and the 68030 waiting for
+  each other (found with the JTAG probe below on an R6). Generic, a candidate for upstream.
+* `rtl/falcon/falcon_system.sv`: `falcon_scsi` with `CD_ALWAYS = 0`. The core has no SCSI images and
+  no ARM to answer the target's window reads, so the always present CD-ROM (ID 2) stayed busy on its
+  first command and TOS waited for its timeout.
+* `rtl/falcon/falcon_system.sv`, `dsp/falcon_dsp.sv`, `dsp/dsp56k_core.sv`, `dsp/dsp_periph.sv`: a
+  `dbg` output for the JTAG probe (`tools/probe5.tcl`): the last 68030 program space bus address and
+  device access, DSP PC, R6, R7, LC, SSISR, host ISR/HSR and a count of the DSP's SSI TX writes.
+  Debugging only, no change in behaviour.
+* `rtl/falcon/falcon_system.sv`: inputs `pad0`/`pad1` for the enhanced joystick ports (`falcon_combel`),
+  apart from `joy0`/`joy1` for the IKBD's joysticks. On MiSTer both are the same pads; on the MEGA65
+  the mouse port must not appear as a joystick (see `main.vhd`), while the joypads come from the
+  MEGA65 joystick ports when the menu item "STe joypads" is on. MiSTer: connect `joy0`/`joy1` to both.
+* `rtl/falcon/falcon_system.sv`: input `nv_lang`, the language and keyboard of the NVRAM default image
+  (`falcon_nvram` `cfg_lang`/`cfg_kbd`, upstream 0 = US): UK with the menu item "As printed, UK TOS".
+* `rtl/falcon/falcon_cpubus.sv`, `falcon_l2.sv`, `falcon_memarb.sv`, `falcon_system.sv`: Fast RAM
+  (TT-RAM), input `fast_n` (16 MB blocks at `$01000000`, 0 = none: the behaviour of upstream). With
+  Fast RAM, A31..A24 are decoded: `$00`/`$FF` the 24-bit space, `$01..fast_n` Fast RAM (a 32-bit port
+  without the ST-RAM slot, also in the Falcon mode), the rest a bus error. The CPU's memory port, the
+  line cache tags and the arbiter's CPU addresses have two more bits ([25:24]); the Fast RAM is right
+  above the 24-bit space in memory (DDRAM_ADDR[22:21]). DMA, video and the blitter stay in the 24-bit
+  space. EmuTOS finds the Fast RAM by itself (32-bit bus test, `ttram_detect`). On MiSTer the DDR3
+  window would have to grow by 48 MB.
+* `rtl/falcon/falcon_system.sv`: the CPU's line cache (`falcon_l2`) is on in the turbo mode too
+  (upstream: Falcon mode only). Without it every turbo read was one SDRAM access through the clock
+  crossing of `falcon_sdram.v`; reading memory got about 30 % faster (`tests/membench.s`).
+* `rtl/falcon/falcon_fdc.sv`, `falcon_system.sv`: input `ext_fd` and the `wd_*` port: the MEGA65's
+  internal floppy drive as A: (menu "Real floppy drive as A:"). The WD1772 is then `wd1772_m65.v` (the
+  ST's, flux level, at the drive), `falcon_fdc` keeps the DMA chip: register accesses go out (the CPU's
+  acknowledge after the access), DRQ moves the data register through the FIFO, INTRQ comes back.
+  `fd_sel_n`/`fd_side_n`: PSG port A bits 2..0 for the drive. With `ext_fd = 0` as upstream.
 
 QNICE
 -----

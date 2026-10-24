@@ -12,6 +12,7 @@ licence refuses debug-core insertion). Run them with
 | `probe.tcl` + `decode.py` | Sample the QNICE CPU bus `$N` times (USER1, 64 bits, `M2M/vhdl/QNICE/qnice.vhd`); `decode.py samples.txt CORE/m2m-rom/m2m-rom.lis` maps addresses to firmware labels |
 | `probe2.tcl` + `decode2.py` | Joystick ports, mouse menu settings, pots and edge counters (USER2, 96 bits, `CORE/vhdl/mega65.vhd`) |
 | `probe3.tcl` + `decode3.py` | Keyboard: the ST keyboard matrix from `keyboard.vhd`, the last 4 bytes the CPU read from the keyboard ACIA and press counters for the MEGA65 keys A/S and the ST key A (USER3, 176 bits, `CORE/vhdl/mega65.vhd`) |
+| `probe5.tcl` + `decode5.py` | Falcon: the last 68030 program space bus address and device access, DSP PC, R6, R7, LC, SSISR, host port ISR/HSR and a count of the DSP's SSI TX writes (USER2 bits 255..96, `CORE/vhdl/mega65.vhd`; `N` samples `MS` ms apart) |
 | `probe4.tcl` + `decode4.py` | Internal floppy drive (USER4, 224 bits, `CORE/vhdl/floppy/floppy_probe.vhd`): sends an optional command `$CMD`, then reads index period (rpm), flux transitions per revolution, a histogram of the flux intervals, TRK00/WPT/DSKCHG and step counters |
 
 Floppy probe commands (`CMD`, hex): bits 15..8 must be `A5`. Bit 0 motor, 1 select A, 2 side 1,
