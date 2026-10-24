@@ -17,20 +17,68 @@ on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
 **Latest version: [1.1.6](https://github.com/freemchr/MegaST/releases/tag/v1.1.6)**
-(October 25, 2026): **the Atari Falcon030 is included as a test** (R6 only, see
-[Falcon030 (test)](#falcon030-test)). Choose it in the menu under "Machine". It runs EmuTOS and
-Atari's TOS 4.04, Falcon demos and programs, and boots FreeMiNT from an IDE hard disk image. The
-menu is now split per machine ("ST/STe settings", "Falcon030 settings", "Drives & images"); **copy
-the new `atarist/fccfg` and `atarist/fcmount` from the zip**, otherwise the settings are not saved.
-1.1.5 made the Viking 1280x1024 card work, shown sharp at 1:1 on HDMI.
+(October 25, 2026): **MegaST now includes the Atari Falcon030** (test, R6 only), see
+[New in 1.1.6](#new-in-116-the-atari-falcon030) below. **Updating from any older version: copy the
+new `atarist/fccfg` and `atarist/fcmount` from the zip**, otherwise the menu settings are not
+saved. 1.1.5 made the Viking 1280x1024 card work, shown sharp at 1:1 on HDMI.
 Since 1.1 (October 16, 2026) **the MEGA65's internal floppy drive** works as the ST's drive A:
-(read only, issue #15, see [Real floppy drive](#real-floppy-drive)). Original ST disks, including copy
-protected games with 10 sectors and 82 tracks, are read as on a real ST. Core files for the
-R3/R3A and R6 (from 1.1.4 on there are no separate R4 and R5 files; if you have one of these
-boards, please open an issue).
-**Coming from 1.0 or older: copy the new `atarist/stcfg` (104 bytes) from the zip**, otherwise
-the menu settings are not saved (from 1.1 on, keep your file). **All versions up to 0.4.10 damage hard disk images when writing** (issue #11): if you
-wrote to an image with one of them, restore it from a backup.
+(read only, issue #15, see [Real floppy drive](#real-floppy-drive)). Core files for the R3/R3A and
+R6 (from 1.1.4 on there are no separate R4 and R5 files; if you have one of these boards, please
+open an issue). **All versions up to 0.4.10 damage hard disk images when writing** (issue #11): if
+you wrote to an image with one of them, restore it from a backup.
+
+New in 1.1.6: the Atari Falcon030
+---------------------------------
+
+> **MegaST is now an Atari ST/STe *and* an Atari Falcon030.** Choose the machine in the menu
+> (Help → "Machine" → "Falcon030"). The Falcon is a **test version** and needs the SDRAM of the
+> **R6** (the R3/R3A core stays an ST). It runs EmuTOS and Atari's TOS 4.04, Falcon demos and
+> programs, and boots FreeMiNT from an IDE hard disk image. Details in
+> [Falcon030 (test)](#falcon030-test); please report what works and what does not in the
+> [issues](https://github.com/freemchr/MegaST/issues).
+
+**The menu is split per machine.** Every machine has its own settings page, and things that belong
+together are grouped:
+
+```
+ MegaST
+ <floppy, hard disk, TOS and cartridge lines>
+ Machine                 >   Atari ST, Atari STe, Mega STe, STEroids, Falcon030
+ ST/STe settings         >   memory, blitter, mono monitor, borders, Viking card, stereo YM
+ Falcon030 settings      >   monitor (VGA/RGB/TV/mono), CPU 32 MHz, 4 MB ST-RAM, Fast RAM
+ Drives & images         >   write protection, floppy swap, real floppy drive, remembering images
+ Controllers & ports     >   mice, joysticks, joypads, PMOD ports, Cubase dongles, keyboard
+ HDMI / VGA              >   video modes, scanlines, 15 kHz
+ CRT emulation, Zoom-in, Audio improvements
+ Reset                       resets the machine that runs (was "Reset Atari ST")
+```
+
+**How the TOS works with two machines.** The ST and the Falcon need different TOS versions, so
+each machine has its own:
+
+| | Atari ST / STe | Falcon030 |
+|--|--|--|
+| Loaded at power on and after switching to it | `atarist/tos.img` | `atarist/tosfalc.img` |
+| In the zip | EmuTOS (256 KB) | EmuTOS for the Falcon (512 KB) |
+| TOS it can run | 192 KB (1.00–1.04) or 256 KB (1.06–2.06), EmuTOS | 512 KB (TOS 4.0x), EmuTOS 512 KB |
+| A TOS chosen with "TOS:" | remembered for the ST | remembered for the Falcon |
+
+* Choosing a TOS with "TOS:" loads it for the machine that runs and restarts it. With `fcmount`
+  on the SD card it is remembered **for that machine** and comes back at the next power on.
+* **Switching the machine** (ST ↔ Falcon030) closes the menu, loads the new machine's TOS (the one
+  remembered for it, otherwise its `.img` file from the table) and starts it. Switching back gives
+  the old machine its own TOS again: for example ST with TOS 2.06 → Falcon with TOS 4.04 → ST
+  with TOS 2.06.
+* **A TOS the machine cannot run is refused** with a message, and the file browser stays open: a
+  512 KB TOS on the ST, or an ST TOS on the Falcon.
+* To go back to the `.img` file of the table, choose it with "TOS:" (`tos.img` on the ST,
+  `tosfalc.img` on the Falcon). With "Remember TOS/cartridge" off ("Drives & images") the
+  machines always start with these files.
+
+**New settings files.** The menu is larger, so 1.1.6 keeps the settings in `atarist/fccfg`
+(119 bytes) and the remembered images in `atarist/fcmount` (1792 bytes). **Copy both from the zip**
+(and `tosfalc.img` and `fcnvram` for the Falcon). The old `stcfg` and `stmount` are no longer read;
+leave them on the card, so going back to 1.1.5 keeps its settings.
 
 **Support:** MegaST is free and open source. If you enjoy it, you can support its development via
 [Buy Me a Coffee](https://buymeacoffee.com/cjf077) or [GitHub Sponsors](https://github.com/sponsors/freemchr).
