@@ -190,7 +190,7 @@ constant SEL_MNT_FILE      : std_logic_vector(15 downto 0) := x"0102";  -- MegaS
 -- START YOUR CONFIGURATION BELOW THIS LINE
 
 constant DIR_START         : string := "/atarist";
--- MegaST: from 1.1.6 on (Falcon030 in the menu) the menu has 118 lines instead of 104, so the settings and
+-- MegaST: from 1.1.6 on (Falcon030 in the menu) the menu has 119 lines instead of 104, so the settings and
 -- remembered images are in their own files (fccfg, fcmount): the stcfg and stmount of the ST-only versions
 -- (up to 1.1.5) stay untouched, so going back to an older version keeps its settings.
 constant CFG_FILE          : string := "/atarist/fccfg";
@@ -338,7 +338,7 @@ constant OPTM_S_SAVING     : string := "<Saving>";          -- the internal writ
 --             Do use a lower case \n. If you forget one of them or if you use upper case, you will run into undefined behavior.
 --          2. Start each line that contains an actual menu item (multi- or single-select) with a Space character,
 --             otherwise you will experience visual glitches.
-constant OPTM_SIZE         : natural := 118;  -- amount of items including empty lines:
+constant OPTM_SIZE         : natural := 119;  -- amount of items including empty lines:
                                              -- needs to be equal to the number of lines in OPTM_ITEMS and amount of items in OPTM_GROUPS
                                              -- IMPORTANT: If SAVE_SETTINGS is true and OPTM_SIZE changes: Make sure to re-generate and
                                              -- and re-distribute the config file. You can make a new one using M2M/tools/make_config.sh
@@ -349,124 +349,125 @@ constant OPTM_DX           : natural := 28;
 constant OPTM_DY           : natural := 23;
 
 constant OPTM_ITEMS        : string :=
-   " Atari ST/STe\n"              &   --  0
-   "\n"                           &   --  1
-   " TOS:%s\n"                    &   --  2
-   " Floppy A:%s\n"               &   --  3
-   " Floppy B:%s\n"               &   --  4
-   " Hard disk 0:%s\n"            &   --  5
-   " Hard disk 1:%s\n"            &   --  6
-   " Cartridge:%s\n"              &   --  7
-   "\n"                           &   --  8
-   " Machine: %s\n"               &   --  9
-   " Machine\n"                   &   -- 10
-   "\n"                           &   -- 11
-   " Atari ST\n"                  &   -- 12
-   " Atari STe\n"                 &   -- 13
-   " Mega STe (16 MHz)\n"         &   -- 14
-   " STEroids (turbo)\n"          &   -- 15
-   " Falcon030\n"                 &   -- 16
-   " Back to main menu\n"         &   -- 17
-   " Memory (ST only): %s\n"      &   -- 18
-   " Memory (ST only)\n"          &   -- 19
-   "\n"                           &   -- 20
-   " 512 KB\n"                    &   -- 21
-   " 1 MB\n"                      &   -- 22
-   " 2 MB\n"                      &   -- 23
-   " 4 MB\n"                      &   -- 24
-   " 8 MB\n"                      &   -- 25
-   " 14 MB\n"                     &   -- 26
-   "\n"                           &   -- 27
-   " Back to main menu\n"         &   -- 28
-   " System settings\n"           &   -- 29
-   " System settings\n"           &   -- 30
-   "\n"                           &   -- 31
-   " Blitter (ST mode)\n"         &   -- 32
-   " Mono monitor (SM124)\n"      &   -- 33
-   " Mono: 60 Hz, not 71 Hz\n"    &   -- 34
-   " Full borders (overscan)\n"   &   -- 35
-   " Viking 1280x1024 card\n"     &   -- 36
-   " Stereo YM sound\n"           &   -- 37
-   " Write protect floppies\n"    &   -- 38
-   " Swap floppy A: and B:\n"     &   -- 39
-   " Real floppy drive as A:\n"   &   -- 40
-   " Floppy read assist\n"        &   -- 41
-   "\n"                           &   -- 42
-   " Remember floppies\n"         &   -- 43
-   " Remember TOS/cartridge\n"    &   -- 44
-   "\n"                           &   -- 45
-   " Back to main menu\n"         &   -- 46
-   " Controllers & ports\n"       &   -- 47
-   " Controllers & ports\n"       &   -- 48
-   "\n"                           &   -- 49
-   " Mouse type:\n"               &   -- 50
-   " Atari mouse / joystick\n"    &   -- 51
-   " Amiga mouse\n"               &   -- 52
-   " C64 1351 mouse\n"            &   -- 53
-   "\n"                           &   -- 54
-   " Mouse port:\n"               &   -- 55
-   " Port 1, joystick port 2\n"   &   -- 56
-   " Port 2, joystick port 1\n"   &   -- 57
-   "\n"                           &   -- 58
-   " STe joypads\n"               &   -- 59
-   " PMOD: RS232/MIDI/printer\n"  &   -- 60
-   " Cubase dongle\n"             &   -- 61
-   "\n"                           &   -- 62
-   " Keyboard:\n"                 &   -- 63
-   " ST keys (positional)\n"      &   -- 64
-   " As printed, US TOS\n"        &   -- 65
-   " As printed, UK TOS\n"        &   -- 66
-   "\n"                           &   -- 67
-   " Back to main menu\n"         &   -- 68
-   " HDMI: %s\n"                  &   -- 69
-   " HDMI Settings\n"             &   -- 70
-   "\n"                           &   -- 71
-   " 720p 50 Hz 16:9\n"           &   -- 72
-   " 720p 60 Hz 16:9\n"           &   -- 73
-   " 576p 50 Hz 4:3\n"            &   -- 74
-   " 576p 50 Hz 5:4\n"            &   -- 75
-   " 640x480 60 Hz\n"             &   -- 76
-   " 720x480 59.94 Hz\n"          &   -- 77
-   " 800x600 60 Hz\n"             &   -- 78
-   "\n"                           &   -- 79
-   " DVI mode (no sound)\n"       &   -- 80
-   "\n"                           &   -- 81
-   " Back to main menu\n"         &   -- 82
-   " VGA: %s\n"                   &   -- 83
-   " VGA Settings\n"              &   -- 84
-   "\n"                           &   -- 85
-   " 31 kHz (standard)\n"         &   -- 86
-   " 15 kHz (RGB, SCART)\n"       &   -- 87
-   " 15 kHz with CSync\n"         &   -- 88
-   "\n"                           &   -- 89
-   " No scanlines\n"              &   -- 90
-   " Scanlines 25%\n"             &   -- 91
-   " Scanlines 50%\n"             &   -- 92
-   " Scanlines 75%\n"             &   -- 93
-   "\n"                           &   -- 94
-   " Back to main menu\n"         &   -- 95
-   " HDMI: CRT emulation\n"       &   -- 96
-   " Zoom-in (hide border)\n"     &   -- 97
-   " Audio improvements\n"        &   -- 98
-   " Falcon: %s\n"                &   -- 99
-   " Falcon030 settings\n"        &   -- 100
-   "\n"                           &   -- 101
-   " Monitor:\n"                  &   -- 102
-   " VGA (31 kHz)\n"              &   -- 103
-   " RGB (15 kHz)\n"              &   -- 104
-   " TV (15 kHz)\n"               &   -- 105
-   " Mono (SM124)\n"              &   -- 106
-   "\n"                           &   -- 107
-   " CPU at 32 MHz (turbo)\n"     &   -- 108
-   " ST-RAM 4 MB (not 14 MB)\n"   &   -- 109
-   " Fast RAM 48 MB (TT-RAM)\n"   &   -- 110
-   "\n"                           &   -- 111
-   "\n"                           &   -- 112
-   " Back to main menu\n"         &   -- 113
-   " Reset Atari ST\n"            &   -- 114
-   " About & Help\n"              &   -- 115
-   "\n"                           &   -- 116
-   " Close Menu\n"                ;   -- 117
+   " MegaST\n"                     &   --  0
+   "\n"                            &   --  1
+   " TOS:%s\n"                     &   --  2
+   " Floppy A:%s\n"                &   --  3
+   " Floppy B:%s\n"                &   --  4
+   " Hard disk 0:%s\n"             &   --  5
+   " Hard disk 1:%s\n"             &   --  6
+   " Cartridge:%s\n"               &   --  7
+   "\n"                            &   --  8
+   " Machine: %s\n"                &   --  9
+   " Machine\n"                    &   -- 10
+   "\n"                            &   -- 11
+   " Atari ST\n"                   &   -- 12
+   " Atari STe\n"                  &   -- 13
+   " Mega STe (16 MHz)\n"          &   -- 14
+   " STEroids (turbo)\n"           &   -- 15
+   " Falcon030\n"                  &   -- 16
+   " Back to main menu\n"          &   -- 17
+   " ST/STe settings\n"            &   -- 18
+   " ST/STe settings\n"            &   -- 19
+   "\n"                            &   -- 20
+   " Memory:\n"                    &   -- 21
+   " 512 KB\n"                     &   -- 22
+   " 1 MB\n"                       &   -- 23
+   " 2 MB\n"                       &   -- 24
+   " 4 MB\n"                       &   -- 25
+   " 8 MB\n"                       &   -- 26
+   " 14 MB\n"                      &   -- 27
+   "\n"                            &   -- 28
+   " Blitter (Atari ST)\n"         &   -- 29
+   " Mono monitor (SM124)\n"       &   -- 30
+   " Mono: 60 Hz, not 71 Hz\n"     &   -- 31
+   " Full borders (overscan)\n"    &   -- 32
+   " Viking 1280x1024 card\n"      &   -- 33
+   " Stereo YM sound\n"            &   -- 34
+   "\n"                            &   -- 35
+   " Back to main menu\n"          &   -- 36
+   " Falcon030 settings\n"         &   -- 37
+   " Falcon030 settings\n"         &   -- 38
+   "\n"                            &   -- 39
+   " Monitor:\n"                   &   -- 40
+   " VGA (31 kHz)\n"               &   -- 41
+   " RGB (15 kHz)\n"               &   -- 42
+   " TV (15 kHz)\n"                &   -- 43
+   " Mono (SM124)\n"               &   -- 44
+   "\n"                            &   -- 45
+   " CPU at 32 MHz (turbo)\n"      &   -- 46
+   " ST-RAM 4 MB (not 14 MB)\n"    &   -- 47
+   " Fast RAM 48 MB (TT-RAM)\n"    &   -- 48
+   "\n"                            &   -- 49
+   " Back to main menu\n"          &   -- 50
+   " Drives & images\n"            &   -- 51
+   " Drives & images\n"            &   -- 52
+   "\n"                            &   -- 53
+   " Write protect floppies\n"     &   -- 54
+   " Swap floppy A: and B:\n"      &   -- 55
+   " Real floppy drive as A:\n"    &   -- 56
+   " Floppy read assist\n"         &   -- 57
+   "\n"                            &   -- 58
+   " Remember floppies\n"          &   -- 59
+   " Remember TOS/cartridge\n"     &   -- 60
+   "\n"                            &   -- 61
+   " Back to main menu\n"          &   -- 62
+   " Controllers & ports\n"        &   -- 63
+   " Controllers & ports\n"        &   -- 64
+   "\n"                            &   -- 65
+   " Mouse type:\n"                &   -- 66
+   " Atari mouse / joystick\n"     &   -- 67
+   " Amiga mouse\n"                &   -- 68
+   " C64 1351 mouse\n"             &   -- 69
+   "\n"                            &   -- 70
+   " Mouse port:\n"                &   -- 71
+   " Port 1, joystick port 2\n"    &   -- 72
+   " Port 2, joystick port 1\n"    &   -- 73
+   "\n"                            &   -- 74
+   " STe joypads\n"                &   -- 75
+   " PMOD: RS232/MIDI/printer\n"   &   -- 76
+   " Cubase dongle\n"              &   -- 77
+   "\n"                            &   -- 78
+   " Keyboard:\n"                  &   -- 79
+   " ST keys (positional)\n"       &   -- 80
+   " As printed, US TOS\n"         &   -- 81
+   " As printed, UK TOS\n"         &   -- 82
+   "\n"                            &   -- 83
+   " Back to main menu\n"          &   -- 84
+   " HDMI: %s\n"                   &   -- 85
+   " HDMI Settings\n"              &   -- 86
+   "\n"                            &   -- 87
+   " 720p 50 Hz 16:9\n"            &   -- 88
+   " 720p 60 Hz 16:9\n"            &   -- 89
+   " 576p 50 Hz 4:3\n"             &   -- 90
+   " 576p 50 Hz 5:4\n"             &   -- 91
+   " 640x480 60 Hz\n"              &   -- 92
+   " 720x480 59.94 Hz\n"           &   -- 93
+   " 800x600 60 Hz\n"              &   -- 94
+   "\n"                            &   -- 95
+   " DVI mode (no sound)\n"        &   -- 96
+   "\n"                            &   -- 97
+   " Back to main menu\n"          &   -- 98
+   " VGA: %s\n"                    &   -- 99
+   " VGA Settings\n"               &   -- 100
+   "\n"                            &   -- 101
+   " 31 kHz (standard)\n"          &   -- 102
+   " 15 kHz (RGB, SCART)\n"        &   -- 103
+   " 15 kHz with CSync\n"          &   -- 104
+   "\n"                            &   -- 105
+   " No scanlines\n"               &   -- 106
+   " Scanlines 25%\n"              &   -- 107
+   " Scanlines 50%\n"              &   -- 108
+   " Scanlines 75%\n"              &   -- 109
+   "\n"                            &   -- 110
+   " Back to main menu\n"          &   -- 111
+   " HDMI: CRT emulation\n"        &   -- 112
+   " Zoom-in (hide border)\n"      &   -- 113
+   " Audio improvements\n"         &   -- 114
+   " Reset\n"                      &   -- 115
+   " About & Help\n"               &   -- 116
+   "\n"                            &   -- 117
+   " Close Menu\n"                 ;   -- 118
 
 -- define your own constants here and choose meaningful names
 -- make sure that your first group uses the value 1 (0 means "no menu item", such as text and line),
@@ -518,124 +519,125 @@ type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC-
 
 -- mandatory: define the menu structure (the groups) of the Options menu
 constant OPTM_GROUPS       : OPTM_GTYPE := (
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            --  0 Atari ST/STe
-                                             OPTM_G_LINE,                                              --  1
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            --  0 MegaST
+                                             OPTM_G_LINE,                                              --  1 
                                              OPTM_G_Tos + OPTM_G_LOAD_ROM,                             --  2 TOS:%s
                                              OPTM_G_Floppy_A + OPTM_G_MOUNT_DRV + OPTM_G_START,        --  3 Floppy A:%s
                                              OPTM_G_Floppy_B + OPTM_G_MOUNT_DRV,                       --  4 Floppy B:%s
                                              OPTM_G_HD_0 + OPTM_G_MOUNT_DRV,                           --  5 Hard disk 0:%s
                                              OPTM_G_HD_1 + OPTM_G_MOUNT_DRV,                           --  6 Hard disk 1:%s
                                              OPTM_G_Cart + OPTM_G_LOAD_ROM,                            --  7 Cartridge:%s
-                                             OPTM_G_LINE,                                              --  8
+                                             OPTM_G_LINE,                                              --  8 
                                              OPTM_G_SUBMENU,                                           --  9 Machine: %s
                                              OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 10 Machine
-                                             OPTM_G_LINE,                                              -- 11
+                                             OPTM_G_LINE,                                              -- 11 
                                              OPTM_G_Machine + OPTM_G_STDSEL,                           -- 12 Atari ST
                                              OPTM_G_Machine,                                           -- 13 Atari STe
                                              OPTM_G_Machine,                                           -- 14 Mega STe (16 MHz)
                                              OPTM_G_Machine,                                           -- 15 STEroids (turbo)
                                              OPTM_G_Machine,                                           -- 16 Falcon030
                                              OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 17 Back to main menu
-                                             OPTM_G_SUBMENU,                                           -- 18 Memory: %s
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 19 Memory
-                                             OPTM_G_LINE,                                              -- 20
-                                             OPTM_G_Memory,                                            -- 21 512 KB
-                                             OPTM_G_Memory + OPTM_G_STDSEL,                            -- 22 1 MB
-                                             OPTM_G_Memory,                                            -- 23 2 MB
-                                             OPTM_G_Memory,                                            -- 24 4 MB
-                                             OPTM_G_Memory,                                            -- 25 8 MB
-                                             OPTM_G_Memory,                                            -- 26 14 MB
-                                             OPTM_G_LINE,                                              -- 27
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 28 Back to main menu
-                                             OPTM_G_SUBMENU,                                           -- 29 System settings
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 30 System settings
-                                             OPTM_G_LINE,                                              -- 31
-                                             OPTM_G_Blitter + OPTM_G_SINGLESEL,                        -- 32 Blitter (ST mode)
-                                             OPTM_G_Mono + OPTM_G_SINGLESEL,                           -- 33 Mono monitor (SM124)
-                                             OPTM_G_Mono60 + OPTM_G_SINGLESEL,                         -- 34 Mono: 60 Hz, not 71 Hz
-                                             OPTM_G_Border + OPTM_G_SINGLESEL,                         -- 35 Full borders (overscan)
-                                             OPTM_G_Viking + OPTM_G_SINGLESEL,                         -- 36 Viking 1280x1024 card
-                                             OPTM_G_Stereo + OPTM_G_SINGLESEL,                         -- 37 Stereo YM sound
-                                             OPTM_G_WProt + OPTM_G_SINGLESEL,                          -- 38 Write protect floppies
-                                             OPTM_G_FdSwap + OPTM_G_SINGLESEL,                         -- 39 Swap floppy A: and B:
-                                             OPTM_G_RealFd + OPTM_G_SINGLESEL,                         -- 40 Real floppy drive as A:
-                                             OPTM_G_Dsep + OPTM_G_SINGLESEL + OPTM_G_STDSEL,           -- 41 Floppy read assist
-                                             OPTM_G_LINE,                                              -- 42
-                                             OPTM_G_RemFloppy + OPTM_G_SINGLESEL + OPTM_G_STDSEL,      -- 43 Remember floppies
-                                             OPTM_G_RemRom + OPTM_G_SINGLESEL + OPTM_G_STDSEL,         -- 44 Remember TOS/cartridge
-                                             OPTM_G_LINE,                                              -- 45
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 46 Back to main menu
-                                             OPTM_G_SUBMENU,                                           -- 47 Controllers & ports
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 48 Controllers & ports
-                                             OPTM_G_LINE,                                              -- 49
-                                             OPTM_G_TEXT,                                              -- 50 Mouse type:
-                                             OPTM_G_MouseType + OPTM_G_STDSEL,                         -- 51 Atari mouse / joystick
-                                             OPTM_G_MouseType,                                         -- 52 Amiga mouse
-                                             OPTM_G_MouseType,                                         -- 53 C64 1351 mouse
-                                             OPTM_G_LINE,                                              -- 54
-                                             OPTM_G_TEXT,                                              -- 55 Mouse port:
-                                             OPTM_G_MousePort + OPTM_G_STDSEL,                         -- 56 Port 1, joystick port 2
-                                             OPTM_G_MousePort,                                         -- 57 Port 2, joystick port 1
-                                             OPTM_G_LINE,                                              -- 58
-                                             OPTM_G_StePads + OPTM_G_SINGLESEL,                        -- 59 STe joypads
-                                             OPTM_G_PMOD + OPTM_G_SINGLESEL,                           -- 60 PMOD: RS232/MIDI/printer
-                                             OPTM_G_Cubase + OPTM_G_SINGLESEL,                         -- 61 Cubase dongle
-                                             OPTM_G_LINE,                                              -- 62
-                                             OPTM_G_TEXT,                                              -- 63 Keyboard:
-                                             OPTM_G_KbdLayout + OPTM_G_STDSEL,                         -- 64 ST keys (positional)
-                                             OPTM_G_KbdLayout,                                         -- 65 As printed, US TOS
-                                             OPTM_G_KbdLayout,                                         -- 66 As printed, UK TOS
-                                             OPTM_G_LINE,                                              -- 67
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 68 Back to main menu
-                                             OPTM_G_SUBMENU,                                           -- 69 HDMI: %s
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 70 HDMI Settings
-                                             OPTM_G_LINE,                                              -- 71
-                                             OPTM_G_HDMI + OPTM_G_STDSEL,                              -- 72 720p 50 Hz 16:9
-                                             OPTM_G_HDMI,                                              -- 73 720p 60 Hz 16:9
-                                             OPTM_G_HDMI,                                              -- 74 576p 50 Hz 4:3
-                                             OPTM_G_HDMI,                                              -- 75 576p 50 Hz 5:4
-                                             OPTM_G_HDMI,                                              -- 76 640x480 60 Hz
-                                             OPTM_G_HDMI,                                              -- 77 720x480 59.94 Hz
-                                             OPTM_G_HDMI,                                              -- 78 800x600 60 Hz
-                                             OPTM_G_LINE,                                              -- 79
-                                             OPTM_G_DVI + OPTM_G_SINGLESEL,                            -- 80 DVI mode (no sound)
-                                             OPTM_G_LINE,                                              -- 81
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 82 Back to main menu
-                                             OPTM_G_SUBMENU,                                           -- 83 VGA: %s
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 84 VGA Settings
-                                             OPTM_G_LINE,                                              -- 85
-                                             OPTM_G_VGA + OPTM_G_STDSEL,                               -- 86 31 kHz (standard)
-                                             OPTM_G_VGA,                                               -- 87 15 kHz (RGB, SCART)
-                                             OPTM_G_VGA,                                               -- 88 15 kHz with CSync
-                                             OPTM_G_LINE,                                              -- 89
-                                             OPTM_G_Scanl + OPTM_G_STDSEL,                             -- 90 No scanlines
-                                             OPTM_G_Scanl,                                             -- 91 Scanlines 25%
-                                             OPTM_G_Scanl,                                             -- 92 Scanlines 50%
-                                             OPTM_G_Scanl,                                             -- 93 Scanlines 75%
-                                             OPTM_G_LINE,                                              -- 94
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 95 Back to main menu
-                                             OPTM_G_CRT + OPTM_G_SINGLESEL,                            -- 96 HDMI: CRT emulation
-                                             OPTM_G_Zoom + OPTM_G_SINGLESEL,                           -- 97 Zoom-in (hide border)
-                                             OPTM_G_Audio + OPTM_G_SINGLESEL,                          -- 98 Audio improvements
-                                             OPTM_G_SUBMENU,                                           -- 99 Falcon: %s
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 100 Falcon030 settings
-                                             OPTM_G_LINE,                                              -- 101
-                                             OPTM_G_TEXT,                                              -- 102 Monitor:
-                                             OPTM_G_FMonitor + OPTM_G_STDSEL,                          -- 103 VGA (31 kHz)
-                                             OPTM_G_FMonitor,                                          -- 104 RGB (15 kHz)
-                                             OPTM_G_FMonitor,                                          -- 105 TV (15 kHz)
-                                             OPTM_G_FMonitor,                                          -- 106 Mono (SM124)
-                                             OPTM_G_LINE,                                              -- 107
-                                             OPTM_G_FTurbo + OPTM_G_SINGLESEL,                         -- 108 CPU at 32 MHz (turbo)
-                                             OPTM_G_F4MB + OPTM_G_SINGLESEL,                           -- 109 ST-RAM 4 MB (not 14 MB)
-                                             OPTM_G_FFast + OPTM_G_SINGLESEL,                          -- 110 Fast RAM 48 MB (TT-RAM)
-                                             OPTM_G_LINE,                                              -- 111
-                                             OPTM_G_LINE,                                              -- 112 (in the submenu: the main menu has 23 lines)
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 113 Back to main menu
-                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 114 Reset Atari ST
-                                             OPTM_G_About + OPTM_G_HELP,                               -- 115 About & Help
-                                             OPTM_G_LINE,                                              -- 116
-                                             OPTM_G_CLOSE                                              -- 117 Close Menu
+                                             OPTM_G_SUBMENU,                                           -- 18 ST/STe settings
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 19 ST/STe settings
+                                             OPTM_G_LINE,                                              -- 20 
+                                             OPTM_G_TEXT,                                              -- 21 Memory:
+                                             OPTM_G_Memory,                                            -- 22 512 KB
+                                             OPTM_G_Memory + OPTM_G_STDSEL,                            -- 23 1 MB
+                                             OPTM_G_Memory,                                            -- 24 2 MB
+                                             OPTM_G_Memory,                                            -- 25 4 MB
+                                             OPTM_G_Memory,                                            -- 26 8 MB
+                                             OPTM_G_Memory,                                            -- 27 14 MB
+                                             OPTM_G_LINE,                                              -- 28 
+                                             OPTM_G_Blitter + OPTM_G_SINGLESEL,                        -- 29 Blitter (Atari ST)
+                                             OPTM_G_Mono + OPTM_G_SINGLESEL,                           -- 30 Mono monitor (SM124)
+                                             OPTM_G_Mono60 + OPTM_G_SINGLESEL,                         -- 31 Mono: 60 Hz, not 71 Hz
+                                             OPTM_G_Border + OPTM_G_SINGLESEL,                         -- 32 Full borders (overscan)
+                                             OPTM_G_Viking + OPTM_G_SINGLESEL,                         -- 33 Viking 1280x1024 card
+                                             OPTM_G_Stereo + OPTM_G_SINGLESEL,                         -- 34 Stereo YM sound
+                                             OPTM_G_LINE,                                              -- 35 
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 36 Back to main menu
+                                             OPTM_G_SUBMENU,                                           -- 37 Falcon030 settings
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 38 Falcon030 settings
+                                             OPTM_G_LINE,                                              -- 39 
+                                             OPTM_G_TEXT,                                              -- 40 Monitor:
+                                             OPTM_G_FMonitor + OPTM_G_STDSEL,                          -- 41 VGA (31 kHz)
+                                             OPTM_G_FMonitor,                                          -- 42 RGB (15 kHz)
+                                             OPTM_G_FMonitor,                                          -- 43 TV (15 kHz)
+                                             OPTM_G_FMonitor,                                          -- 44 Mono (SM124)
+                                             OPTM_G_LINE,                                              -- 45 
+                                             OPTM_G_FTurbo + OPTM_G_SINGLESEL,                         -- 46 CPU at 32 MHz (turbo)
+                                             OPTM_G_F4MB + OPTM_G_SINGLESEL,                           -- 47 ST-RAM 4 MB (not 14 MB)
+                                             OPTM_G_FFast + OPTM_G_SINGLESEL,                          -- 48 Fast RAM 48 MB (TT-RAM)
+                                             OPTM_G_LINE,                                              -- 49 
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 50 Back to main menu
+                                             OPTM_G_SUBMENU,                                           -- 51 Drives & images
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 52 Drives & images
+                                             OPTM_G_LINE,                                              -- 53 
+                                             OPTM_G_WProt + OPTM_G_SINGLESEL,                          -- 54 Write protect floppies
+                                             OPTM_G_FdSwap + OPTM_G_SINGLESEL,                         -- 55 Swap floppy A: and B:
+                                             OPTM_G_RealFd + OPTM_G_SINGLESEL,                         -- 56 Real floppy drive as A:
+                                             OPTM_G_Dsep + OPTM_G_SINGLESEL + OPTM_G_STDSEL,           -- 57 Floppy read assist
+                                             OPTM_G_LINE,                                              -- 58 
+                                             OPTM_G_RemFloppy + OPTM_G_SINGLESEL + OPTM_G_STDSEL,      -- 59 Remember floppies
+                                             OPTM_G_RemRom + OPTM_G_SINGLESEL + OPTM_G_STDSEL,         -- 60 Remember TOS/cartridge
+                                             OPTM_G_LINE,                                              -- 61 
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 62 Back to main menu
+                                             OPTM_G_SUBMENU,                                           -- 63 Controllers & ports
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 64 Controllers & ports
+                                             OPTM_G_LINE,                                              -- 65 
+                                             OPTM_G_TEXT,                                              -- 66 Mouse type:
+                                             OPTM_G_MouseType + OPTM_G_STDSEL,                         -- 67 Atari mouse / joystick
+                                             OPTM_G_MouseType,                                         -- 68 Amiga mouse
+                                             OPTM_G_MouseType,                                         -- 69 C64 1351 mouse
+                                             OPTM_G_LINE,                                              -- 70 
+                                             OPTM_G_TEXT,                                              -- 71 Mouse port:
+                                             OPTM_G_MousePort + OPTM_G_STDSEL,                         -- 72 Port 1, joystick port 2
+                                             OPTM_G_MousePort,                                         -- 73 Port 2, joystick port 1
+                                             OPTM_G_LINE,                                              -- 74 
+                                             OPTM_G_StePads + OPTM_G_SINGLESEL,                        -- 75 STe joypads
+                                             OPTM_G_PMOD + OPTM_G_SINGLESEL,                           -- 76 PMOD: RS232/MIDI/printer
+                                             OPTM_G_Cubase + OPTM_G_SINGLESEL,                         -- 77 Cubase dongle
+                                             OPTM_G_LINE,                                              -- 78 
+                                             OPTM_G_TEXT,                                              -- 79 Keyboard:
+                                             OPTM_G_KbdLayout + OPTM_G_STDSEL,                         -- 80 ST keys (positional)
+                                             OPTM_G_KbdLayout,                                         -- 81 As printed, US TOS
+                                             OPTM_G_KbdLayout,                                         -- 82 As printed, UK TOS
+                                             OPTM_G_LINE,                                              -- 83 
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 84 Back to main menu
+                                             OPTM_G_SUBMENU,                                           -- 85 HDMI: %s
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 86 HDMI Settings
+                                             OPTM_G_LINE,                                              -- 87 
+                                             OPTM_G_HDMI + OPTM_G_STDSEL,                              -- 88 720p 50 Hz 16:9
+                                             OPTM_G_HDMI,                                              -- 89 720p 60 Hz 16:9
+                                             OPTM_G_HDMI,                                              -- 90 576p 50 Hz 4:3
+                                             OPTM_G_HDMI,                                              -- 91 576p 50 Hz 5:4
+                                             OPTM_G_HDMI,                                              -- 92 640x480 60 Hz
+                                             OPTM_G_HDMI,                                              -- 93 720x480 59.94 Hz
+                                             OPTM_G_HDMI,                                              -- 94 800x600 60 Hz
+                                             OPTM_G_LINE,                                              -- 95 
+                                             OPTM_G_DVI + OPTM_G_SINGLESEL,                            -- 96 DVI mode (no sound)
+                                             OPTM_G_LINE,                                              -- 97 
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 98 Back to main menu
+                                             OPTM_G_SUBMENU,                                           -- 99 VGA: %s
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 100 VGA Settings
+                                             OPTM_G_LINE,                                              -- 101 
+                                             OPTM_G_VGA + OPTM_G_STDSEL,                               -- 102 31 kHz (standard)
+                                             OPTM_G_VGA,                                               -- 103 15 kHz (RGB, SCART)
+                                             OPTM_G_VGA,                                               -- 104 15 kHz with CSync
+                                             OPTM_G_LINE,                                              -- 105 
+                                             OPTM_G_Scanl + OPTM_G_STDSEL,                             -- 106 No scanlines
+                                             OPTM_G_Scanl,                                             -- 107 Scanlines 25%
+                                             OPTM_G_Scanl,                                             -- 108 Scanlines 50%
+                                             OPTM_G_Scanl,                                             -- 109 Scanlines 75%
+                                             OPTM_G_LINE,                                              -- 110 
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 111 Back to main menu
+                                             OPTM_G_CRT + OPTM_G_SINGLESEL,                            -- 112 HDMI: CRT emulation
+                                             OPTM_G_Zoom + OPTM_G_SINGLESEL,                           -- 113 Zoom-in (hide border)
+                                             OPTM_G_Audio + OPTM_G_SINGLESEL,                          -- 114 Audio improvements
+                                             OPTM_G_Reset + OPTM_G_SINGLESEL,                          -- 115 Reset
+                                             OPTM_G_About + OPTM_G_HELP,                               -- 116 About & Help
+                                             OPTM_G_LINE,                                              -- 117 
+                                             OPTM_G_CLOSE                                              -- 118 Close Menu
                                            );
 
 --------------------------------------------------------------------------------------------------------------------

@@ -48,7 +48,7 @@ reported it.
   Generic fixes are candidates for upstream.
 * **Menu changes ripple.** The menu line index is the OSM bit, so after inserting or removing a line in
   `OPTM_ITEMS` / `OPTM_GROUPS` (`config.vhd`), every `C_MENU_*` in `mega65.vhd` below it shifts.
-  `top_mega65-r*.vhd` also hard-code `main_osm_control_m(53)` (`C_MENU_MOUSE1351`). `OPTM_SIZE` is the
+  `top_mega65-r*.vhd` also hard-code `main_osm_control_m(69)` (`C_MENU_MOUSE1351`). `OPTM_SIZE` is the
   size of the settings file `/atarist/fccfg` (up to 1.1.5 `stcfg`). If it changes, ship a new `fccfg` (all `0xFF`) and say so
   in `VERSIONS.md` and the README. Likewise `/atarist/fcmount` (remembered images) has
   `(C_VDNUM + C_CRTROMS_MAN_NUM + 1) * 256` bytes (`globals.vhd`; the extra entry is the manual TOS of the

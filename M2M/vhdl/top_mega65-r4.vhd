@@ -430,7 +430,7 @@ architecture synthesis of mega65_r4 is
 begin
 
    -- 48 = C_MENU_MOUSE1351 in CORE/vhdl/mega65.vhd
-   paddle_drain_o <= fw_paddle_drain and main_osm_control_m(53);
+   paddle_drain_o <= fw_paddle_drain and main_osm_control_m(69);
 
    -- Driver for the audio DAC (AK4432VT).
    i_audio : entity work.audio
