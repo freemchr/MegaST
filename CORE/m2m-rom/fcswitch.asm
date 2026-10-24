@@ -12,7 +12,9 @@
 ; bit of the Machine group (the callbacks only come for a new selection).
 ; FC_CHECK (OSM_SEL_POST) lets it go again unless the Falcon menu bit now
 ; differs from the machine whose TOS is in the SDRAM (FC_MACH): then the core
-; stays in reset until the menu closes. FC_SWITCH (main loop, CORE_LOOP) then
+; stays in reset and the menu closes at once (OPTM_CLOSE_REQ, menu.asm), so
+; nothing else can be chosen while the machines are half switched (loading a
+; TOS for it, switching back, a reset). FC_SWITCH (main loop, CORE_LOOP) then
 ; loads the TOS of the new machine and a loaded cartridge, then the new
 ; machine starts.
 ;
@@ -37,6 +39,10 @@ LOG_FC_SWITCH   .ASCII_W "Machine: ST <-> Falcon, loading its TOS\n"
 LOG_FC_AUTO     .ASCII_W "Machine: no manual TOS for it, auto-load TOS\n"
 LOG_FC_NOFTOS   .ASCII_W "Machine: /atarist/tosfalc.img not found, using tos.img\n"
 FC_FTOS_NAME    .ASCII_W "/atarist/tosfalc.img"
+STR_FC_FTOS     .ASCII_P "This is a 512 KB Falcon TOS.\n"
+                .ASCII_W "Choose Machine: Falcon030 first.\n"
+STR_FC_STTOS    .ASCII_P "This is an ST TOS (192/256 KB).\n"
+                .ASCII_W "The Falcon030 needs a 512 KB TOS.\n"
 
 ; ----------------------------------------------------------------------------
 ; Remember the machine of the TOS in the SDRAM
@@ -55,8 +61,8 @@ FC_INIT         INCRB
 
 ; ----------------------------------------------------------------------------
 ; A menu item of the Machine group was selected (OSM_SEL_POST, the core is in
-; reset since OSM_SEL_PRE): keep it in reset if the other machine type was
-; chosen
+; reset since OSM_SEL_PRE): keep it in reset and close the menu if the other
+; machine type was chosen
 ; ----------------------------------------------------------------------------
 
 FC_CHECK        INCRB
@@ -68,11 +74,57 @@ FC_CHECK        INCRB
                 CMP     R8, @R2
                 RBRA    _FCC_SAME, Z
                 OR      M2M$CSR_RESET, @R0      ; other machine: reset until
-                MOVE    1, @R1                  ; its TOS is loaded
+                MOVE    1, @R1                  ; its TOS is loaded, which
+                MOVE    OPTM_CLOSE_REQ, R0      ; FC_SWITCH does as soon as
+                MOVE    1, @R0                  ; the menu is closed
                 RBRA    _FCC_RET, 1
 _FCC_SAME       MOVE    0, @R1                  ; the machine of the TOS: it
                 AND     M2M$CSR_UN_RESET, @R0   ; may start (again)
 _FCC_RET        DECRB
+                RET
+
+; ----------------------------------------------------------------------------
+; Can the machine in the menu run this TOS? (PREP_LOAD_IMAGE, for the files
+; chosen with "TOS:" and the remembered ones; a refused one is shown in the
+; file browser, a remembered one is forgotten and the auto-load TOS is used)
+; The ST maps 256 KB at $E00000, so no 512 KB TOS. The Falcon needs 512 KB
+; (Falcon TOS 4.x, EmuTOS), not an ST TOS of 192 or 256 KB. Other sizes (the
+; cartridge) are not checked.
+; Input:  R8: file handle
+; Output: R8: 0 = OK, else error code; R9: 0 or the error message
+; ----------------------------------------------------------------------------
+
+FC_TOS_CHECK    INCRB
+                MOVE    R8, R0
+                XOR     R8, R8
+                XOR     R9, R9
+                MOVE    R0, R1                  ; R1: size, low word
+                ADD     FAT32$FDH_SIZE_LO, R1
+                CMP     0, @R1                  ; a TOS size?
+                RBRA    _FCTC_RET, !Z
+                MOVE    R0, R1                  ; R1: size, high word
+                ADD     FAT32$FDH_SIZE_HI, R1
+                MOVE    @R1, R1
+                MOVE    MENU_FALCON, R8         ; R8: 1 = Falcon
+                RSUB    _MNT_CFM_GET, 1
+                CMP     0x0008, R1              ; 512 KB?
+                RBRA    _FCTC_ST, !Z
+                CMP     0, R8
+                RBRA    _FCTC_OK, !Z            ; Falcon: OK
+                MOVE    1, R8                   ; ST: no
+                MOVE    STR_FC_FTOS, R9
+                RBRA    _FCTC_RET, 1
+_FCTC_ST        CMP     0, R8
+                RBRA    _FCTC_RET, Z            ; ST: OK (R8 = 0)
+                CMP     0x0003, R1              ; 192 KB?
+                RBRA    _FCTC_STERR, Z
+                CMP     0x0004, R1              ; 256 KB?
+                RBRA    _FCTC_OK, !Z
+_FCTC_STERR     MOVE    2, R8                   ; Falcon: no
+                MOVE    STR_FC_STTOS, R9
+                RBRA    _FCTC_RET, 1
+_FCTC_OK        XOR     R8, R8
+_FCTC_RET       DECRB
                 RET
 
 ; ----------------------------------------------------------------------------

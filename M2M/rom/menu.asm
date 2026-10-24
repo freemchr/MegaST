@@ -572,6 +572,9 @@ _OPTM_SHOW_RET  ADD     R1, SP                  ; restore SP / free memory
 
 OPTM_RUN        SYSCALL(enter, 1)
 
+                MOVE    OPTM_CLOSE_REQ, R0      ; MegaST: no close request yet
+                MOVE    0, @R0
+
                 MOVE    OPTM_DATA, R0           ; R0: size of data structure
                 MOVE    @R0, R0
                 ADD     OPTM_IR_SIZE, R0
@@ -932,6 +935,12 @@ _OPTM_RUN_15    DECRB
                 MOVE    R11, R10                ; R10: selection key
                 MOVE    OPTM_CLBK_SEL, R7       ; call callback
                 RSUB    _OPTM_CALL, 1
+
+                ; MegaST: the callback asked to close the menu: like the
+                ; close key (Help)
+                MOVE    OPTM_CLOSE_REQ, R7
+                CMP     0, @R7
+                RBRA    _OPTM_RUN_5B, !Z
 
                 CMP     OPTM_CLOSE, R6          ; Close?
                 RBRA    _OPTM_RUN_SEL, !Z       ; no: continue menu loop

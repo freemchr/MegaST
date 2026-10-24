@@ -32,3 +32,7 @@ OPTM_STRUCT     .BLOCK 1
 
 ; temporary variable
 OPTM_TEMP       .BLOCK 1
+
+; MegaST: 1 = close the menu after the select callback returns (set by the
+; callback, cleared by OPTM_RUN)
+OPTM_CLOSE_REQ  .BLOCK 1

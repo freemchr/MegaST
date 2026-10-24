@@ -155,6 +155,24 @@ The framework does not remember mounted images (issue #13). Changes:
 
 Generic, a candidate for upstream.
 
+### The menu can be closed by the core (Shell firmware)
+
+`M2M/rom/menu.asm` (`OPTM_RUN`), `M2M/rom/menu_vars.asm`: a select callback may set `OPTM_CLOSE_REQ` to 1,
+then the menu closes after the callback as if the close key (Help) was pressed. `OPTM_RUN` clears it when
+it starts. MegaST closes the menu when Atari ST and Falcon030 are switched (`FC_CHECK`,
+`CORE/m2m-rom/fcswitch.asm`): the TOS of the new machine can only be loaded with the menu closed, and in
+between nothing else may be chosen (a TOS, switching back, "Reset Atari ST"). Before, a manual TOS plus a
+switch made `M2M$FORCE_MENU` run with the menu closed, and `OPTM_SET` stopped the firmware ("menu.asm:
+OPTM_RUN is not running", 0003). Generic, a candidate for upstream.
+
+### Error messages of PREP_LOAD_IMAGE for CRTs/ROMs (Shell firmware)
+
+`M2M/rom/shell.asm` (`HANDLE_MOUNTING`): for a CRT/ROM the error string was always copied from the window
+of the CRT/ROM device (where the core puts its own messages). A string below `M2M$RAMROM_DATA` (`0x7000`)
+is in the QNICE ROM, like the ones `PREP_LOAD_IMAGE` returns, and is printed directly. MegaST refuses a
+TOS the selected machine cannot run (`FC_TOS_CHECK`, `CORE/m2m-rom/fcswitch.asm`: the ST no 512 KB TOS,
+the Falcon no 192/256 KB one). Generic, a candidate for upstream.
+
 ### Bug fix: saving the settings with more than one virtual drive
 
 `M2M/rom/options.asm` (`ROSM_SAVE`): the vdrive id of the "any cache dirty?" loop was kept in `R8`, but

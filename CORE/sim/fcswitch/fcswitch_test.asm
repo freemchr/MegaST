@@ -4,8 +4,10 @@
 ; the loaders and the window are stubs that count their calls.
 ;
 ; 1. FC_INIT with the ST: FC_MACH = 0
-; 2. FC_CHECK, still the ST: no hold; FC_SWITCH: nothing loaded
-; 3. Falcon chosen: hold; back to the ST before the menu closes: no hold
+; 2. FC_CHECK, still the ST: no hold, the menu stays open; FC_SWITCH: nothing
+;    loaded
+; 3. Falcon chosen: hold and the menu closes; back to the ST (only possible
+;    if the menu stayed open): no hold
 ; 4. Falcon, FC_SWITCH without any manual TOS: auto-load TOS, FC_MACH = 1,
 ;    the remembered images are saved
 ; 5. A manual TOS for the Falcon is loaded and remembered ("/F"), the ST has
@@ -20,6 +22,8 @@
 ;    The menu is closed: the TOS line is unmarked with M2M$SET_SETTING, not
 ;    with M2M$FORCE_MENU (OPTM_SET goes fatal)
 ; 9. FC_AUT_NAME keeps the name of other auto-load ROMs and the TOS of the ST
+; 10. FC_TOS_CHECK: the ST refuses a 512 KB TOS, the Falcon one of 192 or
+;    256 KB; other sizes (the cartridge) pass
 ;
 ; This machine is based on AtariST_MiSTer
 ; Powered by MiSTer2MEGA65
@@ -53,8 +57,13 @@ START_FIRMWARE  MOVE    STR_START, R8
                 RSUB    CHECK_EQ, 1
 
                 ; 2.
+                MOVE    OPTM_CLOSE_REQ, R0
+                MOVE    0, @R0
                 RSUB    FC_CHECK, 1
                 MOVE    FC_HOLD, R8
+                MOVE    0, R9
+                RSUB    CHECK_EQ, 1
+                MOVE    OPTM_CLOSE_REQ, R8
                 MOVE    0, R9
                 RSUB    CHECK_EQ, 1
                 RSUB    FC_SWITCH, 1
@@ -67,6 +76,9 @@ START_FIRMWARE  MOVE    STR_START, R8
                 MOVE    1, @R0
                 RSUB    FC_CHECK, 1
                 MOVE    FC_HOLD, R8
+                MOVE    1, R9
+                RSUB    CHECK_EQ, 1
+                MOVE    OPTM_CLOSE_REQ, R8
                 MOVE    1, R9
                 RSUB    CHECK_EQ, 1
                 MOVE    MENU_BIT, R0
@@ -239,6 +251,27 @@ START_FIRMWARE  MOVE    STR_START, R8
                 MOVE    0x1234, R9
                 RSUB    CHECK_EQ, 1
 
+                ; 10. (machine, size high, size low, expected error)
+                MOVE    TC_TABLE, R0
+_T10            CMP     0xFFFF, @R0
+                RBRA    _T10_END, Z
+                MOVE    MENU_BIT, R1
+                MOVE    @R0++, @R1
+                MOVE    TC_FDH, R1
+                ADD     FAT32$FDH_SIZE_HI, R1
+                MOVE    @R0++, @R1
+                MOVE    TC_FDH, R1
+                ADD     FAT32$FDH_SIZE_LO, R1
+                MOVE    @R0++, @R1
+                MOVE    TC_FDH, R8
+                RSUB    FC_TOS_CHECK, 1
+                MOVE    SCRATCH, R1
+                MOVE    R8, @R1
+                MOVE    R1, R8
+                MOVE    @R0++, R9
+                RSUB    CHECK_EQ, 1
+                RBRA    _T10, 1
+_T10_END
                 MOVE    FAILS, R0
                 CMP     0, @R0
                 RBRA    _T_FAIL, !Z
@@ -365,6 +398,17 @@ M2M$FORCE_MENU  INCRB                           ; must not be called
 
 #include "../../m2m-rom/fcswitch.asm"
 
+TC_TABLE        .DW     0, 0x0003, 0, 0         ; ST: 192 KB
+                .DW     0, 0x0004, 0, 0         ; ST: 256 KB
+                .DW     0, 0x0008, 0, 1         ; ST: 512 KB no
+                .DW     0, 0x0002, 0x0004, 0    ; ST: .STC cartridge
+                .DW     1, 0x0008, 0, 0         ; Falcon: 512 KB
+                .DW     1, 0x0003, 0, 2         ; Falcon: 192 KB no
+                .DW     1, 0x0004, 0, 2         ; Falcon: 256 KB no
+                .DW     1, 0x0002, 0, 0         ; Falcon: 128 KB cartridge
+                .DW     1, 0x0004, 0x0001, 0    ; Falcon: odd size passes
+                .DW     0xFFFF
+
 STR_START       .ASCII_W "fcswitch test\n"
 STR_OK          .ASCII_W "OK\n"
 STR_FAIL        .ASCII_W "FAIL: failed checks: "
@@ -392,6 +436,8 @@ CONFIG_DEVH     .BLOCK  1
 CRTROM_AUT_FILE .BLOCK  1
 SCRATCH         .BLOCK  1
 FAILS           .BLOCK  1
+OPTM_CLOSE_REQ  .BLOCK  1
+TC_FDH          .BLOCK  16
 N_SETOFF        .BLOCK  1
                 .ORG    0x8800
 MNT_PATHS       .BLOCK  1792

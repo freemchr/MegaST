@@ -178,14 +178,23 @@ _FFILES_RET     MOVE    R2, R9                  ; restore R9
 ;   R9: image type if R8=0, otherwise 0 or optional ptr to  error msg string
 ; Atari ST: cartridge images in the .STC format have a 4 byte header in front
 ; of the 128 kB ROM image: skip it (file size = 131076 = 0x00020004)
+; MegaST: a TOS that the machine cannot run is refused (FC_TOS_CHECK)
 PREP_LOAD_IMAGE INCRB
                 MOVE    R8, R0                  ; R0: file handle
                 XOR     R4, R4                  ; R4: error code
+                XOR     R5, R5                  ; R5: error message
 
                 MOVE    R9, R1                  ; loading a ROM/cartridge?
                 AND     CTX_MASK_CTX, R1
                 CMP     CTX_LOAD_ROM, R1
                 RBRA    _PLI_RET, !Z            ; no
+
+                MOVE    R0, R8                  ; MegaST: a TOS for the
+                RSUB    FC_TOS_CHECK, 1         ; other machine? (fcswitch.asm)
+                MOVE    R8, R4
+                MOVE    R9, R5
+                CMP     0, R4
+                RBRA    _PLI_RET, !Z
 
                 MOVE    R0, R1                  ; file size = 0x00020004?
                 ADD     FAT32$FDH_SIZE_HI, R1
@@ -204,10 +213,9 @@ PREP_LOAD_IMAGE INCRB
                 MOVE    R9, R4                  ; R4: error code of the seek
                 MOVE    R2, R10
 
-_PLI_RET        MOVE    R0, R8
-                MOVE    R4, R8                  ; R8: 0 = no errors
-                XOR     R9, R9                  ; image type hardcoded to 0
-                DECRB
+_PLI_RET        MOVE    R4, R8                  ; R8: 0 = no errors
+                MOVE    R5, R9                  ; R9: image type 0 or the
+                DECRB                           ; error message
                 RET
 
 ; ----------------------------------------------------------------------------
