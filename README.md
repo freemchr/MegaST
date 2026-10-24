@@ -16,10 +16,13 @@ runs games and GEM programs from floppy and hard disk images. Download the core 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
-**Latest version: [1.1.5](https://github.com/freemchr/MegaST/releases/tag/v1.1.5)**
-(October 24, 2026): the Viking 1280x1024 card works (see [Viking/SM194 card](#vikingsm194-card)):
-on HDMI the desktop is shown sharp, 1:1 at 1280x1024 (tested on an R6). 1.1.4 fixed the bombs after
-a reset, the cartridge removal and the stripes behind the welcome screen.
+**Latest version: [1.1.6](https://github.com/freemchr/MegaST/releases/tag/v1.1.6)**
+(October 25, 2026): **the Atari Falcon030 is included as a test** (R6 only, see
+[Falcon030 (test)](#falcon030-test)). Choose it in the menu under "Machine". It runs EmuTOS and
+Atari's TOS 4.04, Falcon demos and programs, and boots FreeMiNT from an IDE hard disk image. The
+menu is now split per machine ("ST/STe settings", "Falcon030 settings", "Drives & images"); **copy
+the new `atarist/fccfg` and `atarist/fcmount` from the zip**, otherwise the settings are not saved.
+1.1.5 made the Viking 1280x1024 card work, shown sharp at 1:1 on HDMI.
 Since 1.1 (October 16, 2026) **the MEGA65's internal floppy drive** works as the ST's drive A:
 (read only, issue #15, see [Real floppy drive](#real-floppy-drive)). Original ST disks, including copy
 protected games with 10 sectors and 82 tracks, are read as on a real ST. Core files for the
@@ -449,8 +452,8 @@ five grey levels: 640x512 @ 60 Hz, 31 kHz.
 Falcon030 (test)
 ----------------
 
-**The Falcon030 is a test version.** It boots EmuTOS and runs many Falcon programs and demos, but
-it has seen much less testing than the ST. Please report what works and what does not in the
+**The Falcon030 is a test version.** It boots EmuTOS and Atari's TOS 4.04, runs many Falcon programs and
+demos and starts FreeMiNT from a hard disk image, but it has seen much less testing than the ST. Please report what works and what does not in the
 [issues](https://github.com/freemchr/MegaST/issues). The Falcon machine is based on
 [Falcon_MiSTer](https://github.com/apolkosnik/Falcon_MiSTer) and the
 [AP68030](https://github.com/apolkosnik/AP68030) CPU by apolkosnik.
@@ -465,7 +468,13 @@ the menu item "TOS:" replaces it for the machine that runs, and with `fcmount` o
 remembered for that machine: switching from the ST with TOS 2.06 to the Falcon and back gives the
 ST TOS 2.06 again. A TOS the machine cannot run is refused when you choose it (the ST cannot use a
 512 KB TOS, the Falcon needs one). Without `tosfalc.img` the Falcon gets `tos.img` and does not
-start (the menu still works). Atari's TOS 4.0x is being worked on (not working yet).
+start (the menu still works). Atari's TOS 4.04 works: copy your own TOS 4.04 image (512 KB) to the
+SD card and choose it with "TOS:" while the Falcon runs.
+
+**FreeMiNT**: a FreeMiNT installation on an IDE hard disk image (with HDDRIVER) boots: the kernel,
+its drivers and the network setup start. The tested image then stops at a white screen when the
+desktop (XaAES with NVDI) starts; the MEGA65 menu still works. This is being worked on; reports
+with other FreeMiNT setups are welcome.
 
 **What it has**
 
@@ -489,9 +498,9 @@ stay untouched.
 
 **Not working or not tested yet**
 
-* Atari TOS 4.0x (black screen)
 * Programs for a 68060 accelerator (CT60/CT63): the Falcon has a 68030
-* Hard disk drivers other than EmuTOS's own (HDDRIVER, AHDI) and FreeMiNT: not tested yet
+* FreeMiNT's desktop (XaAES with NVDI): white screen with the tested image, see above
+* Hard disk drivers other than EmuTOS's own and HDDRIVER (for example AHDI): not tested yet
 * Microphone input: the MEGA65 has no audio input
 
 PMOD headers (serial port, MIDI, printer)

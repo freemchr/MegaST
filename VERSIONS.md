@@ -1,3 +1,26 @@
+Version 1.1.6 - October 25, 2026
+================================
+
+* **Atari Falcon030 (test, R6 only)**: choose "Machine: Falcon030" in the menu. 68030 (16 or
+  32 MHz), 68882 FPU, VIDEL, DSP56001, DMA sound, 14 MB ST-RAM and 48 MB Fast RAM, IDE hard disks,
+  enhanced joystick ports, NVRAM saved on the SD card (`/atarist/fcnvram`). Based on
+  Falcon_MiSTer and the AP68030 CPU by apolkosnik. It runs EmuTOS (`tosfalc.img`, in the zip) and
+  Atari's TOS 4.04, Falcon demos and programs, and boots FreeMiNT from a hard disk image (its
+  XaAES/NVDI desktop does not start yet with the tested image). See the README.
+* **Each machine has its own TOS**: at power on and after a switch the core loads `tos.img` for the
+  ST and `tosfalc.img` for the Falcon. A TOS chosen with "TOS:" is remembered per machine. A TOS
+  the machine cannot run (a 512 KB TOS on the ST, an ST TOS on the Falcon) is refused with a
+  message.
+* **Switching the machine closes the menu** and starts the new machine with its TOS. Before,
+  switching with a TOS chosen by hand could stop the core ("menu.asm: OPTM_RUN is not running").
+* **The menu is split per machine**: "ST/STe settings" (memory, blitter, mono monitor, borders,
+  Viking, stereo YM), "Falcon030 settings" and "Drives & images" (floppy options, remembering the
+  images). "Reset Atari ST" is now "Reset".
+* **New settings files: copy `atarist/fccfg` (119 bytes) and `atarist/fcmount` (1792 bytes) from
+  the zip.** The menu is larger, so the settings and remembered images are kept in these files;
+  without `fccfg` the settings are not saved. `stcfg` and `stmount` are no longer read, but stay on
+  the card, so going back to 1.1.5 keeps its settings.
+
 Version 1.1.5 - October 24, 2026
 ================================
 
