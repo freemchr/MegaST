@@ -50,7 +50,7 @@ Tested on a MEGA65 R6
 | Amiga mouse (optical, incl. right button), in port 1 or port 2 | works |
 | mouSTer USB adapter, firmware 3.23.5313, Amiga or 1351 mode (see Usage) | works (tester report, issue #17) |
 | Joystick, with debouncing for bouncing and worn switches (Suncom TAC-2) | works |
-| Menu settings saved on the SD card (`stcfg`) | works |
+| Menu settings saved on the SD card (`fccfg`) | works |
 | VGA scanlines, full borders | works |
 | HDMI picture centred, not cut off on the right (576p, 720x480, 640x480) | works (since 1.0) |
 | Internal floppy drive as A: (original Jim Power disk: boot, game) | works (since 1.1); R3-R5 not tested with the drive |
@@ -115,13 +115,15 @@ Requirements
   * `tos.img`: your TOS image (mandatory). The release zip contains the free
     [EmuTOS](https://emutos.sourceforge.io) as `tos.img`; a TOS ROM dump of your own Atari also works.
   * your floppy disk images (`.st`), hard disk images (`.hd`, `.img`, `.vhd`) and cartridges (`.stc`, `.img`)
-  * optionally `stcfg`, an empty settings file, if you want the menu settings to be saved (included
-    in the release zip, or `cd M2M/tools && ./make_config.sh stcfg auto`). The file must have exactly
-    as many bytes as the menu has lines (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 104). When
-    the menu changes in a new release, a settings file of the old size is ignored: use the new one.
-  * optionally `stmount`, if the core shall remember the mounted floppy and hard disk images and
-    the TOS and cartridge chosen in the menu (included in the release zip). It must have exactly
-    1536 bytes, all 0x00 or all 0xFF (e.g. `python3 -c "open('stmount','wb').write(bytes(1536))"`).
+  * `fccfg`, an empty settings file, if you want the menu settings to be saved (in the release
+    zip, or `cd M2M/tools && ./make_config.sh fccfg auto`). **Without it, the menu works but its
+    settings are not saved.** The file must have exactly as many bytes as the menu has lines
+    (`OPTM_SIZE` in `CORE/vhdl/config.vhd`, currently 118). Up to 1.1.5 the file was `stcfg` (104
+    bytes); 1.1.6 does not read it, so copy `fccfg` from the zip (the settings start from the
+    defaults once).
+  * `fcmount`, if the core shall remember the mounted floppy and hard disk images and the TOS and
+    cartridge chosen in the menu (in the release zip; up to 1.1.5 `stmount`). It must have exactly
+    1536 bytes, all 0x00 or all 0xFF (e.g. `python3 -c "open('fcmount','wb').write(bytes(1536))"`).
 
 Usage
 -----
@@ -129,7 +131,7 @@ Usage
 * Press <kbd>Help</kbd> to open the on-screen menu: mount floppy disks, choose the machine
   type, memory size, video output and more. "Reset Atari ST" resets the ST (like the reset
   button of the MEGA65, the ST RAM is kept).
-* With `/atarist/stmount` on the SD card (see Requirements), the core remembers the images you
+* With `/atarist/fcmount` on the SD card (see Requirements), the core remembers the images you
   mounted and the TOS and cartridge you chose, and loads them again at the next start, before
   the ST boots (so a hard disk is found and the right TOS starts). To unmount (eject) a drive,
   select its line in the menu and press <kbd>Space</kbd>; this also forgets it. A drive that still
@@ -217,7 +219,7 @@ Using disk images
 * The menu shows the name of the mounted image next to the drive. To **unmount (eject)** a drive,
   select its line and press <kbd>Space</kbd>. The same on the "Cartridge:" line **removes the
   cartridge**: the ST restarts without it.
-* With `/atarist/stmount` on the SD card (in the release zip), the mounted images and the chosen
+* With `/atarist/fcmount` on the SD card (in the release zip), the mounted images and the chosen
   TOS and cartridge are **remembered** and loaded again at the next start ("Remember floppies" and
   "Remember TOS/cartridge" in "System settings" switch this off for the floppies or the TOS).
 
@@ -226,7 +228,7 @@ Using disk images
 1. Copy the `.st` image into `/atarist` on the SD card (or into a subfolder).
 2. Press <kbd>Help</kbd>, select "Floppy A:" and choose the image.
 3. To boot from it (most games): select "Reset Atari ST" in the menu, or switch the MEGA65 off
-   and on with `stmount` on the SD card. A disk mounted while the ST is running is seen like a
+   and on with `fcmount` on the SD card. A disk mounted while the ST is running is seen like a
    real disk change, e.g. to open it on the desktop.
 4. **Disk changes:** when a game asks for disk 2, mount disk 2 on "Floppy A:" (no reset).
 5. **Saving:** the ST writes into a copy in memory; about 2 seconds after the last write the core
@@ -243,7 +245,7 @@ Using disk images
    "Scanning disk image..." for a moment.
 3. **Reset the ST** ("Reset Atari ST" in the menu). TOS only looks for hard disks when it starts,
    so a hard disk mounted while the desktop is shown does not appear without a reset. With
-   `stmount` the image is mounted at power on before the ST starts, so no reset is needed.
+   `fcmount` the image is mounted at power on before the ST starts, so no reset is needed.
 4. With **EmuTOS**, drive C: appears on the desktop by itself. With **Atari TOS**, the hard disk
    driver on the image (HDDRIVER, AHDI, ICD, ...) starts first and adds drive C:. If there is no C:
    icon, add it once with "Options" → "Install Disk Drive" (TOS 1.x) or "Install Icon" (TOS 2.06),
@@ -275,7 +277,7 @@ games need a real Atari TOS (TOS 1.02 or 1.04 for the ST, see [TOS](#tos)), some
 drive LED is no longer yellow before switching off.
 
 **How do I get empty drives at the next start?** Unmount the drives with <kbd>Space</kbd> in the
-menu. Without `/atarist/stmount` on the SD card, all drives start empty anyway.
+menu. Without `/atarist/fcmount` on the SD card, all drives start empty anyway.
 
 **Some games of a hard disk game collection don't start.** Most hard disk versions of games need
 1 MB of ST RAM or more (512 KB is often not enough, e.g. on the R3/R3A), and some only work with
@@ -289,9 +291,9 @@ TOS
 ---
 
 `/atarist/tos.img` is loaded at power on. "TOS" in the menu loads another TOS image (`.img` or
-`.rom`) and restarts the ST with it (cold boot). With `/atarist/stmount` on the SD card (in the
+`.rom`) and restarts the ST with it (cold boot). With `/atarist/fcmount` on the SD card (in the
 release zip), this choice is remembered and the chosen TOS is loaded again at the next start.
-Without `stmount`, `tos.img` is used again after a power cycle. STe and Mega STe modes need TOS
+Without `fcmount`, `tos.img` is used again after a power cycle. STe and Mega STe modes need TOS
 1.06 or newer (or EmuTOS).
 
 **Mega STe speed:** like a real Mega STE, the Mega STe mode starts at 8 MHz with the cache off; TOS
@@ -475,8 +477,9 @@ for the new machine too.
 * The NVRAM (boot video mode, language, boot drive) is saved on the SD card as `/atarist/fcnvram`
 
 The settings are in the menu under "Falcon:". Because the Falcon's menu is larger, the core keeps its
-settings and remembered images in `/atarist/fccfg` and `/atarist/fcmount` (copy `fccfg` from the
-zip; the ST files `stcfg` and `stmount` of older versions stay untouched).
+settings and remembered images in `/atarist/fccfg` and `/atarist/fcmount`. **Copy both from the
+zip**: without `fccfg` the settings are not saved. The files `stcfg` and `stmount` of older versions
+stay untouched.
 
 **Not working or not tested yet**
 
