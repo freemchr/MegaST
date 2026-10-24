@@ -14,7 +14,11 @@ static Vtb_top* top;
 static uint64_t ticks = 0;   // one tick = half a 96 MHz period
 
 // clk_96: toggles every tick; clk_32: every 3 ticks; clk_2: every 48 ticks (all rise at tick 0)
+// Viking HDMI frame buffer (digital_pipeline.vhd): the words the core writes, sampled at the clk_96 edge
+static std::vector<uint16_t> vfb(1280 * 1024 / 16);
 static void tick() {
+    if ((ticks % 2) == 0 && top->viking_fb_we && top->viking_fb_addr < vfb.size())
+        vfb[top->viking_fb_addr] = top->viking_fb_data;
     top->clk_96 = (ticks % 2) == 0;
     top->clk_32 = (ticks % 6) < 3;
     top->clk_2  = (ticks % 96) < 48;
@@ -86,6 +90,7 @@ int main(int argc, char** argv) {
     top->cfg_crop = getenv("CROP") != nullptr;   // CROP=1: only the graphics area is active
     top->cfg_mste = getenv("MSTE") != nullptr;   // MSTE=1: Mega STe; with ste=1: STEroids
     top->cfg_mono = getenv("MONO") != nullptr;   // MONO=1: SM124 monochrome monitor (71 Hz)
+    top->cfg_viking = getenv("VIKING") != nullptr; // VIKING=1: Viking/SM194 card (needs MEM<=4)
     top->cfg_mde60 = getenv("MONO60") != nullptr; // MONO60=1: mono 60 Hz mode
     top->cfg_full_brd = getenv("BORDER") != nullptr; // BORDER=1: full borders
     top->cfg_real_floppy = rf_name != nullptr;
@@ -163,10 +168,12 @@ int main(int argc, char** argv) {
     top->joy_mouse = 0;
     // KEY_AT=n KEY=i: press the ST matrix key i (column * 8 + row) from frame n on for 5 frames;
     // KEY_EVERY=m: press it again every m frames
+    int viking_off_at = getenv("VIKING_OFF_AT") ? atoi(getenv("VIKING_OFF_AT")) : -1;   // VIKING_OFF_AT=n: menu item off at frame n
     int key_at = getenv("KEY_AT") ? atoi(getenv("KEY_AT")) : -1;
     int key_idx = getenv("KEY") ? atoi(getenv("KEY")) : 0;
     int key_every = getenv("KEY_EVERY") ? atoi(getenv("KEY_EVERY")) : 0;
     while (frame < frames) {
+        if (frame == viking_off_at && top->cfg_viking) { top->cfg_viking = 0; printf("Viking off at frame %d\n", frame); }
         if (key_at >= 0 && frame == key_at && (top->kbd_matrix[key_idx / 32] >> (key_idx % 32) & 1)) {
             printf("key %d pressed at frame %d\n", key_idx, frame);
             top->kbd_matrix[key_idx / 32] &= ~(1u << (key_idx % 32));
@@ -292,6 +299,13 @@ int main(int argc, char** argv) {
                 snprintf(name, sizeof(name), "%s_%03d.ppm", prefix.c_str(), frame);
                 FILE* o = fopen(name, "wb");
                 fprintf(o, "P6 %d %d 255\n", W, H); fwrite(img.data(), 1, img.size(), o); fclose(o);
+                if (top->viking_hdmi) {   // the HDMI picture 1:1 (PBM: 1 = black)
+                    snprintf(name, sizeof(name), "%s_vfb_%03d.pbm", prefix.c_str(), frame);
+                    o = fopen(name, "wb");
+                    fprintf(o, "P4 1280 1024\n");
+                    for (uint16_t w : vfb) { uint16_t b = ~w; fputc(b >> 8, o); fputc(b & 0xff, o); }
+                    fclose(o);
+                }
             }
             printf("frame %d: %dx%d active, bus cycles %llu, last addr %06x, mono %d, reset %d, sdram err %d, hd rd %llu wr %llu, acsi sel %d busy %d state %d present %d irq %d din %02x mode %04x gpip %02x\n",
                    frame, maxx, y, (unsigned long long)n_bus, last_a, top->video_mono, top->dbg_reset, top->dbg_sdram_errors,

@@ -104,6 +104,13 @@ port (
    video_hblank_o          : out std_logic;
    video_vblank_o          : out std_logic;
 
+   -- MegaST: the Viking card's 1280x1024 picture 1:1 on HDMI (frame buffer in digital_pipeline.vhd)
+   viking_fb_clk_o         : out std_logic;
+   viking_fb_we_o          : out std_logic;
+   viking_fb_addr_o        : out std_logic_vector(16 downto 0);
+   viking_fb_data_o        : out std_logic_vector(15 downto 0);
+   viking_fb_enable_o      : out std_logic;              -- QNICE clock domain
+
    --------------------------------------------------------------------------------------------------------
    -- Core Clock Domain
    --------------------------------------------------------------------------------------------------------
@@ -438,6 +445,7 @@ signal main_floppy_led        : std_logic;
 signal main_hd_led            : std_logic;
 signal main_cache_dirty       : std_logic_vector(C_VDNUM - 1 downto 0);
 signal main_video_31khz       : std_logic;
+signal main_viking_hdmi       : std_logic;
 
 -- PMOD
 signal main_pmod_in           : std_logic_vector(15 downto 0);
@@ -450,6 +458,7 @@ signal pmod_pins              : std_logic_vector(15 downto 0);
 ---------------------------------------------------------------------------------------------
 
 signal qnice_video_31khz      : std_logic;
+signal qnice_viking_hdmi      : std_logic;
 
 -- TOS and cartridge loader
 signal qnice_tos_ce           : std_logic;
@@ -706,6 +715,10 @@ begin
          video_hblank_o       => video_hblank_o,
          video_vblank_o       => video_vblank_o,
          video_31khz_o        => main_video_31khz,
+         viking_hdmi_o        => main_viking_hdmi,
+         viking_fb_we_o       => viking_fb_we_o,
+         viking_fb_addr_o     => viking_fb_addr_o,
+         viking_fb_data_o     => viking_fb_data_o,
 
          -- audio output (pcm format, signed values)
          audio_left_o         => main_audio_left_o,
@@ -765,7 +778,9 @@ begin
    -- Due to a discussion on the MEGA65 discord (https://discord.com/channels/719326990221574164/794775503818588200/1039457688020586507)
    -- we decided to choose a naming convention for the PAL modes that might be more intuitive for the end users than it is
    -- for the programmers: "4:3" means "meant to be run on a 4:3 monitor", "5:4 on a 5:4 monitor".
-   qnice_video_mode_o <= C_VIDEO_SVGA_800_60   when qnice_osm_control_i(C_MENU_SVGA_800_60)    = '1' else
+   -- MegaST: while the Viking card's picture is shown, HDMI runs at 1280x1024 and shows it 1:1
+   qnice_video_mode_o <= C_VIDEO_SXGA_1280_60  when qnice_viking_hdmi = '1' else
+                         C_VIDEO_SVGA_800_60   when qnice_osm_control_i(C_MENU_SVGA_800_60)    = '1' else
                          C_VIDEO_HDMI_720_5994 when qnice_osm_control_i(C_MENU_HDMI_720_5994)  = '1' else
                          C_VIDEO_HDMI_640_60   when qnice_osm_control_i(C_MENU_HDMI_640_60)    = '1' else
                          C_VIDEO_HDMI_5_4_50   when qnice_osm_control_i(C_MENU_HDMI_5_4_50)    = '1' else
@@ -788,6 +803,23 @@ begin
          dest_clk => qnice_clk_i,
          dest_out => qnice_video_31khz
       ); -- i_cdc_mono
+
+   i_cdc_viking : xpm_cdc_single
+      generic map (
+         DEST_SYNC_FF   => 2,
+         INIT_SYNC_FF   => 0,
+         SIM_ASSERT_CHK => 0,
+         SRC_INPUT_REG  => 1
+      )
+      port map (
+         src_clk  => main_clk,
+         src_in   => main_viking_hdmi,
+         dest_clk => qnice_clk_i,
+         dest_out => qnice_viking_hdmi
+      ); -- i_cdc_viking
+
+   viking_fb_clk_o    <= sdram_clk;
+   viking_fb_enable_o <= qnice_viking_hdmi;
 
    -- Use On-Screen-Menu selections to configure several audio and video settings
    -- Video and audio mode control

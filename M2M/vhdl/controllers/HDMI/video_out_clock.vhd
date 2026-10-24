@@ -52,7 +52,7 @@ entity video_out_clock is
           -- 000 =  25.200 MHz. E.g.  640x480 @ 60.00 Hz
           -- 001 =  27.000 MHz. E.g.  720x480 @ 59.94 Hz
           -- 010 =  74.250 MHz. E.g. 1280x720 @ 60.00 Hz
-          -- 011 = 148.500 MHz.
+          -- 011 = 108.000 MHz (MegaST: was 148.500 MHz).
           -- 100 =  25.175 MHz. E.g.  640x480 @ 59.94 Hz
           -- 101 =  27.027 MHz. E.g.  720x480 @ 60.00 Hz
           -- 110 =  74.176 MHz. E.g. 1280x720 @ 59.94 Hz
@@ -217,18 +217,20 @@ begin
           when x"55" => data := x"4E" & x"0900" & x"66FF";  -- Filter Register 1
           when x"56" => data := x"CF" & x"1000" & x"666F";  -- Filter Register 2
 
-          -- Desired frequency = 148.500 MHz
-          -- CLKFBOUT_MULT_F   = 37.125
+          -- MegaST: 108 MHz (SXGA 1280x1024) instead of 148.5 MHz (no 1080p mode in M2M)
+          -- Desired frequency = 108.000 MHz
+          -- CLKFBOUT_MULT_F   = 54
           -- DIVCLK_DIVIDE     = 5
-          -- CLKOUT0_DIVIDE_F  = 1.000
-          -- CLKOUT1_DIVIDE    = 5
-          -- Actual frequency  = 148.500 MHz
+          -- CLKOUT0_DIVIDE_F  = 2.000
+          -- CLKOUT1_DIVIDE    = 10
+          -- Actual frequency  = 108.000 MHz
+          -- Lock and filter values: mmcm_lock_lookup/mmcm_filter_lookup (XAPP888, OPTIMIZED)
           when x"60" => data := x"06" & x"1145" & x"1000";  -- CLKOUT5 Register 1
           when x"61" => data := x"07" & x"0000" & x"8000";  -- CLKOUT5 Register 2
           when x"62" => data := x"08" & x"1041" & x"1000";  -- CLKOUT0 Register 1
-          when x"63" => data := x"09" & x"00C0" & x"8000";  -- CLKOUT0 Register 2
-          when x"64" => data := x"0A" & x"1083" & x"1000";  -- CLKOUT1 Register 1
-          when x"65" => data := x"0B" & x"0080" & x"8000";  -- CLKOUT1 Register 2
+          when x"63" => data := x"09" & x"0000" & x"8000";  -- CLKOUT0 Register 2
+          when x"64" => data := x"0A" & x"1145" & x"1000";  -- CLKOUT1 Register 1
+          when x"65" => data := x"0B" & x"0000" & x"8000";  -- CLKOUT1 Register 2
           when x"66" => data := x"0C" & x"1145" & x"1000";  -- CLKOUT2 Register 1
           when x"67" => data := x"0D" & x"0000" & x"8000";  -- CLKOUT2 Register 2
           when x"68" => data := x"0E" & x"1145" & x"1000";  -- CLKOUT3 Register 1
@@ -236,16 +238,16 @@ begin
           when x"6A" => data := x"10" & x"1145" & x"1000";  -- CLKOUT4 Register 1
           when x"6B" => data := x"11" & x"0000" & x"8000";  -- CLKOUT4 Register 2
           when x"6C" => data := x"12" & x"1145" & x"1000";  -- CLKOUT6 Register 1
-          when x"6D" => data := x"13" & x"2400" & x"8000";  -- CLKOUT6 Register 2
-          when x"6E" => data := x"14" & x"1491" & x"1000";  -- CLKFBOUT Register 1
-          when x"6F" => data := x"15" & x"1800" & x"8000";  -- CLKFBOUT Register 2
+          when x"6D" => data := x"13" & x"0000" & x"8000";  -- CLKOUT6 Register 2
+          when x"6E" => data := x"14" & x"16DB" & x"1000";  -- CLKFBOUT Register 1
+          when x"6F" => data := x"15" & x"0000" & x"8000";  -- CLKFBOUT Register 2
           when x"70" => data := x"16" & x"0083" & x"C000";  -- DIVCLK Register
           when x"71" => data := x"18" & x"00FA" & x"FC00";  -- Lock Register 1
           when x"72" => data := x"19" & x"7C01" & x"8000";  -- Lock Register 2
           when x"73" => data := x"1A" & x"7DE9" & x"8000";  -- Lock Register 3
           when x"74" => data := x"28" & x"FFFF" & x"0000";  -- Power Register
-          when x"75" => data := x"4E" & x"0900" & x"66FF";  -- Filter Register 1
-          when x"76" => data := x"CF" & x"1000" & x"666F";  -- Filter Register 2
+          when x"75" => data := x"4E" & x"1800" & x"66FF";  -- Filter Register 1
+          when x"76" => data := x"CF" & x"0100" & x"666F";  -- Filter Register 2
 
           -- Desired frequency = 25.175 MHz
           -- CLKFBOUT_MULT_F   = 17.625
@@ -490,16 +492,16 @@ begin
   MMCM: component mmcme2_adv
     generic map (
       bandwidth            => "OPTIMIZED",
-      clkfbout_mult_f      => 37.125, -- f_VCO = (100 MHz / 5) x 37.125 = 742.5 MHz
+      clkfbout_mult_f      => 54.0,   -- MegaST: f_VCO = (100 MHz / 5) x 54 = 1080 MHz (SXGA, the fastest mode)
       clkfbout_phase       => 0.0,
       clkfbout_use_fine_ps => false,
       clkin1_period        => 10.0,   -- INPUT @ 100 MHz
       clkin2_period        => 0.0,
-      clkout0_divide_f     => 2.0,    -- TMDS @ 371.25 MHz
+      clkout0_divide_f     => 2.0,    -- TMDS @ 540 MHz
       clkout0_duty_cycle   => 0.5,
       clkout0_phase        => 0.0,
       clkout0_use_fine_ps  => false,
-      clkout1_divide       => 10,     -- HDMI @ 74.25 MHz
+      clkout1_divide       => 10,     -- HDMI @ 108 MHz
       clkout1_duty_cycle   => 0.5,
       clkout1_phase        => 0.0,
       clkout1_use_fine_ps  => false,

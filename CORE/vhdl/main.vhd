@@ -122,6 +122,10 @@ entity main is
       video_hblank_o          : out std_logic;
       video_vblank_o          : out std_logic;
       video_31khz_o           : out std_logic;              -- 71 Hz monochrome mode or Viking: no scandoubler
+      viking_hdmi_o           : out std_logic;              -- Viking picture shown: HDMI 1280x1024 from the frame buffer
+      viking_fb_we_o          : out std_logic;              -- clk_sdram_i: Viking pixels into the HDMI frame buffer
+      viking_fb_addr_o        : out std_logic_vector(16 downto 0);
+      viking_fb_data_o        : out std_logic_vector(15 downto 0);
 
       -- Audio output (Signed PCM)
       audio_left_o            : out signed(15 downto 0);
@@ -264,6 +268,10 @@ component atarist_m65 is
       video_vblank    : out   std_logic;
       video_ce        : out   std_logic;
       video_31khz     : out   std_logic;
+      viking_hdmi     : out   std_logic;
+      viking_fb_we    : out   std_logic;
+      viking_fb_addr  : out   std_logic_vector(16 downto 0);
+      viking_fb_data  : out   std_logic_vector(15 downto 0);
 
       audio_l         : out   std_logic_vector(15 downto 0);
       audio_r         : out   std_logic_vector(15 downto 0);
@@ -408,6 +416,7 @@ signal st_floppy_led  : std_logic;
 signal st_hd_led      : std_logic;
 signal st_r, st_g, st_b : std_logic_vector(7 downto 0);
 signal st_hs, st_vs, st_hblank, st_vblank, st_ce, st_31khz : std_logic;
+signal st_viking_hdmi : std_logic;
 
 -- Falcon030 (falcon_m65.sv): runs while falcon_i is 1, the ST is held in reset then and the
 -- Falcon's SDRAM controller drives the pin registers of sdram_m65.v
@@ -729,6 +738,10 @@ begin
          video_vblank    => st_vblank,
          video_ce        => st_ce,
          video_31khz     => st_31khz,
+         viking_hdmi     => st_viking_hdmi,
+         viking_fb_we    => viking_fb_we_o,
+         viking_fb_addr  => viking_fb_addr_o,
+         viking_fb_data  => viking_fb_data_o,
 
          audio_l         => audio_l,
          audio_r         => audio_r,
@@ -965,6 +978,7 @@ begin
    video_green_o  <= f_g            when falcon = '1' else st_g;
    video_blue_o   <= f_b            when falcon = '1' else st_b;
    video_hs_o     <= f_hs           when falcon = '1' else st_hs;
+   viking_hdmi_o  <= st_viking_hdmi and not falcon;
    video_vs_o     <= f_vs           when falcon = '1' else st_vs;
    video_hblank_o <= f_hblank       when falcon = '1' else st_hblank;
    video_vblank_o <= f_vblank       when falcon = '1' else st_vblank;
