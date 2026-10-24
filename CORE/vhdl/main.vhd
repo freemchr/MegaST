@@ -112,6 +112,10 @@ entity main is
       video_hblank_o          : out std_logic;
       video_vblank_o          : out std_logic;
       video_31khz_o           : out std_logic;              -- 71 Hz monochrome mode or Viking: no scandoubler
+      viking_hdmi_o           : out std_logic;              -- Viking picture shown: HDMI 1280x1024 from the frame buffer
+      viking_fb_we_o          : out std_logic;              -- clk_sdram_i: Viking pixels into the HDMI frame buffer
+      viking_fb_addr_o        : out std_logic_vector(16 downto 0);
+      viking_fb_data_o        : out std_logic_vector(15 downto 0);
 
       -- Audio output (Signed PCM)
       audio_left_o            : out signed(15 downto 0);
@@ -253,6 +257,10 @@ component atarist_m65 is
       video_vblank    : out   std_logic;
       video_ce        : out   std_logic;
       video_31khz     : out   std_logic;
+      viking_hdmi     : out   std_logic;
+      viking_fb_we    : out   std_logic;
+      viking_fb_addr  : out   std_logic_vector(16 downto 0);
+      viking_fb_data  : out   std_logic_vector(15 downto 0);
 
       audio_l         : out   std_logic_vector(15 downto 0);
       audio_r         : out   std_logic_vector(15 downto 0);
@@ -545,6 +553,10 @@ begin
          video_vblank    => video_vblank_o,
          video_ce        => video_ce_o,
          video_31khz     => video_31khz_o,
+         viking_hdmi     => viking_hdmi_o,
+         viking_fb_we    => viking_fb_we_o,
+         viking_fb_addr  => viking_fb_addr_o,
+         viking_fb_data  => viking_fb_data_o,
 
          audio_l         => audio_l,
          audio_r         => audio_r,

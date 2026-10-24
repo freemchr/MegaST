@@ -42,6 +42,13 @@ entity digital_pipeline is
       video_vs_i               : in  std_logic;
       video_hblank_i           : in  std_logic;
       video_vblank_i           : in  std_logic;
+      -- MegaST: 1280x1024 1 bpp frame buffer (Viking card), shown 1:1 instead of the scaler's picture
+      -- while viking_fb_enable_i is set (the core selects the SXGA mode at the same time)
+      viking_fb_clk_i          : in  std_logic;
+      viking_fb_we_i           : in  std_logic;
+      viking_fb_addr_i         : in  std_logic_vector(16 downto 0);  -- 80 words per line
+      viking_fb_data_i         : in  std_logic_vector(15 downto 0);  -- leftmost pixel in bit 15, 1 = white
+      viking_fb_enable_i       : in  std_logic;                      -- asynchronous
       audio_clk_i              : in  std_logic;  -- 12.288 MHz
       audio_rst_i              : in  std_logic;
       audio_left_i             : in  signed(15 downto 0); -- Signed PCM format
@@ -146,6 +153,29 @@ architecture synthesis of digital_pipeline is
    signal hdmi_vs                : std_logic;
    signal hdmi_de                : std_logic;
 
+   -- MegaST: after ascal, before the Viking frame buffer stage
+   signal hdmi_sc_red            : unsigned(7 downto 0);
+   signal hdmi_sc_green          : unsigned(7 downto 0);
+   signal hdmi_sc_blue           : unsigned(7 downto 0);
+   signal hdmi_sc_hs             : std_logic;
+   signal hdmi_sc_vs             : std_logic;
+   signal hdmi_sc_de             : std_logic;
+
+   -- MegaST: Viking frame buffer, 1280x1024 pixels, 16 per word
+   constant C_VFB_WORDS          : natural := 1280 * 1024 / 16;
+   type vfb_ram_t is array (0 to C_VFB_WORDS - 1) of std_logic_vector(15 downto 0);
+   signal vfb_ram                : vfb_ram_t;
+   signal hdmi_vfb_enable        : std_logic;
+   signal hdmi_vfb_x             : unsigned(10 downto 0);
+   signal hdmi_vfb_line          : unsigned(16 downto 0);
+   signal hdmi_vfb_gap           : unsigned(11 downto 0);
+   signal hdmi_vfb_rd            : std_logic_vector(15 downto 0);
+   signal hdmi_vfb_rd2           : std_logic_vector(15 downto 0);
+   signal hdmi_vfb_bit1          : unsigned(3 downto 0);
+   signal hdmi_vfb_bit2          : unsigned(3 downto 0);
+   type vfb_dly_t is array (1 to 2) of std_logic_vector(26 downto 0);
+   signal hdmi_vfb_dly           : vfb_dly_t;
+
    -- After OSM
    signal hdmi_osm_red           : std_logic_vector(7 downto 0);
    signal hdmi_osm_green         : std_logic_vector(7 downto 0);
@@ -178,7 +208,8 @@ begin
    sys_info_hdmi_o(47 downto 32) <=
       std_logic_vector(to_unsigned((G_VGA_DX/G_FONT_DX) * 256 + (G_VGA_DY/G_FONT_DY), 16));
 
-   hdmi_video_mode <= G_VIDEO_MODE_VECTOR(6) when hdmi_video_mode_i = C_VIDEO_SVGA_800_60   else
+   hdmi_video_mode <= G_VIDEO_MODE_VECTOR(7) when hdmi_video_mode_i = C_VIDEO_SXGA_1280_60  else  -- MegaST
+                      G_VIDEO_MODE_VECTOR(6) when hdmi_video_mode_i = C_VIDEO_SVGA_800_60   else
                       G_VIDEO_MODE_VECTOR(5) when hdmi_video_mode_i = C_VIDEO_HDMI_720_5994 else
                       G_VIDEO_MODE_VECTOR(4) when hdmi_video_mode_i = C_VIDEO_HDMI_640_60   else
                       G_VIDEO_MODE_VECTOR(3) when hdmi_video_mode_i = C_VIDEO_HDMI_5_4_50   else
@@ -294,7 +325,9 @@ begin
 
    i_ascal : entity work.ascal
       generic map (
-         MASK      => x"ff",
+         -- MegaST: only nearest neighbour and polyphase (mega65.vhd selects nothing else); without the
+         -- bilinear and bicubic filters, ascal meets the timing of the 108 MHz SXGA mode
+         MASK      => x"f1",
          RAMBASE   => (others => '0'),
 
          -- ascal needs an input buffer according to this formula: dx * dy * 3 bytes (RGB) per pixel and then rounded up
@@ -331,12 +364,12 @@ begin
          i_clk             => video_clk_i,                  -- input
 
          -- Output video
-         o_r               => hdmi_red,                     -- output
-         o_g               => hdmi_green,                   -- output
-         o_b               => hdmi_blue,                    -- output
-         o_hs              => hdmi_hs,                      -- output
-         o_vs              => hdmi_vs,                      -- output
-         o_de              => hdmi_de,                      -- output
+         o_r               => hdmi_sc_red,                     -- output
+         o_g               => hdmi_sc_green,                   -- output
+         o_b               => hdmi_sc_blue,                    -- output
+         o_hs              => hdmi_sc_hs,                      -- output
+         o_vs              => hdmi_sc_vs,                      -- output
+         o_de              => hdmi_sc_de,                      -- output
          o_vbl             => open,                         -- output
          o_ce              => '1',                          -- input
          o_clk             => hdmi_clk_i,                   -- input
@@ -456,6 +489,88 @@ begin
          m_avm_readdatavalid_i => hr_readdatavalid_i,
          m_avm_waitrequest_i   => hr_waitrequest_i
       ); -- i_avm_decrease
+
+   ---------------------------------------------------------------------------------------------
+   -- MegaST: Viking frame buffer
+   -- The core writes the Viking card's 1280x1024 picture 1:1 into the frame buffer. While it is
+   -- enabled, the core has selected the SXGA mode (1280x1024), and every HDMI pixel comes from the
+   -- frame buffer instead of the scaler: no downscaling, no filter. Both paths have the same
+   -- delay (three clocks), so the timing does not change when switching.
+   ---------------------------------------------------------------------------------------------
+
+   vfb_write : process (viking_fb_clk_i)
+   begin
+      if rising_edge(viking_fb_clk_i) then
+         if viking_fb_we_i = '1' and unsigned(viking_fb_addr_i) < C_VFB_WORDS then
+            vfb_ram(to_integer(unsigned(viking_fb_addr_i))) <= viking_fb_data_i;
+         end if;
+      end if;
+   end process vfb_write;
+
+   i_cdc_vfb_enable : xpm_cdc_single
+      generic map (
+         DEST_SYNC_FF   => 2,
+         INIT_SYNC_FF   => 0,
+         SIM_ASSERT_CHK => 0,
+         SRC_INPUT_REG  => 0
+      )
+      port map (
+         src_clk  => '0',
+         src_in   => viking_fb_enable_i,
+         dest_clk => hdmi_clk_i,
+         dest_out => hdmi_vfb_enable
+      ); -- i_cdc_vfb_enable
+
+   vfb_read : process (hdmi_clk_i)
+      variable addr : unsigned(16 downto 0);
+      variable pix  : std_logic;
+   begin
+      if rising_edge(hdmi_clk_i) then
+         -- position: x counts the pixels of the line, the line address starts at 0 after the
+         -- vertical blank (more than 4095 clocks without DE) and steps by 80 words per line
+         if hdmi_sc_de = '1' then
+            hdmi_vfb_x   <= hdmi_vfb_x + 1;
+            hdmi_vfb_gap <= (others => '0');
+         else
+            hdmi_vfb_x <= (others => '0');
+            if hdmi_vfb_gap /= x"FFF" then
+               hdmi_vfb_gap <= hdmi_vfb_gap + 1;
+            else
+               hdmi_vfb_line <= (others => '0');
+            end if;
+            if hdmi_vfb_gap = 0 and hdmi_vfb_x /= 0 then -- end of a line
+               hdmi_vfb_line <= hdmi_vfb_line + 80;
+            end if;
+         end if;
+
+         -- clock 1 and 2: frame buffer read (block RAM plus output register)
+         addr := hdmi_vfb_line + resize(hdmi_vfb_x(10 downto 4), 17);
+         if addr < C_VFB_WORDS then
+            hdmi_vfb_rd <= vfb_ram(to_integer(addr));
+         end if;
+         hdmi_vfb_rd2  <= hdmi_vfb_rd;
+         hdmi_vfb_bit1 <= hdmi_vfb_x(3 downto 0);
+         hdmi_vfb_bit2 <= hdmi_vfb_bit1;
+         hdmi_vfb_dly(1) <= hdmi_sc_hs & hdmi_sc_vs & hdmi_sc_de &
+                            std_logic_vector(hdmi_sc_red) & std_logic_vector(hdmi_sc_green) & std_logic_vector(hdmi_sc_blue);
+         hdmi_vfb_dly(2) <= hdmi_vfb_dly(1);
+
+         -- clock 3: output
+         pix        := hdmi_vfb_rd2(15 - to_integer(hdmi_vfb_bit2));
+         hdmi_hs    <= hdmi_vfb_dly(2)(26);
+         hdmi_vs    <= hdmi_vfb_dly(2)(25);
+         hdmi_de    <= hdmi_vfb_dly(2)(24);
+         if hdmi_vfb_enable = '1' then
+            hdmi_red   <= (others => pix);
+            hdmi_green <= (others => pix);
+            hdmi_blue  <= (others => pix);
+         else
+            hdmi_red   <= unsigned(hdmi_vfb_dly(2)(23 downto 16));
+            hdmi_green <= unsigned(hdmi_vfb_dly(2)(15 downto 8));
+            hdmi_blue  <= unsigned(hdmi_vfb_dly(2)(7 downto 0));
+         end if;
+      end if;
+   end process vfb_read;
 
    i_video_overlay : entity work.video_overlay
       generic  map (

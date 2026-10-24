@@ -9,7 +9,7 @@ package video_modes_pkg is
                                                    -- 000 =  25.200 MHz
                                                    -- 001 =  27.000 MHz
                                                    -- 010 =  74.250 MHz
-                                                   -- 011 = 148.500 MHz
+                                                   -- 011 = 108.000 MHz (MegaST: was 148.500 MHz)
                                                    -- 100 =  25.175 MHz
                                                    -- 101 =  27.027 MHz
                                                    -- 110 =  74.176 MHz
@@ -185,6 +185,26 @@ package video_modes_pkg is
       V_POL       => '1'         -- vertical sync pulse polarity (1 = positive, 0 = negative)
    );
 
+   -- MegaST: SXGA 1280x1024 @ 60 Hz (VESA DMT) for the Viking card's picture 1:1
+   -- CAUTION: not a CEA/CTA mode; PC monitors take it, many TVs do not
+   constant C_SXGA_1280_1024_60 : video_modes_t := (
+      CLK_KHZ     => 108000,     -- 108.000 MHz
+      CLK_SEL     => "011",
+      CEA_CTA_VIC => 0,          -- no CEA/CTA VIC
+      ASPECT      => "00",       -- aspect ratio: no data (5:4)
+      PIXEL_REP   => '0',        -- no pixel repetition
+      H_PIXELS    => 1280,       -- horizontal display width in pixels
+      V_PIXELS    => 1024,       -- vertical display width in rows
+      H_PULSE     => 112,        -- horizontal sync pulse width in pixels
+      H_BP        => 248,        -- horizontal back porch width in pixels
+      H_FP        => 48,         -- horizontal front porch width in pixels
+      V_PULSE     => 3,          -- vertical sync pulse width in rows
+      V_BP        => 38,         -- vertical back porch width in rows
+      V_FP        => 1,          -- vertical front porch width in rows
+      H_POL       => '1',        -- horizontal sync pulse polarity (1 = positive, 0 = negative)
+      V_POL       => '1'         -- vertical sync pulse polarity (1 = positive, 0 = negative)
+   );
+
    type video_modes_vector is array(natural range<>) of video_modes_t;
 
    type video_mode_type is (
@@ -194,7 +214,8 @@ package video_modes_pkg is
       C_VIDEO_HDMI_5_4_50   ,  -- PAL  576p in 5:4 @ 50 Hz
       C_VIDEO_HDMI_640_60   ,  -- HDMI 640x480     @ 60 Hz
       C_VIDEO_HDMI_720_5994 ,  -- HDMI 720x480     @ 59.94 Hz
-      C_VIDEO_SVGA_800_60      -- SVGA 800x600     @ 60 Hz
+      C_VIDEO_SVGA_800_60   ,  -- SVGA 800x600     @ 60 Hz
+      C_VIDEO_SXGA_1280_60     -- MegaST: SXGA 1280x1024 @ 60 Hz
    );
 
    pure function video_mode_to_slv(video_mode : video_mode_type) return std_logic_vector;
@@ -215,6 +236,7 @@ package body video_modes_pkg is
          when C_VIDEO_HDMI_640_60   => return "0100";
          when C_VIDEO_HDMI_720_5994 => return "0101";
          when C_VIDEO_SVGA_800_60   => return "0110";
+         when C_VIDEO_SXGA_1280_60  => return "0111";
       end case;
    end function video_mode_to_slv;
 
@@ -228,6 +250,7 @@ package body video_modes_pkg is
          when "0100" => return C_VIDEO_HDMI_640_60;
          when "0101" => return C_VIDEO_HDMI_720_5994;
          when "0110" => return C_VIDEO_SVGA_800_60;
+         when "0111" => return C_VIDEO_SXGA_1280_60;
          when others => return C_VIDEO_HDMI_16_9_50;
       end case;
    end function slv_to_video_mode;

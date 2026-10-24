@@ -15,7 +15,8 @@
 //    - no MT32-pi, no Cubase dongles
 //    - no line doubler: the M2M framework does the scandoubling (VGA) and
 //      the scaling (HDMI); the Viking card's 1280x1024 is downscaled to
-//      640x512 (viking_scale.sv)
+//      640x512 (viking_scale.sv) for VGA; HDMI shows it 1:1 at 1280x1024
+//      (viking_fb_* ports, frame buffer in the framework's digital_pipeline)
 //    - the TOS image is always stored at $E00000 in SDRAM, the 192k TOS
 //      detection is done by the loader
 //    - SDRAM controller for the MEGA65 R4/R5/R6 board (sdram_m65.v)
@@ -138,6 +139,10 @@ module atarist_m65
 	output        video_vblank,
 	output        video_ce,        // pixel clock enable: 16 MHz (color) or 32 MHz (mono, Viking)
 	output        video_31khz,     // 1 = 31 kHz mode (71 Hz mono, Viking): no scandoubler needed
+	output        viking_hdmi,     // the Viking picture is shown: HDMI 1280x1024 from the frame buffer
+	output        viking_fb_we,    // clk_96: Viking pixels into the HDMI frame buffer,
+	output [16:0] viking_fb_addr,  //         16 pixels per word, 80 words per line,
+	output [15:0] viking_fb_data,  //         leftmost pixel in bit 15, 1 = white
 
 	// audio output (clk_32 domain)
 	output [15:0] audio_l,
@@ -323,6 +328,7 @@ assign video_vs     = vid_vs;
 assign video_hblank = vid_hbl;
 assign video_vblank = vid_vbl;
 assign video_31khz  = !vid_nosync & (mode[1] | vid_viking);
+assign viking_hdmi  = vid_viking;
 assign video_ce     = (!vid_nosync & (mode[1] | vid_viking)) ? 1'b1 : vid_ce16;
 
 /* ------------------------------------------------------------------------------ */
@@ -682,6 +688,44 @@ viking_scale viking_scale (
 	.hblank    ( viking_s_hbl    ),
 	.vblank    ( viking_s_vbl    )
 );
+
+// MEGA65: the full 1280x1024 picture for HDMI. The pixels go 1:1 into a frame buffer, which
+// the HDMI output reads with its own 1280x1024 timing (digital_pipeline.vhd).
+reg  [3:0] vfb_x;              // pixel in the word
+reg  [6:0] vfb_w;              // word in the line, 0..79
+reg [16:0] vfb_line;           // first word of the line
+reg [14:0] vfb_sr;
+reg        vfb_hbl;
+reg        vfb_we;
+reg [16:0] vfb_addr;
+reg [15:0] vfb_data;
+
+always @(posedge clk_96) begin
+	vfb_we  <= 1'b0;
+	vfb_hbl <= viking_hbl;
+	if (viking_vbl) begin
+		vfb_line <= 17'd0;
+		vfb_x    <= 4'd0;
+		vfb_w    <= 7'd0;
+	end else if (!viking_hbl) begin
+		vfb_sr <= {vfb_sr[13:0], viking_pix};
+		vfb_x  <= vfb_x + 1'd1;
+		if (&vfb_x) begin
+			vfb_we   <= 1'b1;
+			vfb_addr <= vfb_line + vfb_w;
+			vfb_data <= {vfb_sr, viking_pix};
+			vfb_w    <= vfb_w + 1'd1;
+		end
+	end else if (!vfb_hbl) begin  // end of the line
+		vfb_line <= vfb_line + 17'd80;
+		vfb_x    <= 4'd0;
+		vfb_w    <= 7'd0;
+	end
+end
+
+assign viking_fb_we   = vfb_we;
+assign viking_fb_addr = vfb_addr;
+assign viking_fb_data = vfb_data;
 
 /* ------------------------------------------------------------------------------ */
 /* ------------------------------------ CPU ------------------------------------- */

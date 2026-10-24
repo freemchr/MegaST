@@ -16,6 +16,7 @@
 #                                    MSTE=1: Mega STe, together with ste=1: STEroids,
 #                                    HOLD_RESET=n: keep the ST in reset for the first n frames,
 #                                    VFLAGS=-DSDRAM_RANDOM: random SDRAM content at power-on)
+#    VIKING=1: Viking card (VIKING_OFF_AT=<frame>: menu item off); with the Viking picture shown, every written frame also gets <out_prefix>_vfb_NNN.pbm: the 1280x1024 HDMI picture
 #    cd obj_dir && ./simst <tos.img> <frames> [out_prefix] [ste] [hd.img]
 #
 # Every 10th frame is written as <out_prefix>_NNN.ppm (convert: python3 ../ppm2png.py in.ppm out.png)

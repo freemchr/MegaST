@@ -179,6 +179,32 @@ to read every line within a 720p line period. With 24 bpp, the HyperRAM could no
 desktop flickered in columns at 720p (fewer at 50 Hz), while 576p was stable. 16 bpp needs a third
 less bandwidth and loses nothing visible for the ST's colours. Generic, a candidate for upstream.
 
+### HDMI: Viking card picture 1:1 at 1280x1024
+
+The Viking card draws 1280x1024 in black and white. `ascal` takes at most 1024 pixels per line (`IHRES`),
+and a 1280x1024 input would need more HyperRAM bandwidth than there is, so the core downscales the picture
+to 640x512 grey (`viking_scale.sv`), which made it blurry on HDMI. Instead, HDMI now shows the picture 1:1:
+
+* `M2M/vhdl/av_pipeline/video_modes_pkg.vhd`: new mode `C_SXGA_1280_1024_60` (VESA DMT, 108 MHz, positive
+  syncs, no CEA VIC) and `C_VIDEO_SXGA_1280_60` (`"0111"`).
+* `M2M/vhdl/controllers/HDMI/video_out_clock.vhd`: clock select `"011"` is 108 MHz instead of 148.5 MHz
+  (no M2M mode used 148.5 MHz). The values: VCO 1080 MHz (100 MHz / 5 x 54), lock and filter registers from
+  Xilinx's `mmcm_lock_lookup`/`mmcm_filter_lookup` (XAPP888, `OPTIMIZED`). The MMCM's default
+  configuration, which static timing analysis uses, is now 108 MHz, the fastest mode (was 74.25 MHz).
+* `framework.vhd`, `av_pipeline.vhd`, `digital_pipeline.vhd`: ports `viking_fb_*` (defaults: off). A
+  1280x1024 1 bpp frame buffer in block RAM (40 RAMB36) is written by the core in its own clock domain and
+  read with the HDMI timing. While `viking_fb_enable_i` is set, every HDMI pixel comes from it instead of
+  from `ascal` (before the OSM overlay, so the menu still shows). Both paths go through the same three
+  register stages.
+* `digital_pipeline.vhd`: `ascal` without the bilinear, sharp bilinear and bicubic filters (`MASK => x"f1"`,
+  M2M: `x"ff"`). MegaST only uses nearest neighbour and polyphase; at 108 MHz the bicubic filter missed
+  the timing (-0.063 ns).
+* `top_mega65-r6.vhd`: connects the ports. The R3-R5 tops leave them open (no Viking on the R3; R4/R5 to
+  follow after the R6 test).
+
+The core selects the SXGA mode while the Viking picture is shown (`mega65.vhd`). VGA keeps the downscaled
+640x512 picture. MegaST-specific (the 108 MHz entry replaces 148.5 MHz).
+
 ### JTAG probe of the QNICE CPU bus
 
 `M2M/vhdl/QNICE/qnice.vhd`: a `BSCANE2` (USER1) returns a 64 bit snapshot of the QNICE CPU bus, for

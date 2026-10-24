@@ -86,7 +86,7 @@ Features
 * The MEGA65's internal 3.5" drive as drive A: (real DD disks, read only)
 * Two ACSI hard disks (`.hd`/`.img`/`.vhd` images, read/write, directly on the SD card, up to 4 GB)
 * ROM cartridges (raw `.img` or `.stc`, up to 128 kB)
-* Viking/SM194 compatible 1280x1024 monochrome card (shown as 640x512 grey scale)
+* Viking/SM194 compatible 1280x1024 monochrome card (HDMI: 1:1 at 1280x1024, VGA: 640x512 grey scale)
 * Serial port (RS232), MIDI and parallel (printer) port on the MEGA65's PMOD headers
 * Color (low/medium resolution, 50/60 Hz) and monochrome (SM124, 71 Hz or 60 Hz) monitor,
   normal or full borders (overscan)
@@ -431,8 +431,13 @@ into the AUTO folder, or boot from
 [mist_vhi.st](https://github.com/mist-devel/mist-board/blob/master/tools/mist_vhi.st). It finds
 the card at either address. As soon as the driver accesses the card, the video output switches to
 the card. Switching the menu item on or off resets the ST (with the card off, the driver reports
-"No video memory found" and the ST starts as usual). The MEGA65's video pipeline cannot handle 1280x1024 at 96 MHz, so
-2x2 pixels are averaged into one of five grey levels: 640x512 @ 60 Hz, 31 kHz.
+"No video memory found" and the ST starts as usual).
+
+On **HDMI**, the picture is shown 1:1 at 1280x1024: while the Viking desktop is on screen, the
+HDMI output switches to 1280x1024 @ 60 Hz (108 MHz pixel clock, the VESA mode of 5:4 PC
+monitors) and back to the HDMI mode of the menu when the card is switched off. This mode is not
+a TV mode: PC monitors show it, many TVs do not. On **VGA**, 2x2 pixels are averaged into one of
+five grey levels: 640x512 @ 60 Hz, 31 kHz.
 
 PMOD headers (serial port, MIDI, printer)
 -----------------------------------------

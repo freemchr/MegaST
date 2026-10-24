@@ -43,6 +43,12 @@ entity av_pipeline is
       video_hs_i              : in  std_logic;
       video_hblank_i          : in  std_logic;
       video_vblank_i          : in  std_logic;
+      -- MegaST: Viking card picture 1:1 on HDMI (see digital_pipeline)
+      viking_fb_clk_i         : in  std_logic;
+      viking_fb_we_i          : in  std_logic;
+      viking_fb_addr_i        : in  std_logic_vector(16 downto 0);
+      viking_fb_data_i        : in  std_logic_vector(15 downto 0);
+      viking_fb_enable_i      : in  std_logic;
       audio_clk_i             : in  std_logic; -- 12.288 MHz
       audio_rst_i             : in  std_logic;
       audio_left_i            : in  std_logic_vector(15 downto 0);
@@ -556,6 +562,11 @@ begin
          video_vs_i               => video_crop_vs,
          video_hblank_i           => video_crop_hblank,
          video_vblank_i           => video_crop_vblank,
+         viking_fb_clk_i         => viking_fb_clk_i,          -- MegaST
+         viking_fb_we_i          => viking_fb_we_i,
+         viking_fb_addr_i        => viking_fb_addr_i,
+         viking_fb_data_i        => viking_fb_data_i,
+         viking_fb_enable_i      => viking_fb_enable_i,
          video_hdmax_o            => video_hdmax,
          video_vdmax_o            => video_vdmax,
          audio_clk_i              => audio_clk_i,

@@ -132,6 +132,14 @@ port (
    video_hs_i              : in    std_logic;
    video_hblank_i          : in    std_logic;
    video_vblank_i          : in    std_logic;
+
+   -- MegaST: a 1280x1024 1 bpp picture (Viking card) shown 1:1 on HDMI in the SXGA mode
+   -- (frame buffer in digital_pipeline.vhd); the defaults switch it off
+   viking_fb_clk_i         : in    std_logic := '0';
+   viking_fb_we_i          : in    std_logic := '0';
+   viking_fb_addr_i        : in    std_logic_vector(16 downto 0) := (others => '0');
+   viking_fb_data_i        : in    std_logic_vector(15 downto 0) := (others => '0');
+   viking_fb_enable_i      : in    std_logic := '0';
    main_joy1_up_n_o        : out   std_logic;
    main_joy1_down_n_o      : out   std_logic;
    main_joy1_left_n_o      : out   std_logic;
@@ -243,14 +251,15 @@ architecture synthesis of framework is
 -- Constants
 ---------------------------------------------------------------------------------------------
 
-constant VIDEO_MODE_VECTOR    : video_modes_vector(0 to 6) := (
+constant VIDEO_MODE_VECTOR    : video_modes_vector(0 to 7) := (
    C_HDMI_720p_50,        -- HDMI 1280x720   @ 50 Hz
    C_HDMI_720p_60,        -- 1280x720        @ 60 Hz
    C_HDMI_576p_50,        -- PAL 576p in 4:3 @ 50 Hz
    C_HDMI_576p_50,        -- PAL 576p in 5:4 @ 50 Hz
    C_HDMI_640x480p_60,    -- HDMI 640x480    @ 60 Hz
    C_HDMI_720x480p_5994,  -- HDMI 720x480    @ 59.94 Hz
-   C_SVGA_800_600_60);    -- SVGA 800x600    @ 60 Hz
+   C_SVGA_800_600_60,     -- SVGA 800x600    @ 60 Hz
+   C_SXGA_1280_1024_60);  -- MegaST: SXGA 1280x1024 @ 60 Hz
 
 signal video_mode : video_modes_t;
 
@@ -454,7 +463,8 @@ begin
          sys_pps_o         => sys_pps
       ); -- i_clk_m2m
 
-   video_mode <= C_SVGA_800_600_60    when qnice_video_mode_i = C_VIDEO_SVGA_800_60   else
+   video_mode <= C_SXGA_1280_1024_60  when qnice_video_mode_i = C_VIDEO_SXGA_1280_60  else  -- MegaST
+                 C_SVGA_800_600_60    when qnice_video_mode_i = C_VIDEO_SVGA_800_60   else
                  C_HDMI_720x480p_5994 when qnice_video_mode_i = C_VIDEO_HDMI_720_5994 else
                  C_HDMI_640x480p_60   when qnice_video_mode_i = C_VIDEO_HDMI_640_60   else
                  C_HDMI_576p_50       when qnice_video_mode_i = C_VIDEO_HDMI_5_4_50   else
@@ -886,6 +896,11 @@ begin
          video_hs_i              => video_hs_i,
          video_hblank_i          => video_hblank_i,
          video_vblank_i          => video_vblank_i,
+         viking_fb_clk_i         => viking_fb_clk_i,          -- MegaST
+         viking_fb_we_i          => viking_fb_we_i,
+         viking_fb_addr_i        => viking_fb_addr_i,
+         viking_fb_data_i        => viking_fb_data_i,
+         viking_fb_enable_i      => viking_fb_enable_i,
          audio_clk_i             => audio_clk,
          audio_rst_i             => audio_rst,
          audio_left_i            => audio_left,

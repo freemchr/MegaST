@@ -314,6 +314,13 @@ architecture synthesis of mega65_r6 is
    signal video_hblank           : std_logic;
    signal video_vblank           : std_logic;
 
+   -- MegaST: Viking card picture 1:1 on HDMI
+   signal viking_fb_clk          : std_logic;
+   signal viking_fb_we           : std_logic;
+   signal viking_fb_addr         : std_logic_vector(16 downto 0);
+   signal viking_fb_data         : std_logic_vector(15 downto 0);
+   signal viking_fb_enable       : std_logic;
+
    -- Joysticks and Paddles
    signal main_joy1_up_n_in      : std_logic;
    signal main_joy1_down_n_in    : std_logic;
@@ -646,6 +653,11 @@ begin
       video_hs_i              => video_hs,
       video_hblank_i          => video_hblank,
       video_vblank_i          => video_vblank,
+      viking_fb_clk_i         => viking_fb_clk,       -- MegaST
+      viking_fb_we_i          => viking_fb_we,
+      viking_fb_addr_i        => viking_fb_addr,
+      viking_fb_data_i        => viking_fb_data,
+      viking_fb_enable_i      => viking_fb_enable,
       main_joy1_up_n_o        => main_joy1_up_n_in,
       main_joy1_down_n_o      => main_joy1_down_n_in,
       main_joy1_left_n_o      => main_joy1_left_n_in,
@@ -818,6 +830,11 @@ begin
          video_hs_o              => video_hs,
          video_hblank_o          => video_hblank,
          video_vblank_o          => video_vblank,
+         viking_fb_clk_o         => viking_fb_clk,    -- MegaST
+         viking_fb_we_o          => viking_fb_we,
+         viking_fb_addr_o        => viking_fb_addr,
+         viking_fb_data_o        => viking_fb_data,
+         viking_fb_enable_o      => viking_fb_enable,
 
          -- Audio output (Signed PCM)
          main_audio_left_o       => main_audio_l,
