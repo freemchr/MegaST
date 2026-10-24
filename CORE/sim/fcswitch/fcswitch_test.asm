@@ -17,6 +17,8 @@
 ;    ST gets its auto-load TOS
 ; 8. Without the file of the remembered images (MNT_ON = 0) nothing is
 ;    swapped: Falcon: auto-load TOS
+;    The menu is closed: the TOS line is unmarked with M2M$SET_SETTING, not
+;    with M2M$FORCE_MENU (OPTM_SET goes fatal)
 ; 9. FC_AUT_NAME keeps the name of other auto-load ROMs and the TOS of the ST
 ;
 ; This machine is based on AtariST_MiSTer
@@ -146,6 +148,9 @@ START_FIRMWARE  MOVE    STR_START, R8
                 MOVE    FC_MACH, R8
                 MOVE    0, R9
                 RSUB    CHECK_EQ, 1
+                MOVE    N_SETOFF, R8
+                MOVE    1, R9
+                RSUB    CHECK_EQ, 1
 
                 ; 6.
                 RSUB    CLR_CALLS, 1
@@ -254,6 +259,8 @@ CLR_CALLS       MOVE    N_AUTO, R8
                 MOVE    0, @R8++
                 MOVE    0, @R8++
                 MOVE    0, @R8
+                MOVE    N_SETOFF, R8
+                MOVE    0, @R8
                 MOVE    MNT_DIRTY, R8
                 MOVE    0, @R8
                 RET
@@ -341,7 +348,20 @@ CRTROM_CSR_W    INCRB
 CRTROM_M_GI     MOVE    5, R9                   ; menu index of the TOS line
                 OR      0x0004, SR
                 RET
-M2M$FORCE_MENU  RET
+M2M$SET_SETTING INCRB                           ; counts "item 5 off"
+                CMP     5, R8
+                RBRA    _SS_RET, !Z
+                CMP     0, R9
+                RBRA    _SS_RET, !Z
+                MOVE    N_SETOFF, R0
+                ADD     1, @R0
+_SS_RET         DECRB
+                RET
+M2M$FORCE_MENU  INCRB                           ; must not be called
+                MOVE    FAILS, R0
+                ADD     1, @R0
+                DECRB
+                RET
 
 #include "../../m2m-rom/fcswitch.asm"
 
@@ -372,6 +392,7 @@ CONFIG_DEVH     .BLOCK  1
 CRTROM_AUT_FILE .BLOCK  1
 SCRATCH         .BLOCK  1
 FAILS           .BLOCK  1
+N_SETOFF        .BLOCK  1
                 .ORG    0x8800
 MNT_PATHS       .BLOCK  1792
 

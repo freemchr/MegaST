@@ -221,8 +221,11 @@ FC_TOS_UNLOAD   SYSCALL(enter, 1)
                 MOVE    FC_CRT_TOS, R8          ; menu index of the item
                 RSUB    CRTROM_M_GI, 1
                 RBRA    _FCTU_RET, !C
-                MOVE    R9, R8
-                XOR     R9, R9
-                RSUB    M2M$FORCE_MENU, 1
+                MOVE    R9, R8                  ; R8: menu index
+                XOR     R9, R9                  ; unmark it: the menu takes
+                RSUB    M2M$SET_SETTING, 1      ; its marks from these bits
+                                                ; when it opens (not
+                                                ; M2M$FORCE_MENU: the menu is
+                                                ; closed, OPTM_SET goes fatal)
 _FCTU_RET       SYSCALL(leave, 1)
                 RET
