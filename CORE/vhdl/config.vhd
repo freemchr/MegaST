@@ -190,9 +190,9 @@ constant SEL_MNT_FILE      : std_logic_vector(15 downto 0) := x"0102";  -- MegaS
 -- START YOUR CONFIGURATION BELOW THIS LINE
 
 constant DIR_START         : string := "/atarist";
--- MegaST: the Falcon test builds have a menu of the same size as the ST builds but other items (Machine:
--- Falcon030), so they keep their own settings and remembered images (fccfg, fcmount): switching between ST
--- and Falcon test builds must not load the other one's files. Revisit when the Falcon goes into a release.
+-- MegaST: from 1.1.6 on (Falcon030 in the menu) the menu has 118 lines instead of 104, so the settings and
+-- remembered images are in their own files (fccfg, fcmount): the stcfg and stmount of the ST-only versions
+-- (up to 1.1.5) stay untouched, so going back to an older version keeps its settings.
 constant CFG_FILE          : string := "/atarist/fccfg";
 
 -- MegaST: remember the mounted disk images and the manually loaded ROMs (TOS, cartridge) and load them

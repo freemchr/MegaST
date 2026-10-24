@@ -88,6 +88,8 @@ Features
 * Two ACSI hard disks (`.hd`/`.img`/`.vhd` images, read/write, directly on the SD card, up to 4 GB)
 * ROM cartridges (raw `.img` or `.stc`, up to 128 kB)
 * Viking/SM194 compatible 1280x1024 monochrome card (HDMI: 1:1 at 1280x1024, VGA: 640x512 grey scale)
+* **Atari Falcon030 (test)**: 68030, VIDEL, DSP56001, 68882 FPU, up to 14 MB ST-RAM plus 48 MB Fast
+  RAM, IDE hard disks (R6, see [Falcon030 (test)](#falcon030-test))
 * Serial port (RS232), MIDI and parallel (printer) port on the MEGA65's PMOD headers
 * Color (low/medium resolution, 50/60 Hz) and monochrome (SM124, 71 Hz or 60 Hz) monitor,
   normal or full borders (overscan)
@@ -439,6 +441,49 @@ HDMI output switches to 1280x1024 @ 60 Hz (108 MHz pixel clock, the VESA mode of
 monitors) and back to the HDMI mode of the menu when the card is switched off. This mode is not
 a TV mode: PC monitors show it, many TVs do not. On **VGA**, 2x2 pixels are averaged into one of
 five grey levels: 640x512 @ 60 Hz, 31 kHz.
+
+Falcon030 (test)
+----------------
+
+**The Falcon030 is a test version.** It boots EmuTOS and runs many Falcon programs and demos, but
+it has seen much less testing than the ST. Please report what works and what does not in the
+[issues](https://github.com/freemchr/MegaST/issues). The Falcon machine is based on
+[Falcon_MiSTer](https://github.com/apolkosnik/Falcon_MiSTer) and the
+[AP68030](https://github.com/apolkosnik/AP68030) CPU by apolkosnik.
+
+R6 only (it needs the SDRAM; not on the R3/R3A). Choose **Machine: Falcon030** in the menu.
+
+**TOS**: the Falcon needs a Falcon TOS. The zip has EmuTOS for the Falcon as `atarist/tosfalc.img`
+(512 KB). After choosing Falcon030, load it with the menu item "TOS:" (it is remembered). Atari's
+TOS 4.0x does not boot yet (black screen, being worked on). An ST TOS (1.x, 2.x) does not boot the
+Falcon, and a Falcon TOS does not boot the ST: when switching between ST and Falcon, load the TOS
+for the new machine too.
+
+**What it has**
+
+* 68030 with its caches and PMMU, 16 MHz like a real Falcon or 32 MHz ("CPU at 32 MHz (turbo)")
+* 68882 FPU (it runs on a small RISC-V CPU in the FPGA, so FPU-heavy programs are slower than on a
+  real Falcon)
+* VIDEL graphics: the ST modes and the Falcon modes with 2 to 256 colours and True Color; monitor
+  type VGA, RGB, TV or mono (SM124)
+* DSP56001, DMA sound, the sound matrix and the YM2149
+* 14 MB ST-RAM (or 4 MB) and optionally 48 MB of Fast RAM (TT-RAM) at $01000000
+* Two floppy drives (`.st` images) and the MEGA65's internal drive as A:
+* Two IDE hard disks: "Hard disk 0:" is the IDE master, "Hard disk 1:" the slave (up to 4 GB)
+* Enhanced joystick ports (Jaguar style joypads and paddles via "STe joypads")
+* Serial port and MIDI on the PMOD headers
+* The NVRAM (boot video mode, language, boot drive) is saved on the SD card as `/atarist/fcnvram`
+
+The settings are in the menu under "Falcon:". Because the Falcon's menu is larger, the core keeps its
+settings and remembered images in `/atarist/fccfg` and `/atarist/fcmount` (copy `fccfg` from the
+zip; the ST files `stcfg` and `stmount` of older versions stay untouched).
+
+**Not working or not tested yet**
+
+* Atari TOS 4.0x (black screen)
+* Programs for a 68060 accelerator (CT60/CT63): the Falcon has a 68030
+* Hard disk drivers other than EmuTOS's own (HDDRIVER, AHDI) and FreeMiNT: not tested yet
+* Microphone input: the MEGA65 has no audio input
 
 PMOD headers (serial port, MIDI, printer)
 -----------------------------------------
