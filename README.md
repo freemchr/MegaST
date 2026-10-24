@@ -123,7 +123,7 @@ Requirements
     defaults once).
   * `fcmount`, if the core shall remember the mounted floppy and hard disk images and the TOS and
     cartridge chosen in the menu (in the release zip; up to 1.1.5 `stmount`). It must have exactly
-    1536 bytes, all 0x00 or all 0xFF (e.g. `python3 -c "open('fcmount','wb').write(bytes(1536))"`).
+    1792 bytes, all 0x00 or all 0xFF (e.g. `python3 -c "open('fcmount','wb').write(bytes(1792))"`).
 
 Usage
 -----
@@ -455,11 +455,13 @@ it has seen much less testing than the ST. Please report what works and what doe
 
 R6 only (it needs the SDRAM; not on the R3/R3A). Choose **Machine: Falcon030** in the menu.
 
-**TOS**: the Falcon needs a Falcon TOS. The zip has EmuTOS for the Falcon as `atarist/tosfalc.img`
-(512 KB). After choosing Falcon030, load it with the menu item "TOS:" (it is remembered). Atari's
-TOS 4.0x does not boot yet (black screen, being worked on). An ST TOS (1.x, 2.x) does not boot the
-Falcon, and a Falcon TOS does not boot the ST: when switching between ST and Falcon, load the TOS
-for the new machine too.
+**TOS**: the Falcon needs a Falcon TOS, the ST an ST TOS, and each machine has its own. At power on
+and after switching the machine in the menu, the core loads `atarist/tos.img` for the ST and
+`atarist/tosfalc.img` for the Falcon (EmuTOS for the Falcon, 512 KB, in the zip). A TOS loaded with
+the menu item "TOS:" replaces it for the machine that runs, and with `fcmount` on the SD card it is
+remembered for that machine: switching from the ST with TOS 2.06 to the Falcon and back gives the
+ST TOS 2.06 again. Without `tosfalc.img` the Falcon gets `tos.img` and does not start (the menu
+still works). Atari's TOS 4.0x is being worked on (not working yet).
 
 **What it has**
 

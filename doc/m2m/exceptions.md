@@ -131,6 +131,12 @@ The framework does not remember mounted images (issue #13). Changes:
 * `M2M/rom/shell.asm`: the main loop calls `CORE_LOOP`, a callback of the core (`CORE/m2m-rom/m2m-rom.asm`;
   a core without anything to do there just returns). MegaST saves the Falcon's NVRAM there when it changed
   (`CORE/m2m-rom/nvram.asm`, file `/atarist/fcnvram`, 64 bytes). Generic, a candidate for upstream.
+* `M2M/rom/crts-and-roms.asm` (`CRTROM_AUTOLOAD`): before opening an auto-load ROM, it calls
+  `FC_AUT_NAME` (`CORE/m2m-rom/fcswitch.asm`), which may return another file name: the TOS of the Falcon
+  (`/atarist/tosfalc.img`, if it exists) while the Falcon030 is selected, else the name from `globals.vhd`.
+  `CORE/m2m-rom/make_rom.sh` gives the remembered images one entry more (`MNT_ENTRIES`, file `fcmount`
+  1792 bytes) for the manual TOS of the machine that does not run; `FC_SWITCH` swaps it with the TOS entry
+  on a switch between ST and Falcon. Test: `CORE/sim/fcswitch/run.sh` (QNICE emulator).
 * `M2M/rom/shell.asm`: in CRT/ROM mode `HANDLE_MOUNTING` first calls `MNT_CRT_EJECT`
   (`CORE/m2m-rom/m2m-rom.asm`): Space on the line of a loaded cartridge removes it (status "loading",
   then "idle" in the device, so the ST restarts without it) and forgets it, instead of opening the browser.

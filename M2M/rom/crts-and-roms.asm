@@ -660,6 +660,12 @@ _CRMA_1         MOVE    LOG_STR_ARLINE8, R8
                 MOVE    CRTROM_AUT_NAM, R4
                 ADD     R1, R4
                 ADD     @R4, R3                 ; R3 points to filename
+                ; MegaST: the core may load another file instead (the TOS
+                ; of the Falcon, FC_AUT_NAME in CORE/m2m-rom/fcswitch.asm)
+                MOVE    R1, R8
+                MOVE    R3, R9
+                RSUB    FC_AUT_NAME, 1
+                MOVE    R9, R3
                 MOVE    R3, R8
                 SYSCALL(strlen, 1)
                 SUB     R9, SP                  ; free memory on stack..
