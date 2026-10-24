@@ -1,3 +1,22 @@
+Version 1.1.5 - October 24, 2026
+================================
+
+* **The Viking 1280x1024 card works** (with the MiST driver `mist_vhi.prg` in the AUTO folder, see
+  the README). Before, its picture was scrambled: the 2:1 downscaler never reset its pixel counter
+  at the start of a line.
+* **Sharp Viking picture on HDMI**: while the Viking desktop is on screen, HDMI switches to
+  1280x1024 @ 60 Hz and shows every pixel of the card 1:1, without scaling. When the card is
+  switched off, HDMI goes back to the mode chosen in the menu. 1280x1024 is a PC monitor mode;
+  many TVs do not show it. VGA shows the picture downscaled to 640x512 in grey, as before.
+* **Switching the Viking card on or off in the menu resets the ST.** Without the reset, the driver
+  went on drawing into the card's memory after switching off and the ST crashed.
+* The menu item "Viking" is respected on every machine: the STEroids mode no longer switches the
+  card on by itself.
+* The HDMI scaler no longer has the bilinear and bicubic filters, which MegaST never used (needed
+  for the timing of the 1280x1024 mode).
+
+The settings file stays the same: the 104 byte `/atarist/stcfg` of 1.1 is still valid.
+
 Version 1.1.4 - October 22, 2026
 ================================
 
