@@ -100,6 +100,10 @@ Simulate first. Every hardware round trip costs the maintainer time.
 
 ## Releases
 
+**Version numbers:** after 1.1.6 every release goes up by one step of the second number: 1.2, 1.3,
+1.4, ... No third number (no 1.2.1). Test builds are `<next version>-testN` (e.g. `1.2-test1`).
+This matches MEGA65 Filehost, which only takes `nnnn.n`.
+
 The version is in `config.vhd` (welcome and help texts), `VERSIONS.md` and the README. The `.cor`
 comes from `bit2core mega65r6 <bit> "MegaST" <version> <file>` (`mega65r3`/`r4`/`r5` for the other
 boards). The release zip holds the `.cor`, `README.txt` and `atarist/` (EmuTOS `tos.img` plus its
