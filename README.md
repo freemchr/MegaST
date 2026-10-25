@@ -1,5 +1,5 @@
-Atari ST/STe for MEGA65 (MegaST)
-================================
+Atari ST/STe and Falcon030 for MEGA65 (MegaST)
+==============================================
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support%20MegaST-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/cjf077)
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-freemchr-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/freemchr)
@@ -7,11 +7,15 @@ Atari ST/STe for MEGA65 (MegaST)
 This is a port of the [AtariST_MiSTer](https://github.com/MiSTer-devel/AtariST_MiSTer)
 core (the "MiSTery" Atari ST/STe core by Till Harbaum, Gyorgy Szombathelyi, Jorge Cwik,
 Alexey Melnikov and others) to the [MEGA65](https://mega65.org), using the
-[MiSTer2MEGA65](https://github.com/sy2002/MiSTer2MEGA65) framework.
+[MiSTer2MEGA65](https://github.com/sy2002/MiSTer2MEGA65) framework. Since 1.1.6 it also contains
+an **Atari Falcon030** (test version, R6 only), based on
+[Falcon_MiSTer](https://github.com/apolkosnik/Falcon_MiSTer) and the
+[AP68030](https://github.com/apolkosnik/AP68030) CPU by apolkosnik.
 MEGA65 port by Chris Freeman ([@freemchr](https://github.com/freemchr)).
 
-**Status: stable, running on real hardware.** MegaST is developed and tested on a MEGA65 R6 and
-runs games and GEM programs from floppy and hard disk images. Download the core from
+**Status: the ST/STe is stable and running on real hardware; the Falcon030 is a test version.**
+MegaST is developed and tested on a MEGA65 R6 and runs games and GEM programs from floppy and hard
+disk images; the Falcon030 boots EmuTOS, TOS 4.04 and FreeMiNT and runs several Falcon demos. Download the core from
 [Releases](https://github.com/freemchr/MegaST/releases); see below for what has been tested
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
@@ -115,6 +119,19 @@ Tested on a MEGA65 R6
 | R3 and R3A boards (`CORE-R3.xpr`, 512 KB) | work, including hard disk images (tester reports, issues #2, #22) |
 | R4/R5 boards (`CORE-R4.xpr`, `CORE-R5.xpr`) | not tested yet |
 
+**Falcon030 (test, R6):**
+
+| Area | Result |
+|------|--------|
+| EmuTOS for the Falcon (`tosfalc.img`), boot to the desktop | works |
+| Atari TOS 4.04, boot to the desktop | works (since 1.1.6) |
+| Switching ST ↔ Falcon030 in the menu, each machine with its own TOS | works (since 1.1.6) |
+| HDMI picture with "Monitor: VGA (31 kHz)" | works |
+| Falcon demos and programs | several work (tested on the R6) |
+| FreeMiNT 1.19 from an IDE image (HDDRIVER): kernel, drivers, text shell, TOS desktop (`GEM=ROM`) | works |
+| FreeMiNT with the XaAES desktop | white screen, being worked on |
+| Fast RAM, 32 MHz turbo, real floppy drive, joypads, serial/MIDI, RGB/TV/mono monitor types | not tested yet |
+
 Screenshots
 -----------
 
@@ -123,37 +140,56 @@ Screenshots
 | ![TOS 1.04 desktop](doc/screenshots/tos104-desktop.png) | ![EmuTOS 1.4 welcome screen](doc/screenshots/emutos-welcome.png) |
 
 (Frames from the simulation of the core, i.e. the exact picture the core generates, before the
-HDMI scaling.)
+HDMI scaling. Falcon030 screenshots will follow.)
 
 Features
 --------
 
+MegaST contains two machines; choose one under "Machine" in the menu.
+
+**Atari ST / STe / Mega STe** (all boards)
+
 * Atari ST, STe, Mega STe (16 MHz) and "STEroids" modes
-* 512 KB, 1 MB, 2 MB, 4 MB, 8 MB and 14 MB of ST RAM
+* 512 KB, 1 MB, 2 MB, 4 MB, 8 MB and 14 MB of ST RAM (R3/R3A: 512 KB)
 * Blitter (always on in STe mode, optional in ST mode)
 * All TOS versions: 192k TOS (1.00 - 1.04), 256k TOS (1.06, 1.62, 2.06) and EmuTOS;
   `tos.img` is loaded at power on, another TOS image can be loaded from the menu
+* Two ACSI hard disks (`.hd`/`.img`/`.vhd` images, read/write, directly on the SD card, up to 4 GB)
+* ROM cartridges (raw `.img` or `.stc`, up to 128 kB), Cubase 2 and Cubase 3 dongle
+* Viking/SM194 compatible 1280x1024 monochrome card (HDMI: 1:1 at 1280x1024, VGA: 640x512 grey
+  scale; not on the R3/R3A)
+* Color (low/medium resolution, 50/60 Hz) and monochrome (SM124, 71 Hz or 60 Hz) monitor,
+  normal or full borders (overscan)
+* YM2149 (mono or stereo) and STe DMA sound
+* Real IKBD (HD6301) with the MEGA65 keyboard mapped directly into the ST keyboard matrix
+* Mega ST real time clock (RP5C15), set from the MEGA65's real time clock
+* STe enhanced joystick ports (fire button only)
+
+**Atari Falcon030** (test version, R6 only, see [Falcon030 (test)](#falcon030-test))
+
+* 68030 with caches and PMMU at 16 MHz, or 32 MHz (turbo); 68882 FPU
+* VIDEL graphics: ST modes and Falcon modes with 2 to 256 colours and True Color; monitor type
+  VGA, RGB, TV or mono
+* DSP56001, DMA sound, sound matrix and YM2149
+* 14 MB (or 4 MB) ST-RAM, optionally 48 MB Fast RAM (TT-RAM)
+* EmuTOS (`tosfalc.img`, in the release zip) or Atari TOS 4.0x
+* Two IDE hard disks (`.hd`/`.img`/`.vhd`, up to 4 GB); FreeMiNT boots
+* Enhanced joystick ports (Jaguar style joypads and paddles), NVRAM saved on the SD card
+
+**Both machines**
+
+* Each machine has its own TOS, remembered separately ([TOS](#tos))
 * Two floppy drives (`.st` images, read/write), can be swapped (boot from B:); blank disk
   images can be created with `tools/make_st_disk.py`
 * The MEGA65's internal 3.5" drive as drive A: (real DD disks, read only)
-* Two ACSI hard disks (`.hd`/`.img`/`.vhd` images, read/write, directly on the SD card, up to 4 GB)
-* ROM cartridges (raw `.img` or `.stc`, up to 128 kB)
-* Viking/SM194 compatible 1280x1024 monochrome card (HDMI: 1:1 at 1280x1024, VGA: 640x512 grey scale)
-* **Atari Falcon030 (test)**: 68030, VIDEL, DSP56001, 68882 FPU, up to 14 MB ST-RAM plus 48 MB Fast
-  RAM, IDE hard disks (R6, see [Falcon030 (test)](#falcon030-test))
-* Serial port (RS232), MIDI and parallel (printer) port on the MEGA65's PMOD headers
-* Color (low/medium resolution, 50/60 Hz) and monochrome (SM124, 71 Hz or 60 Hz) monitor,
-  normal or full borders (overscan)
-* YM2149 and STe DMA sound
-* Real IKBD (HD6301) with the MEGA65 keyboard mapped directly into the ST keyboard matrix,
-  numeric keypad via the MEGA key
-* Mega ST real time clock (RP5C15), set from the MEGA65's real time clock
+* The MEGA65 keyboard, with the numeric keypad via the MEGA key and an optional "as printed" layout
 * Atari ST mouse, Amiga mouse, Commodore 1351 mouse or mouSTer USB adapter in MEGA65
-  joystick port 1 or 2 (menu "Controllers & ports"), joystick in the other port, STe enhanced
-  joystick ports (fire button only)
-* Cubase 2 and Cubase 3 dongle in the cartridge port
+  joystick port 1 or 2 (menu "Controllers & ports"), joystick in the other port
+* Serial port (RS232), MIDI and parallel (printer) port on the MEGA65's PMOD headers (the Falcon:
+  serial and MIDI)
 * HDMI (720p/576p/480p/600p) and VGA output: 31 kHz (optionally with scanlines) or 15 kHz RGB
   (optionally with composite sync, e.g. for SCART), zoom-in without the border
+* Menu settings and mounted images remembered on the SD card
 
 Requirements
 ------------
@@ -161,10 +197,13 @@ Requirements
 * **MEGA65 R3, R3A, R4, R5 or R6** board. On the R4-R6 the ST RAM is in the SDRAM (up to 14 MB).
   The R3/R3A has no SDRAM, and its HyperRAM is too slow for the ST's cycle exact memory timing, so
   its own core (`MegaST-R3-...cor`) keeps the ST RAM in the FPGA's block RAM: **512 KB ST RAM**,
-  no Viking card and no STEroids mode, everything else is the same.
+  no Viking card, no STEroids mode and **no Falcon030**; everything else is the same. The
+  Falcon030 needs the SDRAM (R6; the R4/R5 have it too but are not tested).
 * SD card with a folder `/atarist` containing
-  * `tos.img`: your TOS image (mandatory). The release zip contains the free
+  * `tos.img`: the TOS of the ST (mandatory). The release zip contains the free
     [EmuTOS](https://emutos.sourceforge.io) as `tos.img`; a TOS ROM dump of your own Atari also works.
+  * `tosfalc.img`: the TOS of the Falcon030 (512 KB; EmuTOS for the Falcon in the release zip, or
+    your own TOS 4.0x), and `fcnvram`, the Falcon's NVRAM (in the release zip).
   * your floppy disk images (`.st`), hard disk images (`.hd`, `.img`, `.vhd`) and cartridges (`.stc`, `.img`)
   * `fccfg`, an empty settings file, if you want the menu settings to be saved (in the release
     zip, or `cd M2M/tools && ./make_config.sh fccfg auto`). **Without it, the menu works but its
@@ -179,11 +218,9 @@ Requirements
 Usage
 -----
 
-* Press <kbd>Help</kbd> to open the on-screen menu: mount floppy disks, choose the machine
-  type, video output and more. The settings of each machine have their own submenu ("ST/STe
-  settings": memory, blitter, mono monitor, Viking card; "Falcon030 settings"), the floppy
-  options are under "Drives & images". "Reset" resets the machine that runs (like the reset
-  button of the MEGA65, the RAM is kept).
+* Press <kbd>Help</kbd> to open the on-screen menu: mount disks, choose the machine, the video
+  output and more. Every line and setting is explained in [The menu](#the-menu) below. "Reset"
+  resets the machine that runs (like the reset button of the MEGA65, the RAM is kept).
 * With `/atarist/fcmount` on the SD card (see Requirements), the core remembers the images you
   mounted and the TOS and cartridge you chose, and loads them again at the next start, before
   the ST boots (so a hard disk is found and the right TOS starts). To unmount (eject) a drive,
@@ -256,6 +293,86 @@ Usage
 
   With `activepotlines=true` the mouSTer drives the right button line itself (the same setting
   the MEGA65 Amiga core needs).
+
+The menu
+--------
+
+<kbd>Help</kbd> opens and closes the menu. Cursor up/down moves, <kbd>Return</kbd> selects or
+toggles, <kbd>Space</kbd> on a drive line ejects the image. A line with `>` opens a submenu;
+"Back to main menu" (or <kbd>Help</kbd>) leaves it. Settings marked ✓ are on; they are saved in
+`/atarist/fccfg` (see [Requirements](#requirements)).
+
+**Main menu**
+
+| Line | What it does |
+|------|--------------|
+| TOS: | loads a TOS image for the machine that runs and restarts it (see [TOS](#tos)) |
+| Floppy A:, Floppy B: | mounts a `.st` floppy image |
+| Hard disk 0:, Hard disk 1: | mounts a hard disk image (ACSI on the ST, IDE master/slave on the Falcon) |
+| Cartridge: | loads a cartridge image; <kbd>Space</kbd> removes it |
+| Machine: | the machine, see below |
+| ST/STe settings, Falcon030 settings, Drives & images, Controllers & ports, HDMI:, VGA: | submenus, see below |
+| HDMI: CRT emulation | a CRT-like picture on HDMI (scaler filter); off by default |
+| Zoom-in (hide border) | shows only the graphics area without the border; off by default |
+| Audio improvements | filters the sound; off by default |
+| Reset | resets the machine that runs (warm reset, the RAM and the mounted images are kept) |
+| About & Help | version and keys |
+
+**Machine** (one of them)
+
+| Choice | |
+|--------|--|
+| Atari ST (default), Atari STe, Mega STe (16 MHz), STEroids (turbo) | the ST family; changing between them restarts the ST with a cold boot |
+| Falcon030 | the Falcon (test, R6 only). Switching between the ST family and the Falcon closes the menu, loads the TOS of the new machine and starts it |
+
+**ST/STe settings** (only for the ST family)
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| Memory: 512 KB / 1 MB / 2 MB / 4 MB / 8 MB / 14 MB | 1 MB | ST RAM; a change restarts the ST (R3/R3A: always 512 KB) |
+| Blitter (Atari ST) | off | the blitter in the Atari ST mode (the STe modes always have it) |
+| Mono monitor (SM124) | off | the monochrome monitor (640x400, 71 Hz) instead of colour |
+| Mono: 60 Hz, not 71 Hz | off | the mono picture at about 60 Hz, for monitors and HDMI ([Video](#video)) |
+| Full borders (overscan) | off | shows the full border area |
+| Viking 1280x1024 card | off | the Viking/SM194 card; a change resets the ST ([Viking/SM194 card](#vikingsm194-card)) |
+| Stereo YM sound | off | the three YM2149 channels spread over left and right instead of mono |
+
+**Falcon030 settings** (only for the Falcon)
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| Monitor: VGA (31 kHz) / RGB (15 kHz) / TV (15 kHz) / Mono (SM124) | VGA | the monitor the Falcon believes is connected; it decides which video modes TOS and programs offer. The picture goes to HDMI and VGA with every setting, so keep VGA if you use HDMI |
+| CPU at 32 MHz (turbo) | off | the 68030 at 32 MHz instead of 16 MHz |
+| ST-RAM 4 MB (not 14 MB) | off | 4 MB ST-RAM instead of 14 MB |
+| Fast RAM 48 MB (TT-RAM) | off | 48 MB Fast RAM at $01000000 |
+
+**Drives & images** (both machines)
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| Write protect floppies | off | the floppy images are write protected |
+| Swap floppy A: and B: | off | exchanges the drives, e.g. to boot from the disk in B: |
+| Real floppy drive as A: | off | drive A: is the MEGA65's internal drive (read only, [Real floppy drive](#real-floppy-drive)) |
+| Floppy read assist | ✓ on | cleans up the internal drive's signal and re-reads bad sectors |
+| Remember floppies | ✓ on | the floppy images come back at the next start (needs `fcmount`) |
+| Remember TOS/cartridge | ✓ on | the chosen TOS (per machine) and cartridge come back at the next start; off: `tos.img` / `tosfalc.img` |
+
+Hard disks are always remembered.
+
+**Controllers & ports**
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| Mouse type: Atari mouse / joystick, Amiga mouse, C64 1351 mouse | Atari | the mouse in the mouse port ([Usage](#usage)) |
+| Mouse port: Port 1, joystick port 2 / Port 2, joystick port 1 | port 1 | which MEGA65 port has the mouse |
+| STe joypads | off | the MEGA65 joysticks on the enhanced joystick ports (STe, Falcon) |
+| PMOD: RS232/MIDI/printer | off | serial, MIDI and printer port on the PMOD headers ([PMOD headers](#pmod-headers-serial-port-midi-printer)) |
+| Cubase dongle | off | a Cubase 2/3 dongle in the cartridge port (ST) |
+| Keyboard: ST keys (positional) / As printed, US TOS / As printed, UK TOS | positional | the keyboard layout ([Usage](#usage)) |
+
+**HDMI:** 720p 50 Hz (default), 720p 60 Hz, 576p 50 Hz 4:3 or 5:4, 640x480, 720x480, 800x600, and
+"DVI mode (no sound)" for DVI monitors. **VGA:** 31 kHz (default), 15 kHz (RGB, SCART), 15 kHz with
+CSync, and scanlines 25/50/75 %. See [Video](#video).
 
 Using disk images
 -----------------
@@ -343,11 +460,21 @@ the same image and TOS.
 TOS
 ---
 
-`/atarist/tos.img` is loaded at power on. "TOS" in the menu loads another TOS image (`.img` or
-`.rom`) and restarts the ST with it (cold boot). With `/atarist/fcmount` on the SD card (in the
-release zip), this choice is remembered and the chosen TOS is loaded again at the next start.
-Without `fcmount`, `tos.img` is used again after a power cycle. STe and Mega STe modes need TOS
-1.06 or newer (or EmuTOS).
+Each machine has its own TOS: `/atarist/tos.img` for the ST family and `/atarist/tosfalc.img` for
+the Falcon030 are loaded at power on and when you switch to that machine. "TOS:" in the menu loads
+another TOS image (`.img` or `.rom`) for the machine that runs and restarts it (cold boot). With
+`/atarist/fcmount` on the SD card (in the release zip), this choice is remembered **for that
+machine** and loaded again at the next start and after switching back to it. Without `fcmount`,
+`tos.img` / `tosfalc.img` are used again after a power cycle. How this works with the two machines,
+in a table: [New in 1.1.6](#new-in-116-the-atari-falcon030).
+
+| Machine | TOS |
+|---------|-----|
+| Atari ST | 192k TOS 1.00 - 1.04, 256k TOS 1.06 - 2.06, EmuTOS |
+| Atari STe, Mega STe, STEroids | TOS 1.06 or newer (1.62, 2.06), EmuTOS |
+| Falcon030 | 512k TOS 4.0x (4.04 tested), EmuTOS for the Falcon (512 KB) |
+
+A TOS of the wrong size for the machine is refused with a message.
 
 **Mega STe speed:** like a real Mega STE, the Mega STe mode starts at 8 MHz with the cache off; TOS
 2.06 does not switch it. Set 16 MHz and the cache in the XControl "General" panel (or with a speed
@@ -379,7 +506,9 @@ change the MEGA65 clock and is overwritten by it.
 Hard disks
 ----------
 
-The hard disks are ACSI targets 0 and 1. The images are raw disk images (as used by Hatari,
+On the ST the hard disks are ACSI targets 0 and 1; on the Falcon030 they are the IDE master and
+slave (the Falcon has no ACSI port; HDDRIVER and EmuTOS work with IDE images, see
+[Falcon030 (test)](#falcon030-test)). The images are raw disk images (as used by Hatari,
 MiSTer and MiST; `.hd`, `.img` or `.vhd` like on MiSTer, but not a Microsoft "dynamic" VHD),
 e.g. with a DOS (MBR) or Atari (AHDI) partition table. Images can be almost 4 GB large (the
 limit of FAT32); disks larger than 1 GB need a driver with ICD commands (EmuTOS, HDDRIVER). EmuTOS finds the
@@ -458,6 +587,9 @@ Tester reports about single games and disk images. Please report others in the
 Video
 -----
 
+* **Falcon030:** the VIDEL picture goes to HDMI and VGA like the ST's; its resolutions and colour
+  depths are chosen in TOS or by programs, and the menu's "Monitor" setting only decides which
+  modes are offered (see [Falcon030 settings](#the-menu)).
 * **HDMI:** the image is scaled by `ascal` (4:3, with the border). "Zoom-in (hide border)" shows
   only the graphics area (320x200, 640x200 or 640x400) and uses the full width of 16:9 modes.
   The border is black on VGA in this mode.
@@ -519,9 +651,11 @@ ST TOS 2.06 again. A TOS the machine cannot run is refused when you choose it (t
 start (the menu still works). Atari's TOS 4.04 works: copy your own TOS 4.04 image (512 KB) to the
 SD card and choose it with "TOS:" while the Falcon runs.
 
-**FreeMiNT**: a FreeMiNT installation on an IDE hard disk image (with HDDRIVER) boots: the kernel,
-its drivers and the network setup start. The tested image then stops at a white screen when the
-desktop (XaAES with NVDI) starts; the MEGA65 menu still works. This is being worked on; reports
+**FreeMiNT**: a FreeMiNT 1.19 installation on an IDE hard disk image (with HDDRIVER) boots: the
+kernel, its drivers, the network setup and the text shell work, and with `GEM=ROM` in `mint.cnf`
+TOS 4.04's own desktop runs under FreeMiNT. The XaAES desktop does not start yet: the screen turns
+white right after XaAES has loaded its kernel module (also without NVDI and without the video mode
+change); the MEGA65 menu still works. This is being worked on; until then use `GEM=ROM`. Reports
 with other FreeMiNT setups are welcome.
 
 **What it has**
@@ -550,7 +684,7 @@ stay untouched.
 **Not working or not tested yet**
 
 * Programs for a 68060 accelerator (CT60/CT63): the Falcon has a 68030
-* FreeMiNT's desktop (XaAES with NVDI): white screen with the tested image, see above
+* FreeMiNT's XaAES desktop: white screen, see above (FreeMiNT with `GEM=ROM` works)
 * Hard disk drivers other than EmuTOS's own and HDDRIVER (for example AHDI): not tested yet
 * Microphone input: the MEGA65 has no audio input
 
