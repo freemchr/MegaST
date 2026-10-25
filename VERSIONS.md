@@ -3,8 +3,10 @@ Version 1.1.6 - October 25, 2026
 
 * **Atari Falcon030 (test, R6 only)**: choose "Machine: Falcon030" in the menu. 68030 (16 or
   32 MHz), 68882 FPU, VIDEL, DSP56001, DMA sound, 14 MB ST-RAM and 48 MB Fast RAM, IDE hard disks,
-  enhanced joystick ports, NVRAM saved on the SD card (`/atarist/fcnvram`). Based on
-  Falcon_MiSTer and the AP68030 CPU by apolkosnik. It runs EmuTOS (`tosfalc.img`, in the zip) and
+  enhanced joystick ports, NVRAM saved on the SD card (`/atarist/fcnvram`). Engineered for
+  MegaST (SDRAM controller, FPU on a RISC-V in the FPGA, MEGA65 integration, menu, machine
+  switching, TOS handling, fixes); CPU and chipset from the open-source Falcon_MiSTer and AP68030
+  projects. It runs EmuTOS (`tosfalc.img`, in the zip) and
   Atari's TOS 4.04, Falcon demos and programs, and boots FreeMiNT from a hard disk image (its
   XaAES/NVDI desktop does not start yet with the tested image). See the README.
 * **Each machine has its own TOS**: at power on and after a switch the core loads `tos.img` for the

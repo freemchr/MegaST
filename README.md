@@ -7,10 +7,14 @@ Atari ST/STe and Falcon030 for MEGA65 (MegaST)
 This is a port of the [AtariST_MiSTer](https://github.com/MiSTer-devel/AtariST_MiSTer)
 core (the "MiSTery" Atari ST/STe core by Till Harbaum, Gyorgy Szombathelyi, Jorge Cwik,
 Alexey Melnikov and others) to the [MEGA65](https://mega65.org), using the
-[MiSTer2MEGA65](https://github.com/sy2002/MiSTer2MEGA65) framework. Since 1.1.6 it also contains
-an **Atari Falcon030** (test version, R6 only), based on
-[Falcon_MiSTer](https://github.com/apolkosnik/Falcon_MiSTer) and the
-[AP68030](https://github.com/apolkosnik/AP68030) CPU by apolkosnik.
+[MiSTer2MEGA65](https://github.com/sy2002/MiSTer2MEGA65) framework.
+
+Since 1.1.6 MegaST also contains an **Atari Falcon030** (test version, R6 only). The MEGA65 version was engineered for MegaST: the SDRAM memory controller, the 68882 FPU on a
+RISC-V CPU inside the FPGA, the MEGA65 integration, the menu, machine switching and TOS handling,
+and many fixes. Its CPU and chipset come from the open-source
+[Falcon_MiSTer](https://github.com/apolkosnik/Falcon_MiSTer) and
+[AP68030](https://github.com/apolkosnik/AP68030) projects.
+
 MEGA65 port by Chris Freeman ([@freemchr](https://github.com/freemchr)).
 
 **Status: the ST/STe is stable and running on real hardware; the Falcon030 is a test version.**
@@ -634,9 +638,13 @@ Falcon030 (test)
 
 **The Falcon030 is a test version.** It boots EmuTOS and Atari's TOS 4.04, runs many Falcon programs and
 demos and starts FreeMiNT from a hard disk image, but it has seen much less testing than the ST. Please report what works and what does not in the
-[issues](https://github.com/freemchr/MegaST/issues). The Falcon machine is based on
-[Falcon_MiSTer](https://github.com/apolkosnik/Falcon_MiSTer) and the
-[AP68030](https://github.com/apolkosnik/AP68030) CPU by apolkosnik.
+[issues](https://github.com/freemchr/MegaST/issues).
+
+The MEGA65 version was engineered for MegaST: the SDRAM memory controller, the 68882 FPU on a
+RISC-V CPU inside the FPGA, the MEGA65 integration, the menu, machine switching and TOS handling,
+and many fixes. Its CPU and chipset come from the open-source
+[Falcon_MiSTer](https://github.com/apolkosnik/Falcon_MiSTer) and
+[AP68030](https://github.com/apolkosnik/AP68030) projects.
 
 R6 only (it needs the SDRAM; not on the R3/R3A). Choose **Machine: Falcon030** in the menu. Switching
 between the ST and the Falcon closes the menu, loads the TOS of the new machine and starts it.
