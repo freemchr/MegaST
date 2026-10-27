@@ -30,7 +30,8 @@ How the port works
 | `CORE/vhdl/mouse1351.vhd` | Commodore 1351 mouse to the IKBD's PS/2 mouse emulation |
 | `CORE/vhdl/fdc_bridge.vhd` | Connects the M2M virtual drives (8 bit) to the ST's FDC and ACSI controller (16 bit MiSTer "WIDE" interface) |
 | `CORE/vhdl/mega65.vhd` | Glue: clocks, menu settings, TOS loader, floppy buffers in HyperRAM, virtual drives |
-| `CORE/vhdl/config.vhd`, `globals.vhd` | M2M configuration: menu, welcome/help screens, TOS auto-load, drives |
+| `CORE/vhdl/config.vhd`, `globals.vhd` | M2M configuration: menu, welcome/help screens, TOS auto-load, drives; the OSD colours (`OSM_PALETTE`: GEM look) |
+| `CORE/font/MegaST-16x16.rom`, `tools/osd_logo.py` | The OSD font with the MegaST logo (from `doc/logo/megast-logo.png`) and the logo block `SCR_LOGO` in `config.vhd`, both written by `osd_logo.py` (needs Pillow and numpy); run it again after changing the logo |
 
 * **Memory:** ST RAM and the TOS ROM live in the SDRAM (like on MiSTer). The TOS image is
   always stored at $E00000; 192k TOS images (header `os_beg` = $FC0000) are detected by the

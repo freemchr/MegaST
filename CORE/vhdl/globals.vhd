@@ -70,9 +70,33 @@ constant VGA_DY               : natural := 400;
 constant ASCAL_FORMAT         : std_logic_vector(1 downto 0) := "00";
 
 --    FONT_*  size of one OSM character
-constant FONT_FILE            : string  := "../font/Anikki-16x16-m2m.rom";
+--    MegaST: the M2M font with the MegaST logo in codes the core does not print otherwise (tools/osd_logo.py),
+--    the path like QNICE_FIRMWARE_M2M
+constant FONT_FILE            : string  := "../../../CORE/font/MegaST-16x16.rom";
 constant FONT_DX              : natural := 16;
 constant FONT_DY              : natural := 16;
+
+--    MegaST: OSM_PALETTE  the 16 OSM colours (vga_osm.vhd): colour i = attribute bits {dark, R, G, B} in bits
+--    24*i+23..24*i. The M2M firmware draws text in colour 3 on colour 1 (M2M$SA_COL_STD), headlines in colour 6,
+--    selections inverse: here an Atari GEM look (black on white, green headlines, black selection bar). The dark
+--    half (8..15) holds the logo colours (tools/osd_logo.py), colour 0 the logo's grey on the white background.
+constant OSM_PALETTE          : std_logic_vector(16*24-1 downto 0) :=
+   x"FFFFFF" &    -- 15
+   x"000000" &    -- 14
+   x"FD4700" &    -- 13 logo: orange
+   x"FCF803" &    -- 12 logo: yellow
+   x"06EB11" &    -- 11 logo: green
+   x"0089FC" &    -- 10 logo: blue
+   x"F0F0F0" &    --  9 logo: white
+   x"2B2B2B" &    --  8 logo: pill grey
+   x"FFFFFF" &    --  7
+   x"008800" &    --  6 headlines: GEM green
+   x"0089FC" &    --  5 MegaST blue
+   x"C80000" &    --  4 red
+   x"000000" &    --  3 text: black
+   x"808080" &    --  2 grey
+   x"FFFFFF" &    --  1 background: white
+   x"2B2B2B";     --  0 logo: pill grey on the background
 
 -- Constants for the OSM screen memory
 constant CHARS_DX             : natural := VGA_DX / FONT_DX;

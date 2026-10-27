@@ -1,8 +1,9 @@
 | TT-RAM (Fast RAM) test: $100000 = Mxalloc(-1, 1) (largest free TT-RAM block), $100004 = the
 | address of a 1 MB TT-RAM block (Mxalloc(1 MB, 1): TT-RAM only), $100008 = the number of longs
 | that did not read back after writing address-dependent patterns (two passes), $10000C = _p_cookies
-| ($5A0), $100010 = ramtop ($5A4). Then the done marker $D0E0600D at $FFFF0.
-|    ./run_prg.sh /tmp/tt tests/ttram.s -- --ms 6000 --done FFFF0 --dump 100000:20 --fastram 3 --start FFFF4
+| ($5A0), $100010 = ramtop ($5A4), $100014 = ramvalid ($5A8, $1357BD13 when ramtop is valid),
+| $100018 = the value of the _FRB cookie (-1: no cookie). Then the done marker $D0E0600D at $FFFF0.
+|    ./run_prg.sh /tmp/tt tests/ttram.s -- --ms 6000 --done FFFF0 --dump 100000:1C --fastram 3 --start FFFF4
 | MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
 	.text
 	move.l	#0x57A27000,0xFFFF4	| start marker (sim_main --start FFFF4)
@@ -62,6 +63,18 @@ fin:	move.l	d7,8(a5)
 	addq.l	#6,sp
 	move.l	0x5a0.w,12(a5)
 	move.l	0x5a4.w,16(a5)
+	move.l	0x5a8.w,20(a5)
+	moveq	#-1,d0
+	move.l	0x5a0.w,d1
+	beq.s	nofrb
+	move.l	d1,a0
+frb:	move.l	(a0)+,d1
+	beq.s	nofrb
+	move.l	(a0)+,d2
+	cmp.l	#0x5F465242,d1		| '_FRB'
+	bne.s	frb
+	move.l	d2,d0
+nofrb:	move.l	d0,24(a5)
 	move.l	#0xD0E0600D,0xFFFF0
 	clr.w	-(sp)
 	trap	#1

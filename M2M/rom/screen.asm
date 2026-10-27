@@ -286,6 +286,9 @@ SCR$CALC_VRAM   SYSCALL(enter, 1)
 ; \n (backslash char and n)        ditto
 ; <  (less than)                   special character in Anikki-16x16 font
 ; >  (greater than)                ditto
+; ESC (0x001B) + attribute         MegaST: the following characters get this
+;                                  attribute (colours, M2M$SA_*); without ESC
+;                                  the attributes in VRAM stay untouched
 ; ----------------------------------------------------------------------------
 
 SCR$PRINTSTR    SYSCALL(enter, 1)
@@ -293,11 +296,16 @@ SCR$PRINTSTR    SYSCALL(enter, 1)
                 MOVE    R8, R0                  ; R0: string to be printed
                 MOVE    SCR$CUR_X, R1           ; R1: running x-cursor
                 MOVE    SCR$CUR_Y, R2           ; R2: running y-cursor
+                MOVE    0xFFFF, R6              ; R6: attribute (none: keep)
 
                 RSUB    SCR$CALC_VRAM, 1        ; R8: VRAM addr. of curs. pos.
 
 _PS_L1          MOVE    @R0++, R4               ; read char
-                CMP     0x000D, R4              ; is it a CR?
+                CMP     0x001B, R4              ; MegaST: ESC = attribute?
+                RBRA    _PS_L7, !Z
+                MOVE    @R0++, R6               ; yes: R6 = next char
+                RBRA    _PS_L1, 1
+_PS_L7          CMP     0x000D, R4              ; is it a CR?
                 RBRA    _PS_L2, Z               ; yes: process
                 CMP     0x005C, R4              ; is it a backslash?
                 RBRA    _PS_L2, Z               ; yes: process
@@ -312,7 +320,14 @@ _PS_L4          CMP     '>', R4                 ; replace > by special
 _PS_L5          CMP     0, R4                   ; no: end-of-string?
                 RBRA    _PS_RET, Z              ; yes: leave
 _PS_L6          RSUB    _PS_PRE, 1              ; no: print char
-                MOVE    R4, @R8++
+                MOVE    R4, @R8
+                CMP     0xFFFF, R6              ; MegaST: attribute set?
+                RBRA    _PS_L8, Z               ; no
+                MOVE    M2M$RAMROM_DEV, R12     ; yes: same address in the
+                MOVE    M2M$VRAM_ATTR, @R12     ; attribute VRAM
+                MOVE    R6, @R8
+                MOVE    M2M$VRAM_DATA, @R12
+_PS_L8          ADD     1, R8
                 RSUB    _PS_POST, 1
                 ADD     1, @R1                  ; x-cursor + 1
                 RBRA    _PS_L1, 1               ; next char

@@ -122,7 +122,8 @@
 
 module falcon_scsi #(
 	parameter CLK_HZ    = 32000000,
-	parameter CD_ALWAYS = 1           // ID 2 answers selection with no medium
+	parameter CD_ALWAYS = 1,          // ID 2 answers selection with no medium
+	parameter BLK_MAX   = 32          // MEGA65: blocks per HPS request (MegaST's bridge moves one)
 ) (
 	input             clk,
 	input             reset,
@@ -266,7 +267,7 @@ assign sd_blk_cnt = h_n - 6'd1;
 // instead of one synchronous (O_SYNC) write per 512 bytes.  CD-ROM data stays
 // one block per request (Main translates cue/bin images per 512 byte block).
 function [5:0] chunk(input [17:0] n, input cd);
-	chunk = (cd || n <= 18'd1) ? 6'd1 : (n >= 18'd32) ? 6'd32 : n[5:0];
+	chunk = (cd || n <= 18'd1) ? 6'd1 : (n >= BLK_MAX) ? BLK_MAX[5:0] : n[5:0];   // MEGA65: BLK_MAX
 endfunction
 
 // ===========================================================================

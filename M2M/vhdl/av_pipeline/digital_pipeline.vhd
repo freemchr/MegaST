@@ -27,6 +27,7 @@ entity digital_pipeline is
       G_FONT_FILE            : string;
       G_FONT_DX              : natural;
       G_FONT_DY              : natural;
+      G_OSM_PALETTE          : std_logic_vector(16*24-1 downto 0);  -- MegaST: OSM colours (vga_osm.vhd)
       -- MegaST: ascal framebuffer format in HyperRAM: 00=16bpp 565, 01=24bpp (M2M default)
       G_ASCAL_FORMAT         : std_logic_vector(1 downto 0) := "01"
    );
@@ -578,7 +579,8 @@ begin
          G_VGA_DY          => G_VGA_DY,  -- TBD
          G_FONT_FILE       => G_FONT_FILE,
          G_FONT_DX         => G_FONT_DX,
-         G_FONT_DY         => G_FONT_DY
+         G_FONT_DY         => G_FONT_DY,
+         G_OSM_PALETTE     => G_OSM_PALETTE   -- MegaST
       )
       port map (
          vga_clk_i         => hdmi_clk_i,

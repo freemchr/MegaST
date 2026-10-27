@@ -23,7 +23,12 @@ entity vga_osm is
       G_VGA_DY              : natural;
       G_FONT_FILE           : string;
       G_FONT_DX             : natural;
-      G_FONT_DY             : natural
+      G_FONT_DY             : natural;
+      -- MegaST: the 16 colours of the attribute bits {dark, R, G, B} (colour i in bits 24*i+23..24*i,
+      -- RGB); the default is the M2M palette (R, G, B at FF, or 7F when dark)
+      G_OSM_PALETTE         : std_logic_vector(16*24-1 downto 0) :=
+         x"7F7F7F" & x"7F7F00" & x"7F007F" & x"7F0000" & x"007F7F" & x"007F00" & x"00007F" & x"000000" &
+         x"FFFFFF" & x"FFFF00" & x"FF00FF" & x"FF0000" & x"00FFFF" & x"00FF00" & x"0000FF" & x"000000"
    );
    port (
       clk_i                 : in  std_logic;
@@ -216,15 +221,12 @@ begin
    -- render OSM: calculate the pixel that needs to be shown at the given position
    p_stage7 : process (clk_i)
 
+      -- MegaST: the colours come from G_OSM_PALETTE
       function attr2rgb(attr: in std_logic_vector(3 downto 0)) return std_logic_vector is
-         variable r, g, b    : std_logic_vector(7 downto 0);
-         variable brightness : std_logic_vector(7 downto 0);
+         variable i : natural range 0 to 15;
       begin
-         brightness := x"FF" when attr(3) = '0' else x"7F";
-         r := brightness when attr(2) = '1' else x"00";
-         g := brightness when attr(1) = '1' else x"00";
-         b := brightness when attr(0) = '1' else x"00";
-         return r & g & b;
+         i := to_integer(attr);
+         return G_OSM_PALETTE(24*i+23 downto 24*i);
       end attr2rgb;
 
    begin

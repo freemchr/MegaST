@@ -63,6 +63,7 @@ entity main is
       falcon_turbo_i          : in  std_logic;              -- Falcon CPU at 32 MHz
       falcon_4mb_i            : in  std_logic;              -- Falcon ST-RAM 4 MB instead of 14 MB
       falcon_fast_i           : in  std_logic;              -- Falcon Fast RAM (TT-RAM) 48 MB at $01000000
+      falcon_scsi_i           : in  std_logic;              -- Falcon hard disks 0/1 on SCSI ID 0/1, not IDE
       -- Falcon NVRAM buffer (mega65.vhd, port B; see falcon_m65.sv)
       falcon_nvb_addr_o       : out std_logic_vector(5 downto 0);
       falcon_nvb_din_o        : out std_logic_vector(7 downto 0);
@@ -332,6 +333,7 @@ component falcon_m65 is
       monitor         : in    std_logic_vector(1 downto 0);
       cpu_turbo       : in    std_logic;
       tos_lang        : in    std_logic_vector(7 downto 0);
+      hd_scsi         : in    std_logic;
       dio_addr        : in    std_logic_vector(23 downto 1);
       dio_data        : in    std_logic_vector(15 downto 0);
       dio_strobe      : in    std_logic;
@@ -860,6 +862,7 @@ begin
             monitor         => falcon_monitor_i,
             cpu_turbo       => falcon_turbo_i,
             tos_lang        => f_tos_lang,
+            hd_scsi         => falcon_scsi_i,
             dio_addr        => dio_addr_i,
             dio_data        => dio_data_i,
             dio_strobe      => f_dio_strobe,

@@ -232,6 +232,23 @@ to 640x512 grey (`viking_scale.sv`), which made it blurry on HDMI. Instead, HDMI
 The core selects the SXGA mode while the Viking picture is shown (`mega65.vhd`). VGA keeps the downscaled
 640x512 picture. MegaST-specific (the 108 MHz entry replaces 148.5 MHz).
 
+### OSM colours: palette of the core and colour escape (GEM look, logo)
+
+* `M2M/vhdl/av_pipeline/vga_osm.vhd`: the 16 colours of the attribute bits {dark, R, G, B} come from the
+  generic `G_OSM_PALETTE` (24 bits per colour, colour i in bits 24*i+23..24*i) instead of being computed
+  (R, G, B at FF, 7F when dark). The default is that M2M palette, so nothing changes without the generic.
+* `video_overlay.vhd`, `analog_pipeline.vhd`, `digital_pipeline.vhd`, `av_pipeline.vhd`, `framework.vhd`:
+  pass the generic on; `framework.vhd` takes `OSM_PALETTE` from `globals.vhd`. MegaST: black text on white,
+  green headlines, a black selection bar (Atari GEM), and the logo colours in the dark half.
+* `M2M/rom/screen.asm`, `SCR$PRINTSTR`: ESC (0x1B) followed by an attribute byte sets the attribute of the
+  following characters (written into the attribute VRAM at the same address). Without ESC the attribute
+  VRAM is not touched, as before. MegaST uses it for the logo and the headlines of the welcome screen
+  (`config.vhd`, `SCR_LOGO` from `tools/osd_logo.py`).
+
+The logo itself is core-side: `CORE/font/MegaST-16x16.rom` is the M2M font with 129 logo characters in
+codes the core does not print (`FONT_FILE` in `globals.vhd`). Both framework changes are generic, candidates
+for upstream (other cores: `G_OSM_PALETTE` needs a constant `OSM_PALETTE` in their `globals.vhd`).
+
 ### JTAG probe of the QNICE CPU bus
 
 `M2M/vhdl/QNICE/qnice.vhd`: a `BSCANE2` (USER1) returns a 64 bit snapshot of the QNICE CPU bus, for
@@ -263,6 +280,11 @@ with `MEGA65` comments:
 * `rtl/falcon/falcon_system.sv`: `falcon_scsi` with `CD_ALWAYS = 0`. The core has no SCSI images and
   no ARM to answer the target's window reads, so the always present CD-ROM (ID 2) stayed busy on its
   first command and TOS waited for its timeout.
+* `rtl/falcon/falcon_scsi.sv`, `falcon_system.sv`: parameter `BLK_MAX` (default 32, MegaST 1): the
+  blocks per HPS request. MegaST's drive bridge (`fdc_bridge.vhd`) moves one 512 byte block per
+  request. The hard disks go to SCSI ID 0/1 in `falcon_m65.sv` (menu "Hard disks on SCSI (ICD)"),
+  which also answers the targets' window reads (no Main_MiSTer) without data, so that the built-in
+  INQUIRY and READ CAPACITY answers are used.
 * `rtl/falcon/falcon_system.sv`, `dsp/falcon_dsp.sv`, `dsp/dsp56k_core.sv`, `dsp/dsp_periph.sv`: a
   `dbg` output for the JTAG probe (`tools/probe5.tcl`): the last 68030 program space bus address and
   device access, DSP PC, R6, R7, LC, SSISR, host ISR/HSR and a count of the DSP's SSI TX writes.

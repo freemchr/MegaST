@@ -9,6 +9,7 @@
 //     --rfloppy FILE      the .st image in the flux level model of the internal drive (realdrive.h),
 //                         drive A: is that drive (menu "Real floppy drive as A:")
 //     --hda FILE          hard disk on drive 2 (IDE master), served the same way
+//     --scsi              the hard disk is SCSI ID 0, not IDE master (menu "Hard disks on SCSI")
 //     --key IDX:T[:D]     ST matrix position IDX (col*8+row) pressed at T ms for D ms (default 100)
 //     --turbo             CPU at 32 MHz
 //     --nvram FILE        the NVRAM buffer (/atarist/fcnvram, 64 bytes) loaded before the start and
@@ -80,7 +81,7 @@ int main(int argc, char **argv) {
     std::string tos_name = argv[1], frames_dir, img_name[4];
     double run_ms = 6000;
     int frame_every = 50, monitor = 2, ram = 14;
-    bool turbo = false, sw = false, junk = false, reload = false;
+    bool turbo = false, scsi = false, sw = false, junk = false, reload = false;
     int lang = 0, fast_n = 0;
     std::vector<Key> keys;
     std::vector<Joy> joys;
@@ -105,6 +106,7 @@ int main(int argc, char **argv) {
         else if (a == "--fda") img_name[0] = next();
         else if (a == "--hda") img_name[2] = next();
         else if (a == "--turbo") turbo = true;
+        else if (a == "--scsi") scsi = true;
         else if (a == "--lang") lang = atoi(next().c_str());
         else if (a == "--fastram") fast_n = atoi(next().c_str());
         else if (a == "--mouse") { Mouse m{0, 0, 0, 0}; sscanf(next().c_str(), "%lf:%d:%d:%d", &m.t, &m.dx, &m.dy, &m.b); mice.push_back(m); }
@@ -154,7 +156,7 @@ int main(int argc, char **argv) {
 
     top = new Vtb_top;
     svSetScope(svGetScopeFromName("TOP.tb_top"));
-    top->ram_mb = ram; top->monitor = monitor; top->cpu_turbo = turbo; top->tos_lang = lang; top->fast_n = fast_n;
+    top->ram_mb = ram; top->monitor = monitor; top->cpu_turbo = turbo; top->hd_scsi = scsi; top->tos_lang = lang; top->fast_n = fast_n;
     for (int i = 0; i < 4; i++) top->kbd_matrix_n[i] = 0xFFFFFFFF;
     top->ps2_mouse = 0; top->joy0 = 0; top->joy1 = 0; top->pad0 = 0; top->pad1 = 0; top->img_mounted = 0; top->img_size = 0; top->sd_ack = 0;
     top->sd_buff_wr = 0; top->sd_buff_addr = 0; top->sd_buff_dout = 0;

@@ -1,3 +1,22 @@
+Version 1.2 - October 27, 2026
+==============================
+
+* **New menu look**: the on-screen menu and the welcome screen in the style of the Atari GEM desktop
+  (black on white, green headlines, black selection bar) with the MegaST logo.
+* **Falcon: "Hard disks on SCSI (ICD)"** (Falcon030 settings, off by default): the hard disks are
+  SCSI ID 0 and 1 on the Falcon's SCSI port instead of IDE master and slave. For hard disk drivers
+  that do not know IDE, such as ICD: then the same image works on the ST (ACSI) and the Falcon.
+  Takes effect with a reset (issue #25).
+* **Falcon: Fast RAM under Atari TOS 4.04**: `extras/FASTRAM.PRG` in the zip adds the 48 MB Fast
+  RAM to TOS 4.04 (in the AUTO folder), as the driver of an accelerator card does on a real Falcon.
+  EmuTOS finds the Fast RAM by itself (issue #29).
+* **Falcon: a ready IDE hard disk image**: `extras/falcon128.img`, 128 MB with four empty FAT16
+  partitions (C: to F:). EmuTOS mounts it without a driver; TOS 4.04 needs an IDE driver such as
+  HDDRIVER. `tools/make_falcon_hd.py` makes other sizes (issue #25).
+* README: what the 32 MHz turbo speeds up (programs with the 68030's caches on) and why tools still
+  show 16 MHz (issue #28).
+* The settings files are unchanged: `fccfg` and `fcmount` of 1.1.6 still work.
+
 Version 1.1.6 - October 25, 2026
 ================================
 

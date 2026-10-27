@@ -13,6 +13,7 @@ module tb_top (
 	input       [1:0] fast_n,
 	input       [1:0] monitor,
 	input             cpu_turbo,
+	input             hd_scsi,
 	input       [7:0] tos_lang,
 
 	input      [23:1] dio_addr,
@@ -95,7 +96,7 @@ wire        e_doe, e_ready;
 
 falcon_m65 #(.CLK_HZ(32083333)) dut (
 	.clk_32(clk_32), .clk_96(clk_96), .reset(reset), .cold_reset(cold_reset), .por(por),
-	.ram_mb(ram_mb), .fast_n(fast_n), .monitor(monitor), .cpu_turbo(cpu_turbo), .tos_lang(tos_lang),
+	.ram_mb(ram_mb), .fast_n(fast_n), .monitor(monitor), .cpu_turbo(cpu_turbo), .hd_scsi(hd_scsi), .tos_lang(tos_lang),
 	.dio_addr(dio_addr), .dio_data(dio_data), .dio_strobe(dio_strobe), .dio_strobe_ack(dio_strobe_ack), .cart_loaded(cart_loaded),
 	.nvb_addr(nvb_addr), .nvb_din(nvb_din), .nvb_we(nvb_we), .nvb_dout(nvb_dout),
 	.kbd_matrix_n(kbd_matrix_n), .ps2_mouse(ps2_mouse), .joy0(joy0), .joy1(joy1), .pad0(pad0), .pad1(pad1), .ana0(16'd0), .ana1(16'd0),

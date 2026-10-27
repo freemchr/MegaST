@@ -28,6 +28,7 @@ entity av_pipeline is
       G_FONT_FILE             : string;
       G_FONT_DX               : natural;
       G_FONT_DY               : natural;
+      G_OSM_PALETTE           : std_logic_vector(16*24-1 downto 0);  -- MegaST: OSM colours (vga_osm.vhd)
       G_ASCAL_FORMAT          : std_logic_vector(1 downto 0) := "01"  -- MegaST: see digital_pipeline
    );
    port (
@@ -405,7 +406,8 @@ begin
          G_VGA_DY                => G_VGA_DY,
          G_FONT_FILE             => G_FONT_FILE,
          G_FONT_DX               => G_FONT_DX,
-         G_FONT_DY               => G_FONT_DY
+         G_FONT_DY               => G_FONT_DY,
+         G_OSM_PALETTE           => G_OSM_PALETTE   -- MegaST
       )
       port map (
          -- Input from Core (video and audio)
@@ -548,6 +550,7 @@ begin
          G_FONT_FILE         => G_FONT_FILE,
          G_FONT_DX           => G_FONT_DX,
          G_FONT_DY           => G_FONT_DY,
+         G_OSM_PALETTE       => G_OSM_PALETTE,  -- MegaST
          G_ASCAL_FORMAT      => G_ASCAL_FORMAT
       )
       port map (

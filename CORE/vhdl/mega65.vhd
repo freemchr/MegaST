@@ -400,6 +400,7 @@ constant C_MENU_F_MONO         : natural := 44;
 constant C_MENU_F_TURBO        : natural := 46;  -- Falcon CPU at 32 MHz
 constant C_MENU_F_4MB          : natural := 47;  -- Falcon ST-RAM 4 MB instead of 14 MB
 constant C_MENU_F_FAST         : natural := 48;  -- Falcon Fast RAM (TT-RAM) 48 MB at $01000000
+constant C_MENU_F_SCSI         : natural := 49;  -- Falcon hard disks on SCSI ID 0/1 (for ICD), not IDE
 -- 115 "Reset" is handled by the firmware (OSM_SEL_POST in m2m-rom.asm)
 
 ---------------------------------------------------------------------------------------------
@@ -662,6 +663,7 @@ begin
          falcon_turbo_i       => main_osm_control_i(C_MENU_F_TURBO),
          falcon_4mb_i         => main_osm_control_i(C_MENU_F_4MB),
          falcon_fast_i        => main_osm_control_i(C_MENU_F_FAST),
+         falcon_scsi_i        => main_osm_control_i(C_MENU_F_SCSI),
          falcon_nvb_addr_o    => main_nvb_addr,
          falcon_nvb_din_o     => main_nvb_din,
          falcon_nvb_we_o      => main_nvb_we,
