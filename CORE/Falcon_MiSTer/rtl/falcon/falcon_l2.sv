@@ -31,6 +31,7 @@ module falcon_l2 #(parameter IW = 11)
 	input             clk,
 	input             reset,
 	input             en,           // the Falcon mode (cache in use)
+	input             fast,         // MegaST: turbo, a read hit is answered in its lookup clock
 
 	// CPU side (falcon_cpubus): falcon_memarb's CPU port protocol
 	input             c_req,
@@ -181,7 +182,7 @@ always @(posedge clk) begin
 		S_LOOK:
 			if (q_we) st <= S_WRITE;                  // (a hit's bytes are written now)
 			else if (hit) begin
-				r_rdata64 <= d_q; r_ack <= 1'b1;
+				r_rdata64 <= d_q; r_ack <= !fast;    // fast: answered by hit_now
 				st <= S_GAP;
 			end else if (fill_start) begin
 				stale <= 1'b0;
@@ -213,14 +214,18 @@ always @(posedge clk) begin
 end
 
 //----------------------------------------------------------------- the ports
+// MegaST: in turbo (fast) a read hit is answered combinationally in S_LOOK from the block RAM
+// outputs, one clock earlier (issue #28); the Falcon mode keeps the registered answer.
+wire hit_now = fast && on && st == S_LOOK && !q_we && hit;
 assign m_req     = on ? r_req   : c_req;
 assign m_we      = on ? r_we    : c_we;
 assign m_addr    = on ? r_addr  : c_addr;
 assign m_be      = on ? r_be    : c_be;
 assign m_wdata   = on ? r_wdata : c_wdata;
 assign m_burst   = on ? r_burst : 1'b0;
-assign c_ack     = on ? r_ack   : m_ack;
-assign c_rdata64 = on ? r_rdata64 : m_rdata64;
-assign c_rdata   = on ? (q_addr[2] ? r_rdata64[31:0] : r_rdata64[63:32]) : m_rdata;
+wire [63:0] l_rdata64 = hit_now ? d_q : r_rdata64;
+assign c_ack     = on ? (r_ack | hit_now) : m_ack;
+assign c_rdata64 = on ? l_rdata64 : m_rdata64;
+assign c_rdata   = on ? (q_addr[2] ? l_rdata64[31:0] : l_rdata64[63:32]) : m_rdata;
 
 endmodule

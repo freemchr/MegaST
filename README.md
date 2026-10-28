@@ -81,9 +81,10 @@ each machine has its own:
   with TOS 2.06.
 * **A TOS the machine cannot run is refused** with a message, and the file browser stays open: a
   512 KB TOS on the ST, or an ST TOS on the Falcon.
-* To go back to the `.img` file of the table, choose it with "TOS:" (`tos.img` on the ST,
-  `tosfalc.img` on the Falcon). With "Remember TOS/cartridge" off ("Drives & images") the
-  machines always start with these files.
+* To go back to the `.img` file of the table, select the "TOS:" line and press <kbd>Space</kbd>:
+  the chosen TOS is removed and forgotten, the menu closes and the machine restarts with
+  `tos.img` (ST) or `tosfalc.img` (Falcon). Choosing that file with "TOS:" does the same. With
+  "Remember TOS/cartridge" off ("Drives & images") the machines always start with these files.
 
 **New settings files.** The menu is larger, so 1.1.6 keeps the settings in `atarist/fccfg`
 (119 bytes) and the remembered images in `atarist/fcmount` (1792 bytes). **Copy both from the zip**
@@ -312,10 +313,10 @@ toggles, <kbd>Space</kbd> on a drive line ejects the image. A line with `>` open
 
 | Line | What it does |
 |------|--------------|
-| TOS: | loads a TOS image for the machine that runs and restarts it (see [TOS](#tos)) |
+| TOS: | loads a TOS image for the machine that runs and restarts it (see [TOS](#tos)); <kbd>Space</kbd> removes it |
 | Floppy A:, Floppy B: | mounts a `.st` floppy image |
 | Hard disk 0:, Hard disk 1: | mounts a hard disk image (ACSI on the ST; on the Falcon IDE master/slave, or SCSI ID 0/1 with "Hard disks on SCSI (ICD)") |
-| Cartridge: | loads a cartridge image; <kbd>Space</kbd> removes it |
+| Cartridge: | loads a cartridge image (ST/STe only); <kbd>Space</kbd> removes it |
 | Machine: | the machine, see below |
 | ST/STe settings, Falcon030 settings, Drives & images, Controllers & ports, HDMI:, VGA: | submenus, see below |
 | HDMI: CRT emulation | a CRT-like picture on HDMI (scaler filter); off by default |
@@ -348,7 +349,7 @@ toggles, <kbd>Space</kbd> on a drive line ejects the image. A line with `>` open
 | Setting | Default | What it does |
 |---------|---------|--------------|
 | Monitor: VGA (31 kHz) / RGB (15 kHz) / TV (15 kHz) / Mono (SM124) | VGA | the monitor the Falcon believes is connected; it decides which video modes TOS and programs offer. The picture goes to HDMI and VGA with every setting, so keep VGA if you use HDMI |
-| CPU at 32 MHz (turbo) | off | the 68030 at 32 MHz instead of 16 MHz: about 1.6 times as fast for programs that use the 68030's caches (GEM, most Falcon software); programs that switch the caches off (many older games and demos) run slightly slower than at 16 MHz. Tools that read the Falcon's bus control register still show 16 MHz (a real Falcon only has 8 and 16 MHz) |
+| CPU at 32 MHz (turbo) | off | the 68030 at 32 MHz instead of 16 MHz: about 1.6 times as fast for programs that use the 68030's caches (GEM, most Falcon software); programs that switch the caches off (many older games and demos) about 1.1 times as fast (since 1.3; before, slightly slower than at 16 MHz). Tools that read the Falcon's bus control register still show 16 MHz (a real Falcon only has 8 and 16 MHz) |
 | ST-RAM 4 MB (not 14 MB) | off | 4 MB ST-RAM instead of 14 MB |
 | Fast RAM 48 MB (TT-RAM) | off | 48 MB Fast RAM at $01000000. EmuTOS uses it by itself; Atari's TOS 4.04 needs `FASTRAM.PRG` in the AUTO folder (`extras/FASTRAM.PRG` in the zip, source in `tools/fastram/`), as a real Falcon needs the driver of its accelerator card |
 | Hard disks on SCSI (ICD) | off | the hard disks are SCSI ID 0 and 1 (the Falcon's SCSI port) instead of IDE master and slave. For drivers that do not know IDE, such as ICD: then the same image works on the ST (ACSI) and the Falcon. EmuTOS and HDDRIVER work with both. Takes effect with a reset |
@@ -395,7 +396,11 @@ Using disk images
   (hard disk), `.img`, `.rom` (TOS), `.stc`, `.img` (cartridge).
 * The menu shows the name of the mounted image next to the drive. To **unmount (eject)** a drive,
   select its line and press <kbd>Space</kbd>. The same on the "Cartridge:" line **removes the
-  cartridge**: the ST restarts without it.
+  cartridge**: the ST restarts without it. On the "TOS:" line it **removes the chosen TOS**: the
+  machine restarts with `tos.img` (ST) or `tosfalc.img` (Falcon).
+* **Cartridges are for the ST/STe.** While the Falcon030 is selected, the menu refuses a cartridge
+  image, and the Falcon does not see a cartridge that is still loaded for the ST. ST cartridges
+  crashed the Falcon, and no Falcon cartridges are known (issue #27).
 * With `/atarist/fcmount` on the SD card (in the release zip), the mounted images and the chosen
   TOS and cartridge are **remembered** and loaded again at the next start ("Remember floppies" and
   "Remember TOS/cartridge" in "Drives & images" switch this off for the floppies or the TOS).
@@ -681,7 +686,7 @@ with other FreeMiNT setups are welcome.
 **What it has**
 
 * 68030 with its caches and PMMU, 16 MHz like a real Falcon or 32 MHz ("CPU at 32 MHz (turbo)"; the
-  turbo helps programs that keep the caches on, see the menu reference)
+  turbo helps most with the caches on, see the menu reference)
 * 68882 FPU (it runs on a small RISC-V CPU in the FPGA, so FPU-heavy programs are slower than on a
   real Falcon)
 * VIDEL graphics: the ST modes and the Falcon modes with 2 to 256 colours and True Color; monitor

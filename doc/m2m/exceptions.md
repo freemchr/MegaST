@@ -116,6 +116,9 @@ The framework does not remember mounted images (issue #13). Changes:
   file is opened through `HANDLE_DEV`, not `CONFIG_DEVH`, so the FAT32 library keeps the shared sector
   buffer consistent with the vdrives. Like the settings file, it must exist with the exact size, else the
   feature is off. Tested with `CORE/sim/mntmem/run.sh` (QNICE emulator).
+  A CRT/ROM loaded again by `_MNT_LOAD` (restore, machine switch) gets the context `CTX_LOAD_ROM` with
+  the low byte `MNT_CTX_RESTORE` (1), so that `PREP_LOAD_IMAGE` can tell it from one chosen in the
+  browser (MegaST: a cartridge is refused on the Falcon only when chosen, issue #27).
 * `M2M/rom/selectfile.asm`: the browser tracks its current directory in `FB_PATH` (`FBP_SET`, `FBP_CD`),
   because it only returns the bare file name.
 * `M2M/rom/shell.asm`: `HANDLE_MOUNTING` calls `MNT_REMEMBER` after a successful load, `MNT_FORGET` when a
@@ -140,6 +143,8 @@ The framework does not remember mounted images (issue #13). Changes:
 * `M2M/rom/shell.asm`: in CRT/ROM mode `HANDLE_MOUNTING` first calls `MNT_CRT_EJECT`
   (`CORE/m2m-rom/m2m-rom.asm`): Space on the line of a loaded cartridge removes it (status "loading",
   then "idle" in the device, so the ST restarts without it) and forgets it, instead of opening the browser.
+  Space on the line of a manually loaded TOS forgets it, holds the core in reset and closes the menu;
+  `FC_SWITCH` (`fcswitch.asm`, flag `FC_RELOAD`) then loads the auto-load TOS of the same machine.
 * `M2M/rom/options.asm` (`HELP_MENU`): `MNT_OSM_NAMES` writes the names of the restored images when the
   menu opens (`OPTM_HEAP` is only valid then); `MNT_SAVE` retries a postponed save when the menu closes.
 * `M2M/rom/sysdef.asm`: selector `M2M$CFG_MNT_FILE` (`0x0102`); `CORE/vhdl/config.vhd`: `SEL_MNT_FILE`

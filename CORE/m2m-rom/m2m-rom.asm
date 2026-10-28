@@ -178,7 +178,8 @@ _FFILES_RET     MOVE    R2, R9                  ; restore R9
 ;   R9: image type if R8=0, otherwise 0 or optional ptr to  error msg string
 ; Atari ST: cartridge images in the .STC format have a 4 byte header in front
 ; of the 128 kB ROM image: skip it (file size = 131076 = 0x00020004)
-; MegaST: a TOS that the machine cannot run is refused (FC_TOS_CHECK)
+; MegaST: a TOS that the machine cannot run and a cartridge on the Falcon are
+; refused (FC_TOS_CHECK)
 PREP_LOAD_IMAGE INCRB
                 MOVE    R8, R0                  ; R0: file handle
                 XOR     R4, R4                  ; R4: error code
@@ -190,7 +191,10 @@ PREP_LOAD_IMAGE INCRB
                 RBRA    _PLI_RET, !Z            ; no
 
                 MOVE    R0, R8                  ; MegaST: a TOS for the
-                RSUB    FC_TOS_CHECK, 1         ; other machine? (fcswitch.asm)
+                MOVE    R9, R1                  ; other machine, a cartridge
+                AND     CTX_MASK_PARAM, R1      ; on the Falcon?
+                MOVE    R1, R9                  ; (fcswitch.asm)
+                RSUB    FC_TOS_CHECK, 1
                 MOVE    R8, R4
                 MOVE    R9, R5
                 CMP     0, R4
@@ -338,6 +342,10 @@ _OSPR_RET       XOR     R8, R8
 ; loaded removes it. The ST restarts without it: tos_loader.vhd keeps the core
 ; in reset while the status of the device is "loading", like when a cartridge
 ; is loaded. It is also no longer remembered (mntmem.asm).
+; Space on the "TOS:" line with a manually loaded TOS forgets it, keeps the
+; core in reset and closes the menu; then FC_SWITCH (fcswitch.asm) loads the
+; auto-load TOS of the machine, like after a switch to a machine without a
+; manual TOS, and the machine starts.
 ;
 ; Input:  R8: CRT/ROM id
 ;         R9: OPTM_KEY_SELECT or OPTM_KEY_SELALT
@@ -348,6 +356,8 @@ CRT_ID_CART     .EQU    1                       ; C_CRTROMS_MAN (globals.vhd)
 MNT_CRT_EJECT   INCRB
                 CMP     OPTM_KEY_SELALT, R9     ; Space?
                 RBRA    _MCE_NO, !Z
+                CMP     FC_CRT_TOS, R8          ; the TOS?
+                RBRA    _MCE_TOS, Z
                 CMP     CRT_ID_CART, R8         ; the cartridge?
                 RBRA    _MCE_NO, !Z
                 MOVE    CRTROM_MAN_LDF, R0
@@ -376,6 +386,23 @@ _MCE_WAIT       SUB     1, R2
                 MOVE    R1, R8                  ; forget it
                 MOVE    1, R9                   ; (mode 1: CRT/ROM)
                 RSUB    MNT_FORGET, 1
+                OR      0x0004, SR              ; Carry=1
+                RBRA    _MCE_RET, 1
+
+_MCE_TOS        MOVE    CRTROM_MAN_LDF, R0
+                ADD     R8, R0
+                CMP     0, @R0                  ; loaded manually?
+                RBRA    _MCE_NO, Z
+                MOVE    1, R9                   ; forget it (mode 1: CRT/ROM)
+                RSUB    MNT_FORGET, 1
+                MOVE    M2M$CSR, R0             ; reset until the auto-load
+                OR      M2M$CSR_RESET, @R0      ; TOS is there (FC_SWITCH,
+                MOVE    FC_HOLD, R0             ; as soon as the menu is
+                MOVE    1, @R0                  ; closed)
+                MOVE    FC_RELOAD, R0
+                MOVE    1, @R0
+                MOVE    OPTM_CLOSE_REQ, R0
+                MOVE    1, @R0
                 OR      0x0004, SR              ; Carry=1
                 RBRA    _MCE_RET, 1
 
@@ -439,6 +466,7 @@ NV_COUNT        .BLOCK  1                       ; main loop runs to the check
 ; MegaST: switching between the ST and the Falcon (fcswitch.asm)
 FC_MACH         .BLOCK  1                       ; 1: the TOS in the SDRAM is for the Falcon
 FC_HOLD         .BLOCK  1                       ; 1: the core waits for the TOS of the other machine
+FC_RELOAD       .BLOCK  1                       ; 1: same machine, auto-load TOS instead of the manual one
 
 ; M2M Shell variables (only include, if you included "shell.asm" above)
 #include "../../M2M/rom/shell_vars.asm"

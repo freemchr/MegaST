@@ -89,7 +89,9 @@ Simulate first. Every hardware round trip costs the maintainer time.
   (`falcon_m65.sv`). `run_prg.sh OUT PROG [DIR] -- [options]` runs a program from `C:\AUTO` (tests in
   `tests/*.s`: joypad, ttram, membench, dsp; or an NF4 demo with its directory, `FASTLOAD=1`);
   `simrom.py` makes a faster booting EmuTOS copy for `TOS=`. Options: `--monitor`, `--turbo`, `--fastram`,
-  `--rfloppy`, `--pad`, `--joy`, `--wav`, `--nvram`, `--cart`, `--start`/`--done`/`--dump`; a switch from the ST
+  `--rfloppy`, `--pad`, `--joy`, `--wav`, `--nvram`, `--cart`, `--start`/`--done`/`--dump`, `--reset T:US`;
+  `XDEFS=+define+BUS_STATS MDIR=obj_bs` logs the clocks of turbo RAM cycles (`falcon_cpubus.sv`),
+  `XDEFS=+define+DMA_TRACE MDIR=obj_tr` every `$FF8604`/`$FF8606` access (`falcon_fdc.sv`); a switch from the ST
   in the menu: `--reload` (TOS loaded again, fcswitch.asm), `--switch` (all resets at once), `--junk` (no TOS).
 * `CORE/sim/nvram/run.sh`: the Falcon NVRAM file (`/atarist/fcnvram`, `CORE/m2m-rom/nvram.asm`), QNICE emulator.
 * `CORE/sim/fcswitch/run.sh`: which TOS the firmware loads again after a switch between ST and Falcon

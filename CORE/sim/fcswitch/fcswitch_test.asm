@@ -23,7 +23,11 @@
 ;    with M2M$FORCE_MENU (OPTM_SET goes fatal)
 ; 9. FC_AUT_NAME keeps the name of other auto-load ROMs and the TOS of the ST
 ; 10. FC_TOS_CHECK: the ST refuses a 512 KB TOS, the Falcon one of 192 or
-;    256 KB; other sizes (the cartridge) pass
+;    256 KB; a cartridge (128 KB, .stc) passes on the ST, on the Falcon only
+;    when it is a remembered one (MNT_CTX_RESTORE), other sizes pass
+; 11. The manual TOS was removed with Space (MNT_CRT_EJECT: forgotten,
+;    FC_HOLD, FC_RELOAD): FC_SWITCH unloads it and loads the auto-load TOS of
+;    the same machine, the entry of the other machine is not swapped
 ;
 ; This machine is based on AtariST_MiSTer
 ; Powered by MiSTer2MEGA65
@@ -251,7 +255,7 @@ START_FIRMWARE  MOVE    STR_START, R8
                 MOVE    0x1234, R9
                 RSUB    CHECK_EQ, 1
 
-                ; 10. (machine, size high, size low, expected error)
+                ; 10. (machine, size high, size low, context, expected error)
                 MOVE    TC_TABLE, R0
 _T10            CMP     0xFFFF, @R0
                 RBRA    _T10_END, Z
@@ -264,6 +268,7 @@ _T10            CMP     0xFFFF, @R0
                 ADD     FAT32$FDH_SIZE_LO, R1
                 MOVE    @R0++, @R1
                 MOVE    TC_FDH, R8
+                MOVE    @R0++, R9               ; context (low byte)
                 RSUB    FC_TOS_CHECK, 1
                 MOVE    SCRATCH, R1
                 MOVE    R8, @R1
@@ -272,6 +277,46 @@ _T10            CMP     0xFFFF, @R0
                 RSUB    CHECK_EQ, 1
                 RBRA    _T10, 1
 _T10_END
+                ; 11.
+                MOVE    MNT_ON, R0
+                MOVE    1, @R0
+                MOVE    FC_MACH, R0             ; the same machine
+                MOVE    MENU_BIT, R1
+                MOVE    @R0, @R1
+                MOVE    ENTRY_TOS, R0           ; forgotten
+                MOVE    0, @R0
+                MOVE    ENTRY_OTHER, R0         ; TOS of the other machine
+                MOVE    0x0053, @R0
+                MOVE    CRTROM_MAN_LDF, R0      ; the manual TOS is loaded
+                MOVE    1, @R0
+                RSUB    CLR_CALLS, 1
+                MOVE    FC_HOLD, R0
+                MOVE    1, @R0
+                MOVE    FC_RELOAD, R0
+                MOVE    1, @R0
+                RSUB    FC_SWITCH, 1
+                MOVE    N_AUTO, R8
+                MOVE    1, R9
+                RSUB    CHECK_EQ, 1
+                MOVE    N_UNLOAD, R8
+                MOVE    1, R9
+                RSUB    CHECK_EQ, 1
+                MOVE    N_SETOFF, R8
+                MOVE    1, R9
+                RSUB    CHECK_EQ, 1
+                MOVE    ENTRY_OTHER, R8
+                MOVE    0x0053, R9
+                RSUB    CHECK_EQ, 1
+                MOVE    CRTROM_MAN_LDF, R8
+                MOVE    0, R9
+                RSUB    CHECK_EQ, 1
+                MOVE    FC_RELOAD, R8
+                MOVE    0, R9
+                RSUB    CHECK_EQ, 1
+                MOVE    FC_HOLD, R8
+                MOVE    0, R9
+                RSUB    CHECK_EQ, 1
+
                 MOVE    FAILS, R0
                 CMP     0, @R0
                 RBRA    _T_FAIL, !Z
@@ -328,6 +373,7 @@ MENU_FALCON     .EQU    16
 CRT_ID_CART     .EQU    1
 CRTROM_MAN_MAX  .EQU    2
 MNT_ENTRY_SZ    .EQU    256
+MNT_CTX_RESTORE .EQU    1
 ENTRY_TOS       .EQU    0x8C00                  ; MNT_PATHS + 4 * 256
 ENTRY_CART      .EQU    0x8D00                  ; MNT_PATHS + 5 * 256
 ENTRY_OTHER     .EQU    0x8E00                  ; MNT_PATHS + 6 * 256
@@ -398,15 +444,19 @@ M2M$FORCE_MENU  INCRB                           ; must not be called
 
 #include "../../m2m-rom/fcswitch.asm"
 
-TC_TABLE        .DW     0, 0x0003, 0, 0         ; ST: 192 KB
-                .DW     0, 0x0004, 0, 0         ; ST: 256 KB
-                .DW     0, 0x0008, 0, 1         ; ST: 512 KB no
-                .DW     0, 0x0002, 0x0004, 0    ; ST: .STC cartridge
-                .DW     1, 0x0008, 0, 0         ; Falcon: 512 KB
-                .DW     1, 0x0003, 0, 2         ; Falcon: 192 KB no
-                .DW     1, 0x0004, 0, 2         ; Falcon: 256 KB no
-                .DW     1, 0x0002, 0, 0         ; Falcon: 128 KB cartridge
-                .DW     1, 0x0004, 0x0001, 0    ; Falcon: odd size passes
+TC_TABLE        .DW     0, 0x0003, 0, 0, 0      ; ST: 192 KB
+                .DW     0, 0x0004, 0, 0, 0      ; ST: 256 KB
+                .DW     0, 0x0008, 0, 0, 1      ; ST: 512 KB no
+                .DW     0, 0x0002, 0x0004, 0, 0 ; ST: .STC cartridge
+                .DW     0, 0x0002, 0, 0, 0      ; ST: 128 KB cartridge
+                .DW     1, 0x0008, 0, 0, 0      ; Falcon: 512 KB
+                .DW     1, 0x0003, 0, 0, 2      ; Falcon: 192 KB no
+                .DW     1, 0x0004, 0, 0, 2      ; Falcon: 256 KB no
+                .DW     1, 0x0002, 0, 0, 3      ; Falcon: 128 KB cartridge no
+                .DW     1, 0x0002, 0x0004, 0, 3 ; Falcon: .STC cartridge no
+                .DW     1, 0x0002, 0x0004, 1, 0 ; Falcon: remembered .STC
+                .DW     1, 0x0002, 0, 1, 0      ; Falcon: remembered 128 KB
+                .DW     1, 0x0004, 0x0001, 0, 0 ; Falcon: odd size passes
                 .DW     0xFFFF
 
 STR_START       .ASCII_W "fcswitch test\n"
@@ -426,6 +476,7 @@ N_UNLOAD        .BLOCK  1
 N_SAVE          .BLOCK  1
 FC_MACH         .BLOCK  1
 FC_HOLD         .BLOCK  1
+FC_RELOAD       .BLOCK  1
 MNT_SHOWN       .BLOCK  1
 CRTROM_MAN_LDF  .BLOCK  2
 MNT_ON          .BLOCK  1

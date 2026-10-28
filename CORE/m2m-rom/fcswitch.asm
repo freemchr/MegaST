@@ -36,6 +36,7 @@
 FC_CRT_TOS      .EQU    0                       ; C_CRTROMS_MAN (globals.vhd)
 
 LOG_FC_SWITCH   .ASCII_W "Machine: ST <-> Falcon, loading its TOS\n"
+LOG_FC_RELOAD   .ASCII_W "Machine: manual TOS removed, loading the auto-load TOS\n"
 LOG_FC_AUTO     .ASCII_W "Machine: no manual TOS for it, auto-load TOS\n"
 LOG_FC_NOFTOS   .ASCII_W "Machine: /atarist/tosfalc.img not found, using tos.img\n"
 FC_FTOS_NAME    .ASCII_W "/atarist/tosfalc.img"
@@ -43,6 +44,8 @@ STR_FC_FTOS     .ASCII_P "This is a 512 KB Falcon TOS.\n"
                 .ASCII_W "Choose Machine: Falcon030 first.\n"
 STR_FC_STTOS    .ASCII_P "This is an ST TOS (192/256 KB).\n"
                 .ASCII_W "The Falcon030 needs a 512 KB TOS.\n"
+STR_FC_CART     .ASCII_P "Cartridges work only on the ST/STe.\n"
+                .ASCII_W "Choose Machine: ST/STe first.\n"
 
 ; ----------------------------------------------------------------------------
 ; Remember the machine of the TOS in the SDRAM
@@ -55,6 +58,8 @@ FC_INIT         INCRB
                 MOVE    FC_MACH, R0
                 MOVE    R8, @R0
                 MOVE    FC_HOLD, R0
+                MOVE    0, @R0
+                MOVE    FC_RELOAD, R0
                 MOVE    0, @R0
                 DECRB
                 RET
@@ -88,17 +93,34 @@ _FCC_RET        DECRB
 ; chosen with "TOS:" and the remembered ones; a refused one is shown in the
 ; file browser, a remembered one is forgotten and the auto-load TOS is used)
 ; The ST maps 256 KB at $E00000, so no 512 KB TOS. The Falcon needs 512 KB
-; (Falcon TOS 4.x, EmuTOS), not an ST TOS of 192 or 256 KB. Other sizes (the
-; cartridge) are not checked.
+; (Falcon TOS 4.x, EmuTOS), not an ST TOS of 192 or 256 KB. A cartridge
+; (128 KB, .stc with a 4 byte header) only works on the ST (issue #27, the
+; core gives the Falcon no cartridge): chosen in the menu while the Falcon is
+; selected it is refused, a remembered one is loaded (for the ST).
 ; Input:  R8: file handle
+;         R9: low byte of the context: MNT_CTX_RESTORE = loaded again
 ; Output: R8: 0 = OK, else error code; R9: 0 or the error message
 ; ----------------------------------------------------------------------------
 
 FC_TOS_CHECK    INCRB
                 MOVE    R8, R0
+                MOVE    R9, R2                  ; R2: context
                 XOR     R8, R8
                 XOR     R9, R9
-                MOVE    R0, R1                  ; R1: size, low word
+                MOVE    R0, R1                  ; R1: size, high word
+                ADD     FAT32$FDH_SIZE_HI, R1
+                CMP     0x0002, @R1             ; 128 KB: a cartridge?
+                RBRA    _FCTC_TOS, !Z
+                CMP     MNT_CTX_RESTORE, R2     ; remembered: load it
+                RBRA    _FCTC_RET, Z
+                MOVE    MENU_FALCON, R8         ; R8: 1 = Falcon
+                RSUB    _MNT_CFM_GET, 1
+                CMP     0, R8
+                RBRA    _FCTC_RET, Z            ; ST: OK (R8 = 0)
+                MOVE    3, R8                   ; Falcon: no
+                MOVE    STR_FC_CART, R9
+                RBRA    _FCTC_RET, 1
+_FCTC_TOS       MOVE    R0, R1                  ; R1: size, low word
                 ADD     FAT32$FDH_SIZE_LO, R1
                 CMP     0, @R1                  ; a TOS size?
                 RBRA    _FCTC_RET, !Z
@@ -165,7 +187,8 @@ _FCAN_RET       MOVE    R9, @--SP               ; lift R9 over the leave hump
 
 ; ----------------------------------------------------------------------------
 ; Main loop (CORE_LOOP), i.e. the menu is closed: load the TOS for the new
-; machine, then let it start
+; machine, then let it start (or, with FC_RELOAD, the auto-load TOS of the
+; same machine after its manual TOS was removed)
 ; ----------------------------------------------------------------------------
 
 FC_SWITCH       SYSCALL(enter, 1)
@@ -177,11 +200,21 @@ FC_SWITCH       SYSCALL(enter, 1)
                 RSUB    _MNT_CFM_GET, 1
                 MOVE    FC_MACH, R0
                 MOVE    R8, @R0
-
-                MOVE    LOG_FC_SWITCH, R8
-                SYSCALL(puts, 1)
                 MOVE    MNT_SHOWN, R0           ; _MNT_LOAD opens its window
                 MOVE    0, @R0
+
+                ; the manual TOS was removed (MNT_CRT_EJECT): same machine,
+                ; nothing to swap
+                MOVE    FC_RELOAD, R0
+                MOVE    @R0, R1
+                MOVE    0, @R0
+                CMP     0, R1
+                RBRA    _FCS_LOG, Z
+                MOVE    LOG_FC_RELOAD, R8
+                SYSCALL(puts, 1)
+                RBRA    _FCS_UNLD, 1
+_FCS_LOG        MOVE    LOG_FC_SWITCH, R8
+                SYSCALL(puts, 1)
 
                 ; swap the remembered manual TOS of both machines
                 MOVE    MNT_ON, R0

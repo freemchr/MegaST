@@ -506,7 +506,8 @@ _MNTL_2         RSUB    SCR$CLRINNER, 1
                 MOVE    CTX_MOUNT_DISKIMG, @R0
                 CMP     0, R5
                 RBRA    _MNTL_3, Z
-                MOVE    CTX_LOAD_ROM, @R0
+                MOVE    CTX_LOAD_ROM, @R0       ; low byte 1: a remembered
+                ADD     MNT_CTX_RESTORE, @R0    ; one (PREP_LOAD_IMAGE)
 _MNTL_3         MOVE    R7, R8
                 MOVE    R2, R9
                 MOVE    R5, R10

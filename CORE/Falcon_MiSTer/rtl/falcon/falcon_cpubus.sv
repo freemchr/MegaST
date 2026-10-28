@@ -115,10 +115,10 @@ module falcon_cpubus
 	output reg        ciin_n,
 
 	// memory arbiter, CPU port
-	output reg        ram_req,
-	output reg        ram_we,
-	output reg [25:2] ram_addr,    // MEGA65: [25:24] = Fast RAM block (0: the 24-bit space)
-	output reg  [3:0] ram_be,
+	output            ram_req,
+	output            ram_we,
+	output     [25:2] ram_addr,    // MEGA65: [25:24] = Fast RAM block (0: the 24-bit space)
+	output      [3:0] ram_be,
 	output reg [31:0] ram_wdata,
 	input      [31:0] ram_rdata,
 	input             ram_ack,
@@ -229,6 +229,20 @@ function [25:2] mem_addr;
 	input [1:0] xb; input [23:0] x; input rd;
 	mem_addr = (rd && xb == 2'b00 && x[23:3] == 21'd0) ? (24'h380000 | {23'd0, x[2]}) : {xb, x[23:2]};
 endfunction
+
+// MegaST: a turbo read of RAM/ROM goes to the memory port in the clock in which the bridge
+// sees AS (the registered request follows one clock later and holds it): with falcon_l2's
+// combinational hit answer an uncached turbo fetch takes 8 instead of 10 clocks (issue #28).
+// The same decisions as the RAM branch of S_IDLE (turbo) below, for reads only.
+reg         ram_req_q, ram_we_q;
+reg  [25:2] ram_addr_q;
+reg   [3:0] ram_be_q;
+wire ram_early = !fmode && st == S_IDLE && as_act && rw && !cpu_space && !(is_prot && !is_super) &&
+                 !(is_vec && ram_tos) && (is_vec || is_ram || is_fast || is_rom || is_cart);
+assign ram_req  = ram_req_q | ram_early;
+assign ram_we   = ram_early ? 1'b0 : ram_we_q;
+assign ram_addr = ram_early ? mem_addr(xa, la, 1'b1) : ram_addr_q;
+assign ram_be   = ram_early ? be32 : ram_be_q;
 
 //----------------------------------------------------------------------------
 // Falcon mode
@@ -577,14 +591,14 @@ always @(posedge clk) begin
 	if (reset) begin
 		st <= S_IDLE;
 		dsack0_n <= 1; dsack1_n <= 1; berr_n <= 1; avec_n <= 1; ciin_n <= 1;
-		ram_req <= 0; dev_cs <= 0;
+		ram_req_q <= 0; dev_cs <= 0;
 		fmode <= fmode_in;
 		fst <= F_IDLE; wb_valid <= 0; wb_inflight <= 0; rd_inflight <= 0; rb_valid <= 0;
 		ym_seen <= 0; acia_seen <= 0;
 	end
 	else begin
 	// the mode changes only between cycles, with no write in flight
-	if (st == S_IDLE && fst == F_IDLE && !as_act && !wb_valid && !ram_req && fmode != fmode_in) begin
+	if (st == S_IDLE && fst == F_IDLE && !as_act && !wb_valid && !ram_req_q && fmode != fmode_in) begin
 		fmode    <= fmode_in;
 		rb_valid <= 0;
 	end
@@ -620,10 +634,10 @@ always @(posedge clk) begin
 				st       <= S_HOLD;
 			end
 			else if ((is_vec && rw) || is_ram || is_fast || ((is_rom || is_cart) && rw)) begin
-				ram_req   <= 1;
-				ram_we    <= !rw;
-				ram_addr  <= mem_addr(xa, la, rw);
-				ram_be    <= be32;
+				ram_req_q   <= 1;
+				ram_we_q    <= !rw;
+				ram_addr_q  <= mem_addr(xa, la, rw);
+				ram_be_q    <= be32;
 				ram_wdata <= d_o;
 				st        <= S_RAM;
 			end
@@ -643,7 +657,7 @@ always @(posedge clk) begin
 
 	S_RAM:
 		if (ram_ack) begin
-			ram_req  <= 0;
+			ram_req_q  <= 0;
 			d_i      <= ram_rdata;
 			dsack0_n <= 0;
 			dsack1_n <= 0;
@@ -703,16 +717,16 @@ always @(posedge clk) begin
 		if (fst == F_RUN && fk != 5'd31) fk <= fk + {4'd0, cpu_ce};
 
 		// the posted write goes to memory as soon as the port is free
-		if (wb_valid && !wb_inflight && !rd_inflight && !ram_req) begin
-			ram_req   <= 1;
-			ram_we    <= 1;
-			ram_addr  <= wb_addr;
-			ram_be    <= wb_be;
+		if (wb_valid && !wb_inflight && !rd_inflight && !ram_req_q) begin
+			ram_req_q   <= 1;
+			ram_we_q    <= 1;
+			ram_addr_q  <= wb_addr;
+			ram_be_q    <= wb_be;
 			ram_wdata <= wb_data;
 			wb_inflight <= 1;
 		end
 		if (ram_ack && wb_inflight) begin
-			ram_req <= 0; wb_inflight <= 0; wb_valid <= 0;
+			ram_req_q <= 0; wb_inflight <= 0; wb_valid <= 0;
 		end
 
 		case (fst)
@@ -730,15 +744,15 @@ always @(posedge clk) begin
 		F_RUN: begin
 			case (fjob)
 				J_RD:
-					if (!rd_inflight && !ram_req && !wb_valid) begin
-						ram_req   <= 1;
-						ram_we    <= 0;
-						ram_addr  <= maddr_rd;
-						ram_be    <= 4'b1111;
+					if (!rd_inflight && !ram_req_q && !wb_valid) begin
+						ram_req_q   <= 1;
+						ram_we_q    <= 0;
+						ram_addr_q  <= maddr_rd;
+						ram_be_q    <= 4'b1111;
 						rd_inflight <= 1;
 					end
 					else if (ram_ack && rd_inflight) begin
-						ram_req     <= 0;
+						ram_req_q     <= 0;
 						rd_inflight <= 0;
 						rb_valid    <= 1;
 						rb_tag      <= maddr_rd[25:3];
@@ -835,5 +849,41 @@ end
 always @(posedge clk)
 	if (reset) fdc_mode4 <= 0;
 	else if (as_act && !rw && lo && la[23:1] == 23'h7FC303 && cov_odd) fdc_mode4 <= d_o[20];
+
+`ifdef BUS_STATS
+// MegaST simulation only: clocks of turbo RAM cycles (reads/writes): AS seen -> memory ack,
+// AS seen -> AS released, start -> start of the next RAM cycle; printed and cleared every 65536 RAM cycles
+reg [31:0] bs_n, bs_rd, bs_wr, bs_req, bs_hold, bs_gap, bs_c, bs_g;
+reg        bs_in, bs_we;
+initial begin bs_n = 0; bs_rd = 0; bs_wr = 0; bs_req = 0; bs_hold = 0; bs_gap = 0; bs_c = 0; bs_g = 0; bs_in = 0; end
+reg [31:0] bs_tot = 0, bs_clk = 0;
+always @(posedge clk) begin
+	bs_clk <= bs_clk + 1;
+	if (!fmode && bs_tot >= 32'd1100000 && bs_tot < 32'd1100008)
+		$display("BUSCLK %0d as_n %b ds_n %b rw %b a %06x st %0d ram_req_q %b ram_ack %b dsack %b%b",
+			bs_clk, as_n, ds_n, rw, la, st, ram_req_q, ram_ack, dsack1_n, dsack0_n);
+end
+always @(posedge clk) if (!fmode) begin
+	bs_g <= bs_g + 1;
+	if (st == S_IDLE && as_act && (rw || !ds_n) && st != S_RAM) bs_c <= 1;
+	else bs_c <= bs_c + 1;
+	if (st == S_IDLE && as_act && (rw || !ds_n) &&
+	    ((is_vec && rw) || is_ram || is_fast || ((is_rom || is_cart) && rw))) begin
+		bs_in <= 1; bs_we <= !rw; bs_gap <= bs_gap + bs_g; bs_g <= 0; bs_tot <= bs_tot + 1;
+		if (rw) bs_rd <= bs_rd + 1; else bs_wr <= bs_wr + 1;
+	end
+	if (st == S_RAM && ram_ack) bs_req <= bs_req + bs_c;
+	if (bs_in && st == S_HOLD && !as_act) begin
+		bs_in <= 0; bs_n <= bs_n + 1; bs_hold <= bs_hold + bs_c;
+		if (bs_n[15:0] == 16'hFFFF)
+			$display("BUS turbo RAM: %0d reads %0d writes, per cycle: AS->ack %0d.%02d, AS->AS off %0d.%02d, start->next start %0d.%02d clocks",
+				bs_rd, bs_wr, bs_req / bs_n, (bs_req % bs_n) * 100 / bs_n, bs_hold / bs_n, (bs_hold % bs_n) * 100 / bs_n,
+				bs_gap / bs_n, (bs_gap % bs_n) * 100 / bs_n);
+		if (bs_n[15:0] == 16'hFFFF) begin
+			bs_n <= 0; bs_rd <= 0; bs_wr <= 0; bs_req <= 0; bs_hold <= 0; bs_gap <= 0;
+		end
+	end
+end
+`endif
 
 endmodule

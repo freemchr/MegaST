@@ -1896,4 +1896,20 @@ always @(posedge clk) begin
 	end
 end
 
+`ifdef DMA_TRACE
+// MegaST simulation only: every access to $FF8604/$FF8606 (word), repeats counted
+reg [33:0] tr_last = 34'h3_FFFF_FFFF;
+reg [31:0] tr_n = 0;
+always @(posedge clk) if (bus_stb && (a_8604 | a_8606)) begin
+	if ({bus_we, a_8606, bus_we ? bus_din : reg8604_rd} == tr_last) tr_n <= tr_n + 1;
+	else begin
+		if (tr_n != 0) $display("DMA   (x%0d)", tr_n + 1);
+		tr_n <= 0;
+		tr_last <= {bus_we, a_8606, bus_we ? bus_din : reg8604_rd};
+		$display("DMA %s %s %04x  mode %04x", bus_we ? "W" : "R", a_8606 ? "8606" : "8604",
+			bus_we ? bus_din : reg8604_rd, dmode);
+	end
+end
+`endif
+
 endmodule

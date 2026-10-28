@@ -15,6 +15,8 @@ if [ -n "$FPU" ]; then
 else
 	DEFS="+define+FALCON_NO_FPU"; EXTRA=""; MDIR=${MDIR:-obj_dir}
 fi
+# XDEFS: more defines, e.g. XDEFS=+define+DMA_TRACE MDIR=obj_tr (falcon_fdc.sv logs $FF8604/$FF8606)
+DEFS="$DEFS $XDEFS"
 # the .mem tables ($readmemb with the file name only) are read from the directory the test runs in
 ln -sf $F/falcon_psg_vol.mem falcon_psg_vol.mem
 ln -sf $F/falcon_optbl.mem falcon_optbl.mem

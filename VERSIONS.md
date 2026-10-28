@@ -1,3 +1,22 @@
+Version 1.3 - in progress (1.3-test2)
+=====================================
+
+* **Space removes the chosen TOS** (tester report): select the "TOS:" line in the menu and press
+  Space. The TOS is forgotten, the menu closes and the machine restarts with `tos.img` (ST) or
+  `tosfalc.img` (Falcon), as Space already does for the drives and the cartridge. Before, the way
+  back was to switch "Remember TOS/cartridge" off and reset.
+* **Falcon: faster turbo with the caches off** (issue #28): with "CPU at 32 MHz (turbo)" a memory
+  read that the 68030's caches do not answer took 10 processor clocks, two of them only registers
+  between the CPU, the bus bridge and the line cache. These are gone in turbo: 7 clocks. Programs
+  that switch the caches off (many older games and demos) were slightly slower in turbo than at
+  16 MHz and are now about 1.1 times as fast (simulation, tests/cpuspeed.s: 199 instead of 159 loop
+  counts, 16 MHz: 181). With the caches on nothing changes (1.6 times). The Falcon mode (16 MHz) is
+  unchanged.
+* **Falcon: no cartridge** (issue #27): ST cartridges crashed the Falcon or did nothing, and no
+  Falcon cartridges are known. While the Falcon030 is selected, the menu refuses a cartridge image,
+  and the Falcon no longer sees a cartridge that is loaded for the ST. A cartridge remembered for
+  the ST stays remembered and works again after switching back to the ST.
+
 Version 1.2 - October 27, 2026
 ==============================
 

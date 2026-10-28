@@ -446,7 +446,7 @@ falcon_fpu_bridge #(.CLK_HZ(CLK_HZ)) fpu
 // faster than the Falcon mode.
 falcon_l2 l2
 (
-	.clk(clk), .reset(reset), .en(1'b1),
+	.clk(clk), .reset(reset), .en(1'b1), .fast(!cpu_fmode),
 	.c_req(cram_req), .c_we(cram_we), .c_addr(cram_addr), .c_be(cram_be), .c_wdata(cram_wdata),
 	.c_rdata(cram_rdata), .c_rdata64(cram_rdata64), .c_ack(cram_ack),
 	.m_req(mram_req), .m_we(mram_we), .m_addr(mram_addr), .m_be(mram_be), .m_wdata(mram_wdata),
