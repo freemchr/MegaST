@@ -94,25 +94,34 @@ _FCC_RET        DECRB
 ; file browser, a remembered one is forgotten and the auto-load TOS is used)
 ; The ST maps 256 KB at $E00000, so no 512 KB TOS. The Falcon needs 512 KB
 ; (Falcon TOS 4.x, EmuTOS), not an ST TOS of 192 or 256 KB. A cartridge
-; (128 KB, .stc with a 4 byte header) only works on the ST (issue #27, the
-; core gives the Falcon no cartridge): chosen in the menu while the Falcon is
-; selected it is refused, a remembered one is loaded (for the ST).
+; (any size, e.g. 16, 64 or 128 KB) only works on the ST (issue #27, the core
+; gives the Falcon no cartridge): chosen on the "Cartridge:" line while the
+; Falcon is selected it is refused, a remembered one is loaded (for the ST).
+; The line is known from FB_LASTCALLER (shell.asm: CRT/ROM id in the high
+; byte, mode 1 = CRT/ROM in the low byte), not from the size: 1.3-test2 only
+; refused 128 KB cartridges.
 ; Input:  R8: file handle
 ;         R9: low byte of the context: MNT_CTX_RESTORE = loaded again
 ; Output: R8: 0 = OK, else error code; R9: 0 or the error message
 ; ----------------------------------------------------------------------------
+
+FC_CART_CALLER  .EQU    0x0101                  ; CRT_ID_CART, CRT/ROM mode
 
 FC_TOS_CHECK    INCRB
                 MOVE    R8, R0
                 MOVE    R9, R2                  ; R2: context
                 XOR     R8, R8
                 XOR     R9, R9
+                CMP     MNT_CTX_RESTORE, R2     ; remembered?
+                RBRA    _FCTC_MENU, !Z
                 MOVE    R0, R1                  ; R1: size, high word
                 ADD     FAT32$FDH_SIZE_HI, R1
-                CMP     0x0002, @R1             ; 128 KB: a cartridge?
-                RBRA    _FCTC_TOS, !Z
-                CMP     MNT_CTX_RESTORE, R2     ; remembered: load it
+                CMP     0x0002, @R1             ; 128 KB: a cartridge, load it
                 RBRA    _FCTC_RET, Z
+                RBRA    _FCTC_TOS, 1
+_FCTC_MENU      MOVE    FB_LASTCALLER, R1       ; chosen on "Cartridge:"?
+                CMP     FC_CART_CALLER, @R1
+                RBRA    _FCTC_TOS, !Z
                 MOVE    MENU_FALCON, R8         ; R8: 1 = Falcon
                 RSUB    _MNT_CFM_GET, 1
                 CMP     0, R8

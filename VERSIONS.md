@@ -1,4 +1,4 @@
-Version 1.3 - in progress (1.3-test2)
+Version 1.3 - in progress (1.3-test3)
 =====================================
 
 * **Space removes the chosen TOS** (tester report): select the "TOS:" line in the menu and press
@@ -16,6 +16,13 @@ Version 1.3 - in progress (1.3-test2)
   Falcon cartridges are known. While the Falcon030 is selected, the menu refuses a cartridge image,
   and the Falcon no longer sees a cartridge that is loaded for the ST. A cartridge remembered for
   the ST stays remembered and works again after switching back to the ST.
+* **README: hard disks under TOS 4.04** (issue #25): TOS 4.04 has no hard disk driver of its own,
+  so a disk needs one on it. The HDDRIVER demo images boot to drive C: on IDE and on SCSI in the
+  simulation; `falcon128.img` has no driver and works with EmuTOS only.
+* **Falcon: FASTRAM.PRG no longer scrambles the desktop icons** (issues #28, #29): with the Fast
+  RAM added, TOS 4.04 put its own desktop into the Fast RAM, and the desktop then drew all its
+  icons scrambled. `FASTRAM.PRG` now keeps only the desktop in ST RAM; programs still load into
+  the Fast RAM as their header flags ask. Replace `FASTRAM.PRG` from 1.2 with the new one.
 
 Version 1.2 - October 27, 2026
 ==============================

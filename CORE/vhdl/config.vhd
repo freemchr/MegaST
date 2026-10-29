@@ -130,7 +130,7 @@ constant SCR_LOGO : string :=
 constant SCR_WELCOME : string :=
    SCR_LOGO &
    "\n" &
-   COL_TTLE & "           Version 1.3-test2\n" & COL_STD &
+   COL_TTLE & "           Version 1.3-test3\n" & COL_STD &
    "\n" &
    " MEGA65 port by Chris Freeman\n" &
    " Bugs: github.com/freemchr/MegaST\n" &
@@ -149,7 +149,7 @@ constant SCR_WELCOME : string :=
    ;
 
 constant HELP_1 : string :=
-   "\n MegaST for MEGA65 1.3-test2\n\n" &
+   "\n MegaST for MEGA65 1.3-test3\n\n" &
    " MEGA65 port by Chris Freeman\n" &
    " github.com/freemchr/MegaST/issues\n" &
    " MiSTer port of the MiSTery core\n" &

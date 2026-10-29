@@ -532,7 +532,7 @@ e.g. on a boot floppy or on the hard disk itself.
 **A ready image for the Falcon:** `extras/falcon128.img` in the zip is a blank 128 MB IDE image
 with four FAT16 partitions of 32 MB (C: to F:, "TOS & Windows compatible", no byte swapping).
 Copy it into `/atarist`, choose it as "Hard disk 0:" and reset: EmuTOS shows C: to F: by
-itself. To copy files onto it from a PC: on Linux `sudo mount -o loop,offset=32768
+itself (it has no driver, so TOS 4.04 does not see it). To copy files onto it from a PC: on Linux `sudo mount -o loop,offset=32768
 falcon128.img /mnt` (C:); on Windows a tool such as OSFMount. `tools/make_falcon_hd.py` makes
 other sizes (`python3 make_falcon_hd.py --size 64 my.img`).
 
@@ -675,6 +675,13 @@ ST TOS 2.06 again. A TOS the machine cannot run is refused when you choose it (t
 512 KB TOS, the Falcon needs one). Without `tosfalc.img` the Falcon gets `tos.img` and does not
 start (the menu still works). Atari's TOS 4.04 works: copy your own TOS 4.04 image (512 KB) to the
 SD card and choose it with "TOS:" while the Falcon runs.
+
+**Hard disks under TOS 4.04:** unlike EmuTOS, TOS 4.04 has no hard disk driver of its own. A disk
+works when a driver on it starts at boot. The HDDRIVER demo images from
+[hddriver.net](https://www.hddriver.net) (`hddrdemo130_ide.img` on IDE, `hddrdemo130_scsi.img`
+with "Hard disks on SCSI (ICD)") boot to the desktop with drive C: in the simulation; the demo only
+works with its own small images. For your own images use a full driver such as HDDRIVER.
+`falcon128.img` has no driver, so it works with EmuTOS only.
 
 **FreeMiNT**: a FreeMiNT 1.19 installation on an IDE hard disk image (with HDDRIVER) boots: the
 kernel, its drivers, the network setup and the text shell work, and with `GEM=ROM` in `mint.cnf`

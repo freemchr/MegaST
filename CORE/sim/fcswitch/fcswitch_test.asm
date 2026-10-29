@@ -23,7 +23,8 @@
 ;    with M2M$FORCE_MENU (OPTM_SET goes fatal)
 ; 9. FC_AUT_NAME keeps the name of other auto-load ROMs and the TOS of the ST
 ; 10. FC_TOS_CHECK: the ST refuses a 512 KB TOS, the Falcon one of 192 or
-;    256 KB; a cartridge (128 KB, .stc) passes on the ST, on the Falcon only
+;    256 KB; a cartridge (chosen on the "Cartridge:" line, FB_LASTCALLER,
+;    any size: 16, 64, 128 KB, .stc) passes on the ST, on the Falcon only
 ;    when it is a remembered one (MNT_CTX_RESTORE), other sizes pass
 ; 11. The manual TOS was removed with Space (MNT_CRT_EJECT: forgotten,
 ;    FC_HOLD, FC_RELOAD): FC_SWITCH unloads it and loads the auto-load TOS of
@@ -255,7 +256,8 @@ START_FIRMWARE  MOVE    STR_START, R8
                 MOVE    0x1234, R9
                 RSUB    CHECK_EQ, 1
 
-                ; 10. (machine, size high, size low, context, expected error)
+                ; 10. (machine, size high, size low, context, menu line,
+                ; expected error)
                 MOVE    TC_TABLE, R0
 _T10            CMP     0xFFFF, @R0
                 RBRA    _T10_END, Z
@@ -269,6 +271,8 @@ _T10            CMP     0xFFFF, @R0
                 MOVE    @R0++, @R1
                 MOVE    TC_FDH, R8
                 MOVE    @R0++, R9               ; context (low byte)
+                MOVE    FB_LASTCALLER, R1
+                MOVE    @R0++, @R1
                 RSUB    FC_TOS_CHECK, 1
                 MOVE    SCRATCH, R1
                 MOVE    R8, @R1
@@ -444,19 +448,27 @@ M2M$FORCE_MENU  INCRB                           ; must not be called
 
 #include "../../m2m-rom/fcswitch.asm"
 
-TC_TABLE        .DW     0, 0x0003, 0, 0, 0      ; ST: 192 KB
-                .DW     0, 0x0004, 0, 0, 0      ; ST: 256 KB
-                .DW     0, 0x0008, 0, 0, 1      ; ST: 512 KB no
-                .DW     0, 0x0002, 0x0004, 0, 0 ; ST: .STC cartridge
-                .DW     0, 0x0002, 0, 0, 0      ; ST: 128 KB cartridge
-                .DW     1, 0x0008, 0, 0, 0      ; Falcon: 512 KB
-                .DW     1, 0x0003, 0, 0, 2      ; Falcon: 192 KB no
-                .DW     1, 0x0004, 0, 0, 2      ; Falcon: 256 KB no
-                .DW     1, 0x0002, 0, 0, 3      ; Falcon: 128 KB cartridge no
-                .DW     1, 0x0002, 0x0004, 0, 3 ; Falcon: .STC cartridge no
-                .DW     1, 0x0002, 0x0004, 1, 0 ; Falcon: remembered .STC
-                .DW     1, 0x0002, 0, 1, 0      ; Falcon: remembered 128 KB
-                .DW     1, 0x0004, 0x0001, 0, 0 ; Falcon: odd size passes
+; menu line: 0x0001 = "TOS:", 0x0101 = "Cartridge:" (FB_LASTCALLER)
+TC_TABLE        .DW     0, 0x0003, 0, 0, 0x0001, 0      ; ST: 192 KB
+                .DW     0, 0x0004, 0, 0, 0x0001, 0      ; ST: 256 KB
+                .DW     0, 0x0008, 0, 0, 0x0001, 1      ; ST: 512 KB no
+                .DW     0, 0x0002, 0x0004, 0, 0x0101, 0 ; ST: .STC cartridge
+                .DW     0, 0x0002, 0, 0, 0x0101, 0      ; ST: 128 KB cartridge
+                .DW     0, 0x0001, 0, 0, 0x0101, 0      ; ST: 64 KB cartridge
+                .DW     0, 0, 0x4000, 0, 0x0101, 0      ; ST: 16 KB cartridge
+                .DW     1, 0x0008, 0, 0, 0x0001, 0      ; Falcon: 512 KB
+                .DW     1, 0x0003, 0, 0, 0x0001, 2      ; Falcon: 192 KB no
+                .DW     1, 0x0004, 0, 0, 0x0001, 2      ; Falcon: 256 KB no
+                .DW     1, 0x0002, 0, 0, 0x0101, 3      ; Falcon: 128 KB cart no
+                .DW     1, 0x0002, 0x0004, 0, 0x0101, 3 ; Falcon: .STC cart no
+                .DW     1, 0x0001, 0, 0, 0x0101, 3      ; Falcon: 64 KB cart no
+                .DW     1, 0, 0x4000, 0, 0x0101, 3      ; Falcon: 16 KB cart no
+                .DW     1, 0x0002, 0x0004, 1, 0xFFFF, 0 ; Falcon: remembered .STC
+                .DW     1, 0x0002, 0, 1, 0xFFFF, 0      ; Falcon: remembered 128 KB
+                .DW     1, 0x0001, 0, 1, 0xFFFF, 0      ; Falcon: remembered 64 KB
+                .DW     1, 0x0008, 0, 1, 0xFFFF, 0      ; Falcon: remembered TOS
+                .DW     0, 0x0008, 0, 1, 0xFFFF, 1      ; ST: remembered 512 KB no
+                .DW     1, 0x0004, 0x0001, 0, 0x0001, 0 ; Falcon: odd size passes
                 .DW     0xFFFF
 
 STR_START       .ASCII_W "fcswitch test\n"
@@ -468,6 +480,7 @@ STR_AT          .ASCII_W " at "
 
                 .ORG    0x8000
 MENU_BIT        .BLOCK  1
+FB_LASTCALLER   .BLOCK  1
 N_AUTO          .BLOCK  1
 N_LOAD0         .BLOCK  1
 N_LOAD1         .BLOCK  1
