@@ -26,7 +26,7 @@ on the MEGA65. Please report problems and successes in the
 
 **Latest version: [1.2](https://github.com/freemchr/MegaST/releases/tag/v1.2)**
 (October 27, 2026): a new menu look in the style of the Atari GEM desktop, and for the Falcon the
-option "Hard disks on SCSI (ICD)", `FASTRAM.PRG` for the Fast RAM under TOS 4.04 and a ready IDE
+option "Hard disks on SCSI", `FASTRAM.PRG` for the Fast RAM under TOS 4.04 and a ready IDE
 hard disk image (`extras/` in the zip); see `VERSIONS.md`. 1.1.6 (October 25, 2026) added the
 **Atari Falcon030** (test, R6 only), see [New in 1.1.6](#new-in-116-the-atari-falcon030) below.
 **Updating from a version older than 1.1.6: copy the new `atarist/fccfg` and `atarist/fcmount`
@@ -315,7 +315,7 @@ toggles, <kbd>Space</kbd> on a drive line ejects the image. A line with `>` open
 |------|--------------|
 | TOS: | loads a TOS image for the machine that runs and restarts it (see [TOS](#tos)); <kbd>Space</kbd> removes it |
 | Floppy A:, Floppy B: | mounts a `.st` floppy image |
-| Hard disk 0:, Hard disk 1: | mounts a hard disk image (ACSI on the ST; on the Falcon IDE master/slave, or SCSI ID 0/1 with "Hard disks on SCSI (ICD)") |
+| Hard disk 0:, Hard disk 1: | mounts a hard disk image (ACSI on the ST; on the Falcon IDE master/slave, or SCSI ID 0/1 with "Hard disks on SCSI") |
 | Cartridge: | loads a cartridge image (ST/STe only); <kbd>Space</kbd> removes it |
 | Machine: | the machine, see below |
 | ST/STe settings, Falcon030 settings, Drives & images, Controllers & ports, HDMI:, VGA: | submenus, see below |
@@ -352,7 +352,7 @@ toggles, <kbd>Space</kbd> on a drive line ejects the image. A line with `>` open
 | CPU at 32 MHz (turbo) | off | the 68030 at 32 MHz instead of 16 MHz: about 1.6 times as fast for programs that use the 68030's caches (GEM, most Falcon software); programs that switch the caches off (many older games and demos) about 1.1 times as fast (since 1.3; before, slightly slower than at 16 MHz). Tools that read the Falcon's bus control register still show 16 MHz (a real Falcon only has 8 and 16 MHz) |
 | ST-RAM 4 MB (not 14 MB) | off | 4 MB ST-RAM instead of 14 MB |
 | Fast RAM 48 MB (TT-RAM) | off | 48 MB Fast RAM at $01000000. EmuTOS uses it by itself; Atari's TOS 4.04 needs `FASTRAM.PRG` in the AUTO folder (`extras/FASTRAM.PRG` in the zip, source in `tools/fastram/`), as a real Falcon needs the driver of its accelerator card |
-| Hard disks on SCSI (ICD) | off | the hard disks are SCSI ID 0 and 1 (the Falcon's SCSI port) instead of IDE master and slave. For drivers that do not know IDE, such as ICD: then the same image works on the ST (ACSI) and the Falcon. EmuTOS and HDDRIVER work with both. Takes effect with a reset |
+| Hard disks on SCSI | off | the hard disks are SCSI ID 0 and 1 (the Falcon's SCSI port) instead of IDE master and slave, for drivers that know the Falcon's SCSI but not IDE. EmuTOS and HDDRIVER work with both. Drivers that only know ACSI (the ST's hard disk port), such as older ICD PRO versions, do not start on the Falcon either way, as on a real Falcon. Takes effect with a reset |
 
 **Drives & images** (both machines)
 
@@ -520,9 +520,12 @@ Hard disks
 
 On the ST the hard disks are ACSI targets 0 and 1; on the Falcon030 they are the IDE master and
 slave (the Falcon has no ACSI port; HDDRIVER and EmuTOS work with IDE images, see
-[Falcon030 (test)](#falcon030-test)). With "Falcon030 settings" → "Hard disks on SCSI (ICD)" they
-are SCSI ID 0 and 1 instead, for drivers without IDE support such as ICD (whose boot code on
-the IDE disk finds nothing and shows no message). The images are raw disk images (as used by Hatari,
+[Falcon030 (test)](#falcon030-test)). With "Falcon030 settings" → "Hard disks on SCSI" they
+are SCSI ID 0 and 1 instead, for drivers that know the Falcon's SCSI but not IDE. A disk prepared on
+the ST with a driver that only knows ACSI, such as an older ICD PRO, does not boot on the Falcon
+(also not on a real one): TOS 4.04 starts its boot code, which then reads the disk over ACSI, finds
+no ACSI port and gives up without a message. Use EmuTOS, which reads such a disk by itself, or
+HDDRIVER. The images are raw disk images (as used by Hatari,
 MiSTer and MiST; `.hd`, `.img` or `.vhd` like on MiSTer, but not a Microsoft "dynamic" VHD),
 e.g. with a DOS (MBR) or Atari (AHDI) partition table. Images can be almost 4 GB large (the
 limit of FAT32); disks larger than 1 GB need a driver with ICD commands (EmuTOS, HDDRIVER). EmuTOS finds the
@@ -679,7 +682,7 @@ SD card and choose it with "TOS:" while the Falcon runs.
 **Hard disks under TOS 4.04:** unlike EmuTOS, TOS 4.04 has no hard disk driver of its own. A disk
 works when a driver on it starts at boot. The HDDRIVER demo images from
 [hddriver.net](https://www.hddriver.net) (`hddrdemo130_ide.img` on IDE, `hddrdemo130_scsi.img`
-with "Hard disks on SCSI (ICD)") boot to the desktop with drive C: in the simulation; the demo only
+with "Hard disks on SCSI") boot to the desktop with drive C: in the simulation; the demo only
 works with its own small images. For your own images use a full driver such as HDDRIVER.
 `falcon128.img` has no driver, so it works with EmuTOS only.
 
@@ -705,7 +708,7 @@ with other FreeMiNT setups are welcome.
 * 14 MB ST-RAM (or 4 MB) and optionally 48 MB of Fast RAM (TT-RAM) at $01000000
 * Two floppy drives (`.st` images) and the MEGA65's internal drive as A:
 * Two IDE hard disks: "Hard disk 0:" is the IDE master, "Hard disk 1:" the slave (up to 4 GB), or
-  SCSI ID 0 and 1 with "Hard disks on SCSI (ICD)"
+  SCSI ID 0 and 1 with "Hard disks on SCSI"
 * Enhanced joystick ports (Jaguar style joypads and paddles via "STe joypads")
 * Serial port and MIDI on the PMOD headers
 * The NVRAM (boot video mode, language, boot drive) is saved on the SD card as `/atarist/fcnvram`
@@ -719,7 +722,8 @@ stay untouched.
 
 * Programs for a 68060 accelerator (CT60/CT63): the Falcon has a 68030
 * FreeMiNT's XaAES desktop: white screen, see above (FreeMiNT with `GEM=ROM` works)
-* Hard disk drivers other than EmuTOS's own and HDDRIVER (for example AHDI, and ICD on SCSI): not tested yet
+* Hard disk drivers other than EmuTOS's own and HDDRIVER (for example AHDI): not tested yet. ACSI-only drivers
+  such as older ICD PRO versions cannot start on the Falcon (see the [FAQ](#faq) on hard disks)
 * Microphone input: the MEGA65 has no audio input
 
 PMOD headers (serial port, MIDI, printer)

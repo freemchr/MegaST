@@ -449,7 +449,7 @@ constant OPTM_ITEMS        : string :=
    " CPU at 32 MHz (turbo)\n"      &   -- 46
    " ST-RAM 4 MB (not 14 MB)\n"    &   -- 47
    " Fast RAM 48 MB (TT-RAM)\n"    &   -- 48
-   " Hard disks on SCSI (ICD)\n"   &   -- 49
+   " Hard disks on SCSI\n"         &   -- 49
    " Back to main menu\n"          &   -- 50
    " Drives & images\n"            &   -- 51
    " Drives & images\n"            &   -- 52
@@ -620,7 +620,7 @@ constant OPTM_GROUPS       : OPTM_GTYPE := (
                                              OPTM_G_FTurbo + OPTM_G_SINGLESEL,                         -- 46 CPU at 32 MHz (turbo)
                                              OPTM_G_F4MB + OPTM_G_SINGLESEL,                           -- 47 ST-RAM 4 MB (not 14 MB)
                                              OPTM_G_FFast + OPTM_G_SINGLESEL,                          -- 48 Fast RAM 48 MB (TT-RAM)
-                                             OPTM_G_FScsi + OPTM_G_SINGLESEL,                          -- 49 Hard disks on SCSI (ICD)
+                                             OPTM_G_FScsi + OPTM_G_SINGLESEL,                          -- 49 Hard disks on SCSI
                                              OPTM_G_CLOSE + OPTM_G_SUBMENU,                            -- 50 Back to main menu
                                              OPTM_G_SUBMENU,                                           -- 51 Drives & images
                                              OPTM_G_TEXT + OPTM_G_HEADLINE,                            -- 52 Drives & images

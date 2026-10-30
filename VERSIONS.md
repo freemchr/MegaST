@@ -19,6 +19,10 @@ Version 1.3 - in progress (1.3-test3)
 * **README: hard disks under TOS 4.04** (issue #25): TOS 4.04 has no hard disk driver of its own,
   so a disk needs one on it. The HDDRIVER demo images boot to drive C: on IDE and on SCSI in the
   simulation; `falcon128.img` has no driver and works with EmuTOS only.
+* **Falcon: "Hard disks on SCSI (ICD)" is now "Hard disks on SCSI"** (issue #25): an ICD PRO disk
+  from the ST does not boot on the Falcon. Its boot code reads the disk over ACSI, which the Falcon
+  does not have (also a real one), so the driver never starts. The option is for drivers that know
+  the Falcon's SCSI; for ICD disks use EmuTOS, or HDDRIVER under TOS 4.04. Settings are unchanged.
 * **Falcon: FASTRAM.PRG no longer scrambles the desktop icons** (issues #28, #29): with the Fast
   RAM added, TOS 4.04 put its own desktop into the Fast RAM, and the desktop then drew all its
   icons scrambled. `FASTRAM.PRG` now keeps only the desktop in ST RAM; programs still load into

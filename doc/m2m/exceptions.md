@@ -287,7 +287,7 @@ with `MEGA65` comments:
   first command and TOS waited for its timeout.
 * `rtl/falcon/falcon_scsi.sv`, `falcon_system.sv`: parameter `BLK_MAX` (default 32, MegaST 1): the
   blocks per HPS request. MegaST's drive bridge (`fdc_bridge.vhd`) moves one 512 byte block per
-  request. The hard disks go to SCSI ID 0/1 in `falcon_m65.sv` (menu "Hard disks on SCSI (ICD)"),
+  request. The hard disks go to SCSI ID 0/1 in `falcon_m65.sv` (menu "Hard disks on SCSI", up to 1.3-test3 "Hard disks on SCSI (ICD)"),
   which also answers the targets' window reads (no Main_MiSTer) without data, so that the built-in
   INQUIRY and READ CAPACITY answers are used.
 * `rtl/falcon/falcon_system.sv`, `dsp/falcon_dsp.sv`, `dsp/dsp56k_core.sv`, `dsp/dsp_periph.sv`: a
