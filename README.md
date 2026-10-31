@@ -3,6 +3,7 @@ Atari ST/STe and Falcon030 for MEGA65 (MegaST)
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support%20MegaST-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/cjf077)
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-freemchr-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/freemchr)
+[![Get release alerts in Discord](https://img.shields.io/badge/Discord-Get_release_alerts-5865F2?logo=discord&logoColor=white)](https://sourceping.app/github/freemchr/MegaST)
 
 This is a port of the [AtariST_MiSTer](https://github.com/MiSTer-devel/AtariST_MiSTer)
 core (the "MiSTery" Atari ST/STe core by Till Harbaum, Gyorgy Szombathelyi, Jorge Cwik,
