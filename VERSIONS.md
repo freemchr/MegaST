@@ -1,4 +1,4 @@
-Version 1.3 - in progress (1.3-test3)
+Version 1.3 - in progress (1.3-test4)
 =====================================
 
 * **Space removes the chosen TOS** (tester report): select the "TOS:" line in the menu and press
@@ -27,6 +27,16 @@ Version 1.3 - in progress (1.3-test3)
   RAM added, TOS 4.04 put its own desktop into the Fast RAM, and the desktop then drew all its
   icons scrambled. `FASTRAM.PRG` now keeps only the desktop in ST RAM; programs still load into
   the Fast RAM as their header flags ask. Replace `FASTRAM.PRG` from 1.2 with the new one.
+* **Falcon: programs in Fast RAM draw correctly under TOS 4.04** (issue #29): TOS 4.04 copies the
+  icons and pictures of a program or accessory with the blitter, also when the program was loaded
+  into the Fast RAM. The Falcon's blitter only reached the first 16 MB (as the real chip), so such
+  programs drew scrambled, also with the blitter switched off by Blitmode. With Fast RAM on, the
+  blitter now reaches the Fast RAM too (beyond a real Falcon). EmuTOS still uses no blitter while
+  Fast RAM is on (its own choice); with Fast RAM off it uses the blitter.
+* **FASTRAM.PRG waits after its message** (issue #29): 3 seconds, or until a key is pressed, so the
+  message can be read.
+* **README: TOS 4.04 uses one floppy drive** (issue #32): TOS 4.04 only selects drive A:, so
+  B: is a second name for A: (as on a real Falcon, which has one drive). EmuTOS uses both drives.
 
 Version 1.2 - October 27, 2026
 ==============================

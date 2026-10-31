@@ -67,6 +67,12 @@
 //     boundary if only the low word is written afterwards.
 //   - Address counters are 24 bits and wrap; Hatari's 32-bit counters can
 //     carry above bit 23 (and read back so) after an overflow.
+//   - MEGA65: with Fast RAM (fast_n > 0) a high address word of $01xx..$03xx
+//     (A31..A24) that names a Fast RAM block (at most fast_n) is kept in a 2-bit block
+//     number, so the blitter reaches the Fast RAM at $01000000 (the real chip
+//     has 24 address bits; TOS 4.04's VDI blits from the Fast RAM of a program
+//     loaded there, issues #28/#29). Any other high byte above $00 is block 0
+//     as before. The counters still wrap at 16 MB, within the block.
 //   - Byte reads of word registers return the register (Hatari leaves the
 //     stale IoMem content).
 //   - The control register line number (bits 3..0) is the live counter; in
@@ -103,7 +109,7 @@ module falcon_blitter #(
     // DMA (ST-RAM master) port
     output reg        dma_req,
     output reg        dma_we,
-    output reg [23:1] dma_addr,
+    output reg [25:1] dma_addr,     // MEGA65: [25:24] Fast RAM block
     output     [1:0]  dma_be,
     output reg [15:0] dma_wdata,
     input      [15:0] dma_rdata,
@@ -116,6 +122,7 @@ module falcon_blitter #(
     input             fmode,        // Falcon bus timing: the CPU's share in its clocks
     input             ftick,        // a CPU clock of Falcon time
     input             fpace,        // Falcon mode: the blit is ahead of Falcon time
+    input      [1:0]  fast_n,       // MEGA65: Fast RAM in 16 MB blocks at $01000000 (0: none)
 
     output            busy
 );
@@ -129,6 +136,7 @@ module falcon_blitter #(
     (* ramstyle = "MLAB, no_rw_check" *) reg [15:0] htc [0:15];
     reg [15:1] src_xinc, src_yinc, dst_xinc, dst_yinc;
     reg [23:1] src_addr, dst_addr;
+    reg [1:0]  src_blk, dst_blk;    // MEGA65: the Fast RAM block of the addresses (0: ST space)
     reg [15:0] endmask1, endmask2, endmask3;
     reg [16:0] x_count, x_count_reset, y_count;
     reg [1:0]  hop;
@@ -197,7 +205,9 @@ module falcon_blitter #(
         x_count_reset = 17'h0;
         rd_kind       = 2'd0;
         bus_dout      = 16'h0;
-        dma_addr      = 23'h0;
+        dma_addr      = 25'h0;
+        src_blk       = 2'd0;
+        dst_blk       = 2'd0;
         dma_wdata     = 16'h0;
     end
 
@@ -205,6 +215,11 @@ module falcon_blitter #(
     // datapath helpers
     // ------------------------------------------------------------------
     wire        src_neg = src_xinc[15];
+    // MEGA65: the Fast RAM block a high address byte names (0: none or not there)
+    function [1:0] fast_blk(input [7:0] h);
+        fast_blk = (h[7:2] == 6'd0 && h[1:0] <= fast_n) ? h[1:0] : 2'd0;
+    endfunction
+
     wire [22:0] src_xinc_ext = {{8{src_xinc[15]}}, src_xinc[15:1]};
     wire [22:0] src_yinc_ext = {{8{src_yinc[15]}}, src_yinc[15:1]};
     wire [22:0] dst_xinc_ext = {{8{dst_xinc[15]}}, dst_xinc[15:1]};
@@ -286,8 +301,8 @@ module falcon_blitter #(
     wire        k_rs   = k_ns && !k_hs && !k_nf;
     wire        k_rd   = k_rfx || k_rs || (k_nd && !k_hd);
     wire [1:0]  k_kind = k_rfx ? RK_FXSR : k_rs ? RK_SRC : RK_DST;
-    wire [23:1] k_addr = !(k_rfx || k_rs) ? dst_addr :
-                         (!k_step && rd_kind == RK_FXSR) ? src_addr + src_xinc_ext : src_addr;
+    wire [25:1] k_addr = !(k_rfx || k_rs) ? {dst_blk, dst_addr} :
+                         (!k_step && rd_kind == RK_FXSR) ? {src_blk, src_addr + src_xinc_ext} : {src_blk, src_addr};
     // an access may start
     wire        go     = (phase == P_RUN) && bg && !fpace;
 
@@ -299,14 +314,14 @@ module falcon_blitter #(
         case (bus_addr)
             5'h10: rd_mux = {src_xinc, 1'b0};
             5'h11: rd_mux = {src_yinc, 1'b0};
-            5'h12: rd_mux = {8'h00, src_addr[23:16]};
+            5'h12: rd_mux = {6'd0, src_blk, src_addr[23:16]};
             5'h13: rd_mux = {src_addr[15:1], 1'b0};
             5'h14: rd_mux = endmask1;
             5'h15: rd_mux = endmask2;
             5'h16: rd_mux = endmask3;
             5'h17: rd_mux = {dst_xinc, 1'b0};
             5'h18: rd_mux = {dst_yinc, 1'b0};
-            5'h19: rd_mux = {8'h00, dst_addr[23:16]};
+            5'h19: rd_mux = {6'd0, dst_blk, dst_addr[23:16]};
             5'h1A: rd_mux = {dst_addr[15:1], 1'b0};
             5'h1B: rd_mux = x_count[15:0];
             5'h1C: rd_mux = y_count[15:0];
@@ -347,6 +362,7 @@ module falcon_blitter #(
             src_xinc <= 15'd0; src_yinc <= 15'd0;
             dst_xinc <= 15'd0; dst_yinc <= 15'd0;
             src_addr <= 23'd0; dst_addr <= 23'd0;
+            src_blk  <= 2'd0;  dst_blk  <= 2'd0;
             endmask1 <= 16'd0; endmask2 <= 16'd0; endmask3 <= 16'd0;
             x_count  <= 17'd0; y_count  <= 17'd0;
             hop      <= 2'd0;  lop      <= 4'd0;
@@ -454,7 +470,7 @@ module falcon_blitter #(
                 buffer    <= buf_in;
                 wdata     <= dst_data;
                 dma_wdata <= dst_data;
-                dma_addr  <= dst_addr;
+                dma_addr  <= {dst_blk, dst_addr};
                 dma_we    <= 1'b1;
                 dma_req   <= go;
                 fsm       <= F_WR;
@@ -464,7 +480,7 @@ module falcon_blitter #(
                 if (!dma_req) begin
                     if (go) begin
                         dma_req   <= 1'b1;
-                        dma_addr  <= dst_addr;
+                        dma_addr  <= {dst_blk, dst_addr};
                         dma_wdata <= wdata;
                     end
                 end else if (dma_ack) begin
@@ -516,14 +532,14 @@ module falcon_blitter #(
                 case (bus_addr)
                 5'h10: src_xinc <= bus_din[15:1];
                 5'h11: src_yinc <= bus_din[15:1];
-                5'h12: src_addr[23:16] <= bus_din[7:0];
+                5'h12: begin src_addr[23:16] <= bus_din[7:0]; src_blk <= fast_blk(bus_din[15:8]); end
                 5'h13: src_addr[15:1]  <= bus_din[15:1];
                 5'h14: endmask1 <= bus_din;
                 5'h15: endmask2 <= bus_din;
                 5'h16: endmask3 <= bus_din;
                 5'h17: dst_xinc <= bus_din[15:1];
                 5'h18: dst_yinc <= bus_din[15:1];
-                5'h19: dst_addr[23:16] <= bus_din[7:0];
+                5'h19: begin dst_addr[23:16] <= bus_din[7:0]; dst_blk <= fast_blk(bus_din[15:8]); end
                 5'h1A: dst_addr[15:1]  <= bus_din[15:1];
                 5'h1B: begin
                     x_count       <= (bus_din == 16'd0) ? 17'h10000 : {1'b0, bus_din};

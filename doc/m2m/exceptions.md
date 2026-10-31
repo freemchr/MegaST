@@ -305,9 +305,16 @@ with `MEGA65` comments:
   Fast RAM, A31..A24 are decoded: `$00`/`$FF` the 24-bit space, `$01..fast_n` Fast RAM (a 32-bit port
   without the ST-RAM slot, also in the Falcon mode), the rest a bus error. The CPU's memory port, the
   line cache tags and the arbiter's CPU addresses have two more bits ([25:24]); the Fast RAM is right
-  above the 24-bit space in memory (DDRAM_ADDR[22:21]). DMA, video and the blitter stay in the 24-bit
-  space. EmuTOS finds the Fast RAM by itself (32-bit bus test, `ttram_detect`). On MiSTer the DDR3
+  above the 24-bit space in memory (DDRAM_ADDR[22:21]). DMA and video stay in the 24-bit space.
+  EmuTOS finds the Fast RAM by itself (32-bit bus test, `ttram_detect`). On MiSTer the DDR3
   window would have to grow by 48 MB.
+* `rtl/falcon/falcon_blitter.sv`, `falcon_memarb.sv`, `falcon_cpubus.sv`, `falcon_system.sv`: the
+  blitter reaches the Fast RAM (issues #28, #29). TOS 4.04's VDI blits from the memory of a program or
+  accessory loaded into Fast RAM (high address word `$0100`), and Blitmode(0) does not stop it; the
+  real chip has 24 address bits, so such a program drew scrambled. With `fast_n` > 0 a high address
+  word with A31..A24 = `$01..fast_n` sets a 2-bit block number per address register (read back in the high word);
+  the counters still wrap at 16 MB within the block. The arbiter's blitter port (d2) and the snoop
+  address have [25:24]. With `fast_n = 0` (and for any other high byte) as upstream.
 * `rtl/falcon/falcon_system.sv`: the CPU's line cache (`falcon_l2`) is on in the turbo mode too
   (upstream: Falcon mode only). Without it every turbo read was one SDRAM access through the clock
   crossing of `falcon_sdram.v`; reading memory got about 30 % faster (`tests/membench.s`).

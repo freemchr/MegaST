@@ -10,6 +10,7 @@
 |    after each resolution change), and a desktop in Fast RAM draws all its icons scrambled
 |    (issues #28, #29). Programs are started with other modes and keep their flags,
 |  - stays resident for the hook and the buffer.
+| After its message it waits 3 seconds (a key ends the wait), so the message can be read.
 | It does nothing when TOS already knows Fast RAM (ramvalid set and ramtop above $01000000).
 | Position independent, no relocation table (tools/fastram/build.sh).
 | MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
@@ -65,6 +66,23 @@ print:	move.l	a0,-(sp)
 	move.w	#9,-(sp)
 	trap	#1			| Cconws
 	addq.l	#6,sp
+	move.w	#180,d7			| 3 s at 60 Hz (3.6 s at 50 Hz)
+pause:	move.w	#2,-(sp)
+	move.w	#1,-(sp)
+	trap	#13			| Bconstat(CON)
+	addq.l	#4,sp
+	tst.w	d0
+	bne.s	pa_key
+	move.w	#37,-(sp)
+	trap	#14			| Vsync
+	addq.l	#2,sp
+	subq.w	#1,d7
+	bne.s	pause
+	rts
+pa_key:	move.w	#2,-(sp)
+	move.w	#2,-(sp)
+	trap	#13			| Bconin(CON): take the key
+	addq.l	#4,sp
 	rts
 
 | supervisor: fsize = the Fast RAM size (0: none), -1 when TOS knows it already

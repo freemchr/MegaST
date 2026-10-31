@@ -168,7 +168,7 @@ module falcon_cpubus
 	output            wbuf_busy,   // a posted RAM write is not in memory yet
 	input      [63:0] ram_rdata64, // the whole DDR3 word of a read, with ram_ack
 	input             snoop_we,    // another master wrote RAM
-	input      [23:0] snoop_addr,
+	input      [25:0] snoop_addr,   // MEGA65: [25:24] Fast RAM block (the blitter)
 	input             buf_flush,   // the loader writes memory
 	input             iack_mfp,    // with iack_done: the vector came from the MFP
 
@@ -836,7 +836,7 @@ always @(posedge clk) begin
 
 		endcase
 
-		if (buf_flush || (snoop_we && {2'b00, snoop_addr[23:3]} == rb_tag)) rb_valid <= 0;
+		if (buf_flush || (snoop_we && snoop_addr[25:3] == rb_tag)) rb_valid <= 0;
 		// a new instruction: its first YM/ACIA access waits again (an access
 		// seen on the same clock belongs to the previous instruction)
 		if (inst) begin ym_seen <= 0; acia_seen <= 0; end

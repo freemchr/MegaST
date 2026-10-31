@@ -143,7 +143,7 @@ wire        dsack0_n, dsack1_n, berr_n, avec_n, ciin_n;
 wire  [2:0] ipl_n;
 reg         cpu_br_n = 1, cpu_bgack_n = 1;
 wire        snoop_we;
-wire [23:0] snoop_addr;
+wire [25:0] snoop_addr;         // MEGA65: [25:24] Fast RAM block
 wire [31:0] dbg_pc;
 
 // The RESET instruction resets the peripherals only (cpu_reset_oe); the
@@ -206,7 +206,7 @@ ap030_top #(.USE_CE(1)) cpu
 	.fetch_stop_v(cpu_fetch_stop_v), .fetch_stop(cpu_fetch_stop),
 	.fetch_scan_v(cpu_scan_v), .fetch_scan_to(cpu_scan_to),
 	.dbg_vbr(), .dbg_cacr(), .dbg_cache_clear(),
-	.snoop_we(snoop_we), .snoop_addr({8'd0, snoop_addr}), .nmi_vec_nocache(1'b0),
+	.snoop_we(snoop_we), .snoop_addr({6'd0, snoop_addr}), .nmi_vec_nocache(1'b0),
 	.fetch_lazy(cpu_fmode)   // Falcon mode: Hatari's instruction prefetch
 );
 
@@ -255,7 +255,7 @@ wire [31:0] cp_wdata, cp_rdata;
 wire        blt_req, blt_we, blt_ack, blt_pace;
 wire        blit_br;
 reg         blit_bg = 0;       // the blitter owns the bus
-wire [23:1] blt_addr;
+wire [25:1] blt_addr;          // MEGA65: [25:24] Fast RAM block
 wire  [1:0] blt_be;
 wire [15:0] blt_wdata, blt_rdata;
 
@@ -308,7 +308,7 @@ wire [15:0] fdc_dwdata, fdc_drdata;
 // (Hatari's blitter uses get_word/put_word, which reach the I/O handlers):
 // one device-bus cycle per word while the blitter owns the bus.  A bus
 // error there reads $0000 and drops the write (STMemory_DMA_*Word).
-wire        blt_io = (blt_addr[23:16] == 8'hF0) || (blt_addr[23:15] == 9'h1FF);
+wire        blt_io = (blt_addr[25:24] == 2'b00) && ((blt_addr[23:16] == 8'hF0) || (blt_addr[23:15] == 9'h1FF));
 wire        mblt_ack;
 wire [15:0] mblt_rdata;
 reg         bd_cs = 0, bd_stb = 0, bd_ack = 0;
@@ -334,7 +334,7 @@ assign blt_rdata = bd_ack ? bd_rdata : mblt_rdata;
 assign dev_cs   = bd_cs ? 1'b1      : c_dev_cs;
 assign dev_stb  = bd_cs ? bd_stb    : c_dev_stb;
 assign dev_we   = bd_cs ? blt_we    : c_dev_we;
-assign dev_addr = bd_cs ? blt_addr  : c_dev_addr;
+assign dev_addr = bd_cs ? blt_addr[23:1] : c_dev_addr;
 assign dev_uds  = bd_cs ? blt_be[1] : c_dev_uds;
 assign dev_lds  = bd_cs ? blt_be[0] : c_dev_lds;
 assign dev_din  = bd_cs ? blt_wdata : c_dev_din;
@@ -769,7 +769,7 @@ falcon_blitter blitter
 	.clk(clk), .reset(dev_reset),
 	`DEVBUS(sel_blit), .bus_addr(dev_addr[5:1]), .bus_dout(blit_dout), .bus_ack(blit_ack),
 	.br(blit_br), .bg(blit_bg), .cpu_bus_cycle(cpu_cycle_done),
-	.fmode(cpu_fmode), .ftick(cpu_ce | cpu_idle_tick), .fpace(blt_pace),
+	.fmode(cpu_fmode), .ftick(cpu_ce | cpu_idle_tick), .fpace(blt_pace), .fast_n(fast_n),
 	.busy(blit_busy),
 	.dma_req(blt_req), .dma_we(blt_we), .dma_addr(blt_addr), .dma_be(blt_be),
 	.dma_wdata(blt_wdata), .dma_rdata(blt_rdata), .dma_ack(blt_ack)

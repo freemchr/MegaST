@@ -706,7 +706,8 @@ with other FreeMiNT setups are welcome.
   default, also works with an HDMI TV or monitor only (tested on an R6 over HDMI).
 * DSP56001, DMA sound, the sound matrix and the YM2149
 * 14 MB ST-RAM (or 4 MB) and optionally 48 MB of Fast RAM (TT-RAM) at $01000000
-* Two floppy drives (`.st` images) and the MEGA65's internal drive as A:
+* Two floppy drives (`.st` images) and the MEGA65's internal drive as A:. Atari's TOS 4.04 uses
+  drive A: only (B: is a second name for A:, as on a real Falcon); EmuTOS uses both
 * Two IDE hard disks: "Hard disk 0:" is the IDE master, "Hard disk 1:" the slave (up to 4 GB), or
   SCSI ID 0 and 1 with "Hard disks on SCSI"
 * Enhanced joystick ports (Jaguar style joypads and paddles via "STe joypads")
