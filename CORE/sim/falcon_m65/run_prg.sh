@@ -4,7 +4,8 @@
 # PROG is a .s file (assembled with the m68k toolchain into a .PRG without relocations, see
 # tests/) or a .PRG/.TOS. DIR (optional) goes into the root of C: (data files of a demo). The image
 # (OUT.img), the frames (OUT/) and the log (OUT.log) are written next to OUT. Without TOS= the
-# EmuTOS of the Falcon test builds is used (simrom.py makes a faster booting copy for TOS=);
+# EmuTOS of the 1.3 release zip is used (~/MegaST-release/MegaST-v1.3/atarist/tosfalc.img;
+# simrom.py makes a faster booting copy for TOS=);
 # SIM= selects the model (default obj_fpu). Test programs (.s) get the program flags PRGFLAGS (default
 # 1: fast load, no TPA clear; 7: also loaded into and Malloc from TT-RAM).
 # MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
@@ -14,7 +15,8 @@ OUT=$1; PROG=$2; shift 2
 DIR=
 if [ "$1" != "--" ] && [ -n "$1" ]; then DIR=$1; shift; fi
 [ "$1" = "--" ] && shift
-TOS=${TOS:-$HOME/MegaST-release/MegaST-v1.1.4-falcon-test4/atarist/tosfalc.img}
+TOS=${TOS:-$HOME/MegaST-release/MegaST-v1.3/atarist/tosfalc.img}
+[ -f "$TOS" ] || { echo "$0: no TOS image $TOS (set TOS=, e.g. the atarist/tosfalc.img of a release zip)" >&2; exit 1; }
 SIM=${SIM:-$H/obj_fpu/Vtb_top}
 ST=$OUT.stage
 rm -rf "$ST" "$OUT"; mkdir -p "$ST/root/AUTO" "$OUT"
