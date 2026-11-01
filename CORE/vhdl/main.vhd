@@ -867,7 +867,8 @@ begin
             dio_data        => dio_data_i,
             dio_strobe      => f_dio_strobe,
             dio_strobe_ack  => f_dio_ack,
-            cart_loaded     => cart_loaded_i,
+            cart_loaded     => '0',                 -- no cartridge on the Falcon (issue #27): ST
+                                                    -- cartridges crash it; the menu refuses them
             nvb_addr        => falcon_nvb_addr_o,
             nvb_din         => falcon_nvb_din_o,
             nvb_we          => falcon_nvb_we_o,

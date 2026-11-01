@@ -12,6 +12,8 @@
 FB_PATH_MAX     .EQU    255                     ; = MNT_ENTRY_SZ - 1
 MNT_ENTRY_SZ    .EQU    256
 MNT_FNAME_MAX   .EQU    63
+MNT_CTX_RESTORE .EQU    1                       ; SF_CONTEXT low byte: loaded
+                                                ; again, not chosen by the user
 FB_PATH         .BLOCK  256                     ; current dir. of the browser
 MNT_PATHS       .BLOCK  MNT_BUF_SIZE            ; one path per entry
 MNT_PEND        .BLOCK  MNT_ENTRIES             ; name for the menu pending

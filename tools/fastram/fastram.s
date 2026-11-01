@@ -4,8 +4,13 @@
 |  - finds the Fast RAM at $01000000 (16, 32 or 48 MB, menu "Fast RAM"): the core answers a bus
 |    error above it; without Fast RAM the bus has 24 bits and $01000000 is a mirror of address 0,
 |  - adds it to GEMDOS (Maddalt), sets ramtop ($5A4) and ramvalid ($5A8),
-|  - puts the _FRB cookie (a 64 KB ST-RAM buffer for DMA into Fast RAM) into the cookie jar and
-|    stays resident for that buffer.
+|  - puts the _FRB cookie (a 64 KB ST-RAM buffer for DMA into Fast RAM) into the cookie jar,
+|  - hooks GEMDOS (XBRA 'MSFR') and clears the TT-RAM bits (1, 2) of Pexec mode 7 called from
+|    the ROM: TOS 4.04 makes the process of the AES and desktop that way (flags 7, $E1F44E, again
+|    after each resolution change), and a desktop in Fast RAM draws all its icons scrambled
+|    (issues #28, #29). Programs are started with other modes and keep their flags,
+|  - stays resident for the hook and the buffer.
+| After its message it waits 3 seconds (a key ends the wait), so the message can be read.
 | It does nothing when TOS already knows Fast RAM (ramvalid set and ramtop above $01000000).
 | Position independent, no relocation table (tools/fastram/build.sh).
 | MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
@@ -30,7 +35,7 @@
 	bmi	quit
 	pea	setvars(pc)
 	move.w	#38,-(sp)
-	trap	#14			| Supexec(setvars): frbset = 1 with the _FRB cookie
+	trap	#14			| Supexec(setvars): frbset = 1 with the _FRB cookie, the hook
 	addq.l	#6,sp
 	lea	m_ok(pc),a0
 	move.l	d6,d0
@@ -43,11 +48,11 @@
 	add.b	#'0',d0
 	move.b	d0,m_mb+1-m_ok(a0)
 	bsr	print
+	lea	frbbuf(pc),a0		| keep the program (the hook)
 	tst.l	frbset(pc)
-	beq.s	term
-	lea	frbbuf(pc),a0		| keep the program and the _FRB buffer
-	add.l	#0x10000,a0
-	sub.l	a3,a0
+	beq.s	keep
+	add.l	#0x10000,a0		| and the _FRB buffer
+keep:	sub.l	a3,a0
 	clr.w	-(sp)
 	move.l	a0,-(sp)
 	move.w	#0x31,-(sp)
@@ -61,6 +66,23 @@ print:	move.l	a0,-(sp)
 	move.w	#9,-(sp)
 	trap	#1			| Cconws
 	addq.l	#6,sp
+	move.w	#180,d7			| 3 s at 60 Hz (3.6 s at 50 Hz)
+pause:	move.w	#2,-(sp)
+	move.w	#1,-(sp)
+	trap	#13			| Bconstat(CON)
+	addq.l	#4,sp
+	tst.w	d0
+	bne.s	pa_key
+	move.w	#37,-(sp)
+	trap	#14			| Vsync
+	addq.l	#2,sp
+	subq.w	#1,d7
+	bne.s	pause
+	rts
+pa_key:	move.w	#2,-(sp)
+	move.w	#2,-(sp)
+	trap	#13			| Bconin(CON): take the key
+	addq.l	#4,sp
 	rts
 
 | supervisor: fsize = the Fast RAM size (0: none), -1 when TOS knows it already
@@ -116,6 +138,10 @@ setvars:
 	add.l	#0x01000000,d0
 	move.l	d0,0x5a4.w		| ramtop
 	move.l	#0x1357BD13,0x5a8.w	| ramvalid
+	lea	old1(pc),a0
+	move.l	0x84.w,(a0)		| GEMDOS
+	lea	pexhook(pc),a0
+	move.l	a0,0x84.w
 	move.l	0x5a0.w,d0		| _p_cookies
 	beq.s	sv_end
 	move.l	d0,a0
@@ -141,6 +167,27 @@ sv_last:
 	lea	frbset(pc),a2
 	move.l	#1,(a2)
 sv_end:	movem.l	(sp)+,d2-d3/a2
+	rts
+
+| GEMDOS hook: Pexec mode 7 without the TT-RAM bits (load and Malloc in TT-RAM)
+	.ascii	"XBRAMSFR"
+old1:	.long	0
+pexhook:
+	move.l	a0,-(sp)
+	btst	#5,4(sp)		| called from supervisor mode?
+	bne.s	ph_sup
+	move.l	usp,a0
+	bra.s	ph_go
+ph_sup:	lea	12(sp),a0		| a0, SR, PC, format word
+ph_go:	cmp.l	#0x004B0007,(a0)	| Pexec mode 7
+	bne.s	ph_out
+	cmp.l	#0x00E00000,6(sp)	| called from the ROM? (PC at 6(sp))
+	bcs.s	ph_out
+	cmp.l	#0x00F00000,6(sp)
+	bcc.s	ph_out
+	and.l	#0xFFFFFFF9,4(a0)
+ph_out:	move.l	(sp)+,a0
+	move.l	old1(pc),-(sp)
 	rts
 
 m_ok:	.ascii	"MegaST: "

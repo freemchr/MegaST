@@ -6,6 +6,7 @@
 //     --frames DIR        write frames as DIR/frame_NNNN.ppm   --frame-every N (default 50)
 //     --monitor M         0 mono, 1 RGB, 2 VGA (default), 3 TV     --ram MB (4 or 14, default 14)
 //     --fda FILE          floppy A (.st), served like fdc_bridge.vhd (16-bit words, even byte low)
+//     --fdb FILE          floppy B (.st), the same
 //     --rfloppy FILE      the .st image in the flux level model of the internal drive (realdrive.h),
 //                         drive A: is that drive (menu "Real floppy drive as A:")
 //     --hda FILE          hard disk on drive 2 (IDE master), served the same way
@@ -104,6 +105,7 @@ int main(int argc, char **argv) {
         else if (a == "--monitor") monitor = atoi(next().c_str());
         else if (a == "--ram") ram = atoi(next().c_str());
         else if (a == "--fda") img_name[0] = next();
+        else if (a == "--fdb") img_name[1] = next();
         else if (a == "--hda") img_name[2] = next();
         else if (a == "--turbo") turbo = true;
         else if (a == "--scsi") scsi = true;

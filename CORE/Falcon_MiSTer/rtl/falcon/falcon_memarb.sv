@@ -21,7 +21,9 @@
 //
 //  MEGA65: the CPU port has two more address bits, the Fast RAM blocks of
 //  falcon_cpubus (guest 01000000-03FFFFFF), right above the 24-bit space in
-//  memory (DDRAM_ADDR[22:21]); the other masters reach the 24-bit space only.
+//  memory (DDRAM_ADDR[22:21]). So has the blitter (d2): TOS 4.04 blits from
+//  the Fast RAM of programs loaded there (falcon_blitter). The other masters
+//  reach the 24-bit space only.
 //
 //  One command is outstanding at a time.  DMA writes are reported on the
 //  snoop port so the CPU data cache never holds stale lines.
@@ -89,7 +91,7 @@ module falcon_memarb
 
 	input             d2_req,
 	input             d2_we,
-	input      [23:1] d2_addr,
+	input      [25:1] d2_addr,     // MEGA65: [25:24] Fast RAM block (the blitter)
 	input       [1:0] d2_be,
 	input      [15:0] d2_wdata,
 	output reg [15:0] d2_rdata,
@@ -122,7 +124,7 @@ module falcon_memarb
 
 	// snoop: a non-CPU master wrote RAM
 	output reg        snoop_we,
-	output reg [23:0] snoop_addr,
+	output reg [25:0] snoop_addr,  // MEGA65: [25:24] Fast RAM block
 
 	// MiSTer DDRAM interface
 	input             DDRAM_BUSY,
@@ -201,7 +203,7 @@ always @* begin : sel
 		g_owner = M_D1; g_we = d1_we; g_addr = {2'b00, d1_addr[23:3]}; g_sub = d1_addr[2:1];
 		g_wdata = {4{d1_wdata}}; g_be = {6'd0, d1_be} << (6 - 2 * d1_addr[2:1]);
 	end else if (d2_req) begin
-		g_owner = M_D2; g_we = d2_we; g_addr = {2'b00, d2_addr[23:3]}; g_sub = d2_addr[2:1];
+		g_owner = M_D2; g_we = d2_we; g_addr = d2_addr[25:3]; g_sub = d2_addr[2:1];
 		g_wdata = {4{d2_wdata}}; g_be = {6'd0, d2_be} << (6 - 2 * d2_addr[2:1]);
 	end else if (d3_req) begin
 		g_owner = M_D3; g_we = d3_we; g_addr = {2'b00, d3_addr[23:3]}; g_sub = d3_addr[2:1];
@@ -213,7 +215,9 @@ always @* begin : sel
 
 	// memory types for the DMA masters
 	wa = {g_addr, g_sub, 1'b0};
-	if (g_owner == M_D0 || g_owner == M_D1 || g_owner == M_D2) begin
+	if (g_owner == M_D2 && wa[25:24] != 2'b00)
+		g_ok = 1;    // MEGA65: the blitter in Fast RAM (falcon_blitter only names blocks that exist)
+	else if (g_owner == M_D0 || g_owner == M_D1 || g_owner == M_D2) begin
 		if (g_we)
 			g_ok = (wa < ram_top) && (wa[23:3] != 21'd0 || g_owner == M_D1);
 		else
@@ -228,8 +232,8 @@ reg   [1:0] b_v = 2'b00;
 reg  [25:3] b_tag0, b_tag1;
 reg  [63:0] b_dat0, b_dat1;
 reg         b_lru = 0;          // the entry the next fill replaces
-wire        b_h0   = b_v[0] && (b_tag0 == {2'b00, d2_addr[23:3]});
-wire        b_h1   = b_v[1] && (b_tag1 == {2'b00, d2_addr[23:3]});
+wire        b_h0   = b_v[0] && (b_tag0 == d2_addr[25:3]);
+wire        b_h1   = b_v[1] && (b_tag1 == d2_addr[25:3]);
 wire [63:0] b_line = b_h0 ? b_dat0 : b_dat1;
 // a read hit (not the request just acknowledged, nor that of a read in the DDR3)
 wire        d2_hit = d2_req && !d2_we && !d2_ack && (b_h0 || b_h1) && !(st != S_IDLE && owner == M_D2 && !cmd_we);
@@ -281,7 +285,7 @@ always @(posedge clk) begin
 			if (g_owner == M_LD)  ld_take = 1;
 			if (g_we && g_owner != M_CPU && g_owner != M_LD) begin
 				snoop_we   <= 1;
-				snoop_addr <= {g_addr[23:3], g_sub, 1'b0};
+				snoop_addr <= {g_addr[25:3], g_sub, 1'b0};
 			end
 			if (g_we && g_owner != M_CPU) begin
 				owr_we   <= 1;

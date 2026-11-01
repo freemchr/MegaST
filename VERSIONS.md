@@ -1,3 +1,43 @@
+Version 1.3 - November 1, 2026
+==============================
+
+* **Space removes the chosen TOS** (tester report): select the "TOS:" line in the menu and press
+  Space. The TOS is forgotten, the menu closes and the machine restarts with `tos.img` (ST) or
+  `tosfalc.img` (Falcon), as Space already does for the drives and the cartridge. Before, the way
+  back was to switch "Remember TOS/cartridge" off and reset.
+* **Falcon: faster turbo with the caches off** (issue #28): with "CPU at 32 MHz (turbo)" a memory
+  read that the 68030's caches do not answer took 10 processor clocks, two of them only registers
+  between the CPU, the bus bridge and the line cache. These are gone in turbo: 7 clocks. Programs
+  that switch the caches off (many older games and demos) were slightly slower in turbo than at
+  16 MHz and are now about 1.1 times as fast (simulation, tests/cpuspeed.s: 199 instead of 159 loop
+  counts, 16 MHz: 181). With the caches on nothing changes (1.6 times). The Falcon mode (16 MHz) is
+  unchanged.
+* **Falcon: no cartridge** (issue #27): ST cartridges crashed the Falcon or did nothing, and no
+  Falcon cartridges are known. While the Falcon030 is selected, the menu refuses a cartridge image,
+  and the Falcon no longer sees a cartridge that is loaded for the ST. A cartridge remembered for
+  the ST stays remembered and works again after switching back to the ST.
+* **README: hard disks under TOS 4.04** (issue #25): TOS 4.04 has no hard disk driver of its own,
+  so a disk needs one on it. The HDDRIVER demo images boot to drive C: on IDE and on SCSI in the
+  simulation; `falcon128.img` has no driver and works with EmuTOS only.
+* **Falcon: "Hard disks on SCSI (ICD)" is now "Hard disks on SCSI"** (issue #25): an ICD PRO disk
+  from the ST does not boot on the Falcon. Its boot code reads the disk over ACSI, which the Falcon
+  does not have (also a real one), so the driver never starts. The option is for drivers that know
+  the Falcon's SCSI; for ICD disks use EmuTOS, or HDDRIVER under TOS 4.04. Settings are unchanged.
+* **Falcon: FASTRAM.PRG no longer scrambles the desktop icons** (issues #28, #29): with the Fast
+  RAM added, TOS 4.04 put its own desktop into the Fast RAM, and the desktop then drew all its
+  icons scrambled. `FASTRAM.PRG` now keeps only the desktop in ST RAM; programs still load into
+  the Fast RAM as their header flags ask. Replace `FASTRAM.PRG` from 1.2 with the new one.
+* **Falcon: programs in Fast RAM draw correctly under TOS 4.04** (issue #29): TOS 4.04 copies the
+  icons and pictures of a program or accessory with the blitter, also when the program was loaded
+  into the Fast RAM. The Falcon's blitter only reached the first 16 MB (as the real chip), so such
+  programs drew scrambled, also with the blitter switched off by Blitmode. With Fast RAM on, the
+  blitter now reaches the Fast RAM too (beyond a real Falcon). EmuTOS still uses no blitter while
+  Fast RAM is on (its own choice); with Fast RAM off it uses the blitter.
+* **FASTRAM.PRG waits after its message** (issue #29): 3 seconds, or until a key is pressed, so the
+  message can be read.
+* **README: TOS 4.04 uses one floppy drive** (issue #32): TOS 4.04 only selects drive A:, so
+  B: is a second name for A: (as on a real Falcon, which has one drive). EmuTOS uses both drives.
+
 Version 1.2 - October 27, 2026
 ==============================
 

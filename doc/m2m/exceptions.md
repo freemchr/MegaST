@@ -116,6 +116,9 @@ The framework does not remember mounted images (issue #13). Changes:
   file is opened through `HANDLE_DEV`, not `CONFIG_DEVH`, so the FAT32 library keeps the shared sector
   buffer consistent with the vdrives. Like the settings file, it must exist with the exact size, else the
   feature is off. Tested with `CORE/sim/mntmem/run.sh` (QNICE emulator).
+  A CRT/ROM loaded again by `_MNT_LOAD` (restore, machine switch) gets the context `CTX_LOAD_ROM` with
+  the low byte `MNT_CTX_RESTORE` (1), so that `PREP_LOAD_IMAGE` can tell it from one chosen in the
+  browser (MegaST: a cartridge is refused on the Falcon only when chosen, issue #27).
 * `M2M/rom/selectfile.asm`: the browser tracks its current directory in `FB_PATH` (`FBP_SET`, `FBP_CD`),
   because it only returns the bare file name.
 * `M2M/rom/shell.asm`: `HANDLE_MOUNTING` calls `MNT_REMEMBER` after a successful load, `MNT_FORGET` when a
@@ -140,6 +143,8 @@ The framework does not remember mounted images (issue #13). Changes:
 * `M2M/rom/shell.asm`: in CRT/ROM mode `HANDLE_MOUNTING` first calls `MNT_CRT_EJECT`
   (`CORE/m2m-rom/m2m-rom.asm`): Space on the line of a loaded cartridge removes it (status "loading",
   then "idle" in the device, so the ST restarts without it) and forgets it, instead of opening the browser.
+  Space on the line of a manually loaded TOS forgets it, holds the core in reset and closes the menu;
+  `FC_SWITCH` (`fcswitch.asm`, flag `FC_RELOAD`) then loads the auto-load TOS of the same machine.
 * `M2M/rom/options.asm` (`HELP_MENU`): `MNT_OSM_NAMES` writes the names of the restored images when the
   menu opens (`OPTM_HEAP` is only valid then); `MNT_SAVE` retries a postponed save when the menu closes.
 * `M2M/rom/sysdef.asm`: selector `M2M$CFG_MNT_FILE` (`0x0102`); `CORE/vhdl/config.vhd`: `SEL_MNT_FILE`
@@ -282,7 +287,7 @@ with `MEGA65` comments:
   first command and TOS waited for its timeout.
 * `rtl/falcon/falcon_scsi.sv`, `falcon_system.sv`: parameter `BLK_MAX` (default 32, MegaST 1): the
   blocks per HPS request. MegaST's drive bridge (`fdc_bridge.vhd`) moves one 512 byte block per
-  request. The hard disks go to SCSI ID 0/1 in `falcon_m65.sv` (menu "Hard disks on SCSI (ICD)"),
+  request. The hard disks go to SCSI ID 0/1 in `falcon_m65.sv` (menu "Hard disks on SCSI", up to 1.3-test3 "Hard disks on SCSI (ICD)"),
   which also answers the targets' window reads (no Main_MiSTer) without data, so that the built-in
   INQUIRY and READ CAPACITY answers are used.
 * `rtl/falcon/falcon_system.sv`, `dsp/falcon_dsp.sv`, `dsp/dsp56k_core.sv`, `dsp/dsp_periph.sv`: a
@@ -300,9 +305,16 @@ with `MEGA65` comments:
   Fast RAM, A31..A24 are decoded: `$00`/`$FF` the 24-bit space, `$01..fast_n` Fast RAM (a 32-bit port
   without the ST-RAM slot, also in the Falcon mode), the rest a bus error. The CPU's memory port, the
   line cache tags and the arbiter's CPU addresses have two more bits ([25:24]); the Fast RAM is right
-  above the 24-bit space in memory (DDRAM_ADDR[22:21]). DMA, video and the blitter stay in the 24-bit
-  space. EmuTOS finds the Fast RAM by itself (32-bit bus test, `ttram_detect`). On MiSTer the DDR3
+  above the 24-bit space in memory (DDRAM_ADDR[22:21]). DMA and video stay in the 24-bit space.
+  EmuTOS finds the Fast RAM by itself (32-bit bus test, `ttram_detect`). On MiSTer the DDR3
   window would have to grow by 48 MB.
+* `rtl/falcon/falcon_blitter.sv`, `falcon_memarb.sv`, `falcon_cpubus.sv`, `falcon_system.sv`: the
+  blitter reaches the Fast RAM (issues #28, #29). TOS 4.04's VDI blits from the memory of a program or
+  accessory loaded into Fast RAM (high address word `$0100`), and Blitmode(0) does not stop it; the
+  real chip has 24 address bits, so such a program drew scrambled. With `fast_n` > 0 a high address
+  word with A31..A24 = `$01..fast_n` sets a 2-bit block number per address register (read back in the high word);
+  the counters still wrap at 16 MB within the block. The arbiter's blitter port (d2) and the snoop
+  address have [25:24]. With `fast_n = 0` (and for any other high byte) as upstream.
 * `rtl/falcon/falcon_system.sv`: the CPU's line cache (`falcon_l2`) is on in the turbo mode too
   (upstream: Falcon mode only). Without it every turbo read was one SDRAM access through the clock
   crossing of `falcon_sdram.v`; reading memory got about 30 % faster (`tests/membench.s`).
