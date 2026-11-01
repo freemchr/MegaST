@@ -1,5 +1,5 @@
-Version 1.3 - in progress (1.3-test4)
-=====================================
+Version 1.3 - November 1, 2026
+==============================
 
 * **Space removes the chosen TOS** (tester report): select the "TOS:" line in the menu and press
   Space. The TOS is forgotten, the menu closes and the machine restarts with `tos.img` (ST) or

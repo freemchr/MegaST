@@ -24,10 +24,12 @@ disk images; the Falcon030 boots EmuTOS, TOS 4.04 and FreeMiNT and runs several 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
-**Latest version: [1.2](https://github.com/freemchr/MegaST/releases/tag/v1.2)**
-(October 27, 2026): a new menu look in the style of the Atari GEM desktop, and for the Falcon the
-option "Hard disks on SCSI", `FASTRAM.PRG` for the Fast RAM under TOS 4.04 and a ready IDE
-hard disk image (`extras/` in the zip); see `VERSIONS.md`. 1.1.6 (October 25, 2026) added the
+**Latest version: [1.3](https://github.com/freemchr/MegaST/releases/tag/v1.3)**
+(November 1, 2026): Space on the "TOS:" line removes a chosen TOS; for the Falcon a faster turbo
+with the caches off, cartridges refused cleanly, and `FASTRAM.PRG` (`extras/` in the zip) now
+gives TOS 4.04 the Fast RAM with correct desktop icons, and programs in the Fast RAM draw
+correctly; see `VERSIONS.md`. 1.2 (October 27, 2026) brought the menu look in the style of the
+Atari GEM desktop, the Falcon option "Hard disks on SCSI" and a ready IDE hard disk image. 1.1.6 (October 25, 2026) added the
 **Atari Falcon030** (test, R6 only), see [New in 1.1.6](#new-in-116-the-atari-falcon030) below.
 **Updating from a version older than 1.1.6: copy the new `atarist/fccfg` and `atarist/fcmount`
 from the zip**, otherwise the menu settings are not saved. 1.1.5 made the Viking 1280x1024 card work, shown sharp at 1:1 on HDMI.
