@@ -1,5 +1,5 @@
-Version 1.4 - in progress (1.4-test1)
-=====================================
+Version 1.4 - November 2, 2026
+==============================
 
 * **Falcon: EmuTOS with "Hard disks on SCSI" fails on large transfers** (tester report): installing
   a program to a SCSI hard disk, copying files on it or loading a large program stopped with "Your
@@ -9,8 +9,10 @@ Version 1.4 - in progress (1.4-test1)
   slower, so every transfer that took longer than about a second was aborted. The EmuTOS in the zip
   (`tosfalc.img`) now allows 12.8 KB/s (one byte changed, `tools/emutos_scsi_timeout.py`). In the
   simulation with the SD card's speed, copying 68 KB and 30 KB files on a SCSI disk failed before and
-  works now. IDE was not affected (EmuTOS allows 3 seconds per 16 sectors there), nor TOS 4.04 with
-  its own driver. A copy of EmuTOS from the EmuTOS website still has the short limit.
+  works now. The fix only changes SCSI. On IDE, EmuTOS allows 3 seconds per 16 sectors, and in the
+  simulation IDE works at the SD card's speed; the tester also saw the message once on an IDE disk,
+  which is not explained yet (reports welcome). TOS 4.04 with the ICD driver works on IDE (tester
+  report). A copy of EmuTOS from the EmuTOS website still has the short limit.
 
 Version 1.3 - November 1, 2026
 ==============================
