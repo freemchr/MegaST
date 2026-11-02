@@ -535,6 +535,13 @@ limit of FAT32); disks larger than 1 GB need a driver with ICD commands (EmuTOS,
 partitions automatically; with Atari TOS you need a hard disk driver (AHDI, HDDRIVER, ...),
 e.g. on a boot floppy or on the hard disk itself.
 
+**Speed:** the core reads and writes the images directly on the SD card, slower than a real hard
+disk (writing is the slowest part). Drivers wait long enough, with one exception: EmuTOS on the
+Falcon with "Hard disks on SCSI" gives up when a transfer takes longer than it would on a real
+disk, and shows "Your output device is not receiving data". The EmuTOS in the zip (`tosfalc.img`,
+from 1.4) has a longer time limit; a copy of EmuTOS from the EmuTOS website does not, so with it
+use IDE (the default) instead of SCSI.
+
 **A ready image for the Falcon:** `extras/falcon128.img` in the zip is a blank 128 MB IDE image
 with four FAT16 partitions of 32 MB (C: to F:, "TOS & Windows compatible", no byte swapping).
 Copy it into `/atarist`, choose it as "Hard disk 0:" and reset: EmuTOS shows C: to F: by
@@ -674,7 +681,9 @@ between the ST and the Falcon closes the menu, loads the TOS of the new machine 
 
 **TOS**: the Falcon needs a Falcon TOS, the ST an ST TOS, and each machine has its own. At power on
 and after switching the machine in the menu, the core loads `atarist/tos.img` for the ST and
-`atarist/tosfalc.img` for the Falcon (EmuTOS for the Falcon, 512 KB, in the zip). A TOS loaded with
+`atarist/tosfalc.img` for the Falcon (EmuTOS for the Falcon, 512 KB, in the zip; from 1.4 with one
+byte changed for hard disks on SCSI, see [Hard disks](#hard-disks) and
+`tools/emutos_scsi_timeout.py`; the EmuTOS source is at [emutos.sourceforge.io](https://emutos.sourceforge.io)). A TOS loaded with
 the menu item "TOS:" replaces it for the machine that runs, and with `fcmount` on the SD card it is
 remembered for that machine: switching from the ST with TOS 2.06 to the Falcon and back gives the
 ST TOS 2.06 again. A TOS the machine cannot run is refused when you choose it (the ST cannot use a

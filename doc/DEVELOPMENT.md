@@ -108,6 +108,19 @@ simulation):
   simulation (run `build.sh` first). A floppy boot sector writes 64 KB with one `Rwabs` call, and
   `check.py` verifies every sector of the image. A delay (641666 = 20 ms per sector) makes the
   writes as slow as the firmware's SD path; very long delays make the driver time out and retry
+* `CORE/sim/falcon_m65/` (Falcon030 bench, `Vtb_top`): `HD_RD_US` / `HD_WR_US` make every hard disk
+  sector read/write take that many microseconds, like the firmware's SD path (2000 / 20000 is about
+  the speed of the unbuffered drives); `HD_SPIKE_EVERY=N HD_SPIKE_US=T` makes every Nth request take
+  T instead (SD card busy). With 2000 / 20000, the EmuTOS 1.3 release image failed to copy 68 KB
+  files on a SCSI disk (EUNDEV, its transfer time limit assumes 200 KB/s); IDE passed.
+
+### EmuTOS in the release zip
+
+`atarist/tosfalc.img` is the Falcon EmuTOS with one change, made by `tools/emutos_scsi_timeout.py`
+(it checks the original bytes): `do_scsi_rw` (`bios/scsi.c`) divides the transfer length by 64
+instead of `BYTES_PER_CLOCK` (1024) for its timeout, so SCSI transfers may run at 12.8 KB/s instead
+of 200 KB/s. Apply it to every new EmuTOS image before a release (the offset depends on the build:
+find `moveq #10,d0; asr.l d0,d6; cmpi.l #200,d6` in a disassembly). `tos.img` (ST, ACSI) is unchanged.
 
 `tools/JTAG.md` describes the JTAG tools used for debugging on the real hardware (a TE0790 adapter
 and Vivado's hardware manager, no ILA needed).

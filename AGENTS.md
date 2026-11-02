@@ -93,6 +93,8 @@ Simulate first. Every hardware round trip costs the maintainer time.
   `XDEFS=+define+BUS_STATS MDIR=obj_bs` logs the clocks of turbo RAM cycles (`falcon_cpubus.sv`),
   `XDEFS=+define+DMA_TRACE MDIR=obj_tr` every `$FF8604`/`$FF8606` access (`falcon_fdc.sv`); a switch from the ST
   in the menu: `--reload` (TOS loaded again, fcswitch.asm), `--switch` (all resets at once), `--junk` (no TOS).
+  `HD_RD_US=2000 HD_WR_US=20000` makes the hard disk as slow as the SD card path of the firmware
+  (`HD_SPIKE_EVERY`/`HD_SPIKE_US`: occasional stalls); the bench is otherwise far faster than the hardware.
 * `CORE/sim/nvram/run.sh`: the Falcon NVRAM file (`/atarist/fcnvram`, `CORE/m2m-rom/nvram.asm`), QNICE emulator.
 * `CORE/sim/fcswitch/run.sh`: which TOS the firmware loads again after a switch between ST and Falcon
   (`CORE/m2m-rom/fcswitch.asm`), QNICE emulator.
@@ -109,4 +111,5 @@ This matches MEGA65 Filehost, which only takes `nnnn.n`.
 The version is in `config.vhd` (welcome and help texts), `VERSIONS.md` and the README. The `.cor`
 comes from `bit2core mega65r6 <bit> "MegaST" <version> <file>` (`mega65r3`/`r4`/`r5` for the other
 boards). The release zip holds the `.cor`, `README.txt` and `atarist/` (EmuTOS `tos.img` plus its
-license files, `fccfg`, `fcmount`, `fcnvram`, `tosfalc.img`). Posting releases or issue comments needs the maintainer's OK.
+license files, `fccfg`, `fcmount`, `fcnvram`, `tosfalc.img`). `tosfalc.img` is EmuTOS patched with
+`tools/emutos_scsi_timeout.py` (SCSI timeout for the slow SD path, `doc/DEVELOPMENT.md`). Posting releases or issue comments needs the maintainer's OK.

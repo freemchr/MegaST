@@ -319,7 +319,22 @@ int main(int argc, char **argv) {
         case 0:
             for (int d = 0; d < 4 && fd_phase == 0; d++) {
                 bool rd = top->sd_rd >> d & 1, wr = top->sd_wr >> d & 1;
-                if (rd || wr) { fd_drv = d; fd_lba = top->sd_lba[d]; fd_phase = 1; fd_delay = 2000; fd_idx = rd ? 0 : -1; }
+                if (rd || wr) {
+                    fd_drv = d; fd_lba = top->sd_lba[d]; fd_phase = 1; fd_delay = 2000; fd_idx = rd ? 0 : -1;
+                    // HD_RD_US / HD_WR_US: latency of a hard disk sector like the SD card path of the
+                    // firmware (unbuffered drive); HD_SPIKE_EVERY / HD_SPIKE_US: every Nth hard disk
+                    // request takes that long instead (SD card busy)
+                    if (d == 2) {
+                        static double rd_us = getenv("HD_RD_US") ? atof(getenv("HD_RD_US")) : 0;
+                        static double wr_us = getenv("HD_WR_US") ? atof(getenv("HD_WR_US")) : 0;
+                        static long spike_n = getenv("HD_SPIKE_EVERY") ? atol(getenv("HD_SPIKE_EVERY")) : 0;
+                        static double spike_us = getenv("HD_SPIKE_US") ? atof(getenv("HD_SPIKE_US")) : 0;
+                        static long hd_req = 0;
+                        double us = rd ? rd_us : wr_us;
+                        if (spike_n > 0 && ++hd_req % spike_n == 0) us = spike_us;
+                        if (us > 0) fd_delay = (int)(us * 1e-6 * CLK_HZ) + 1;
+                    }
+                }
             }
             break;
         case 1:
