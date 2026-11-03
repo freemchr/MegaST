@@ -109,18 +109,27 @@ simulation):
   `check.py` verifies every sector of the image. A delay (641666 = 20 ms per sector) makes the
   writes as slow as the firmware's SD path; very long delays make the driver time out and retry
 * `CORE/sim/falcon_m65/` (Falcon030 bench, `Vtb_top`): `HD_RD_US` / `HD_WR_US` make every hard disk
-  sector read/write take that many microseconds, like the firmware's SD path (2000 / 20000 is about
-  the speed of the unbuffered drives); `HD_SPIKE_EVERY=N HD_SPIKE_US=T` makes every Nth request take
-  T instead (SD card busy). With 2000 / 20000, the EmuTOS 1.3 release image failed to copy 68 KB
-  files on a SCSI disk (EUNDEV, its transfer time limit assumes 200 KB/s); IDE passed.
+  sector read/write take that many microseconds, like the firmware's SD path (2000 / 20000 is an
+  estimate of the unbuffered drives, not measured on the hardware); `HD_SPIKE_EVERY=N HD_SPIKE_US=T`
+  makes every Nth request take T instead (SD card busy). With 2000 / 20000, the EmuTOS 1.3 release
+  image failed to copy 68 KB files on a SCSI disk (EUNDEV, its transfer time limit assumes 200 KB/s);
+  IDE passed. **Only models built from `sim_main.cpp` of 2026-11-02 or later know these variables**
+  (`obj_v13`); older ones (`obj_fpu` of 10-28 and others) ignore them silently, so check that a slow
+  run really takes longer (520 sectors at 20 ms: about 10 s more). `tests/bigfile.s` writes and reads
+  back 128 KB in one call, from ST-RAM and (with `--fastram 1..3`) from TT-RAM through EmuTOS's FRB.
 
 ### EmuTOS in the release zip
 
 `atarist/tosfalc.img` is the Falcon EmuTOS with one change, made by `tools/emutos_scsi_timeout.py`
-(it checks the original bytes): `do_scsi_rw` (`bios/scsi.c`) divides the transfer length by 64
-instead of `BYTES_PER_CLOCK` (1024) for its timeout, so SCSI transfers may run at 12.8 KB/s instead
-of 200 KB/s. Apply it to every new EmuTOS image before a release (the offset depends on the build:
-find `moveq #10,d0; asr.l d0,d6; cmpi.l #200,d6` in a disassembly). `tos.img` (ST, ACSI) is unchanged.
+(it checks the original bytes): `do_scsi_rw` (`bios/scsi.c`) gives a SCSI transfer
+max(1 s, length / 1024) ticks, i.e. 200 KB/s. The patch makes that max(10 s, length / 8): at least
+1.6 KB/s, 320 ms per sector (`asr.l #10` -> `#3`; `cmpi.l #200` -> `#2000`; `moveq #$37,d6; not.b d6`,
+which makes 200, -> `move.w #2000,d6`). 1.4 had length / 64 (12.8 KB/s) with the 1 s minimum, which
+was still too little on a tester's SD card (Signum install, 1.5-test1 has the new values). Upstream
+EmuTOS uses length / 64 since emutos#81. Apply the patch to every new EmuTOS image before a release
+(the offset depends on the build: find `moveq #10,d0; asr.l d0,d6; cmpi.l #200,d6` in a disassembly).
+`tos.img` (ST, ACSI) is unchanged. The real cure is a faster SD path: the firmware writes unbuffered
+drives with one `f32_fwrite` call per byte (`VD_UB_WRITE`, `M2M/rom/shell.asm`).
 
 `tools/JTAG.md` describes the JTAG tools used for debugging on the real hardware (a TE0790 adapter
 and Vivado's hardware manager, no ILA needed).

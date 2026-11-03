@@ -95,6 +95,7 @@ Simulate first. Every hardware round trip costs the maintainer time.
   in the menu: `--reload` (TOS loaded again, fcswitch.asm), `--switch` (all resets at once), `--junk` (no TOS).
   `HD_RD_US=2000 HD_WR_US=20000` makes the hard disk as slow as the SD card path of the firmware
   (`HD_SPIKE_EVERY`/`HD_SPIKE_US`: occasional stalls); the bench is otherwise far faster than the hardware.
+  Only models built since 2026-11-02 (`obj_v13`) read these variables; older ones ignore them silently.
 * `CORE/sim/nvram/run.sh`: the Falcon NVRAM file (`/atarist/fcnvram`, `CORE/m2m-rom/nvram.asm`), QNICE emulator.
 * `CORE/sim/fcswitch/run.sh`: which TOS the firmware loads again after a switch between ST and Falcon
   (`CORE/m2m-rom/fcswitch.asm`), QNICE emulator.
