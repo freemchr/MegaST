@@ -1,3 +1,16 @@
+Version 1.5 - November 4, 2026
+==============================
+
+* **Falcon: EmuTOS with "Hard disks on SCSI" still failed with slow SD cards** (issue #34): the
+  longer SCSI time limit of 1.4 (at least 1 second, 12.8 KB/s) was still too short on the tester's
+  MEGA65; installing Signum stopped again with "Your output device is not receiving data". The
+  EmuTOS in the zip (`tosfalc.img`) now allows every SCSI transfer at least 10 seconds and 1.6 KB/s
+  (`tools/emutos_scsi_timeout.py`). The tester installed Signum from 3 disks on two SCSI disk
+  images and copied a 3.6 MB folder without an error. His stopwatch: copying 1 MB takes about
+  31 seconds on SCSI, on IDE and with TOS 4.04 and the ICD driver, so the SD card path (about
+  33 KB/s each way) sets the speed, not the driver. The IDE message reported for 1.4 came from a
+  setup with the SCSI option on. The cores only differ from 1.4 in the version number.
+
 Version 1.4 - November 2, 2026
 ==============================
 

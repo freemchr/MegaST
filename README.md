@@ -25,10 +25,10 @@ disk images; the Falcon030 boots EmuTOS, TOS 4.04 and FreeMiNT and runs several 
 on the MEGA65. Please report problems and successes in the
 [issues](https://github.com/freemchr/MegaST/issues).
 
-**Latest version: [1.4](https://github.com/freemchr/MegaST/releases/tag/v1.4)**
-(November 2, 2026): on the Falcon, EmuTOS with "Hard disks on SCSI" no longer aborts large
-transfers ("Your output device is not receiving data" when installing or copying); see
-`VERSIONS.md`. 1.3 (November 1, 2026): Space on the "TOS:" line removes a chosen TOS; for the
+**Latest version: [1.5](https://github.com/freemchr/MegaST/releases/tag/v1.5)**
+(November 4, 2026): on the Falcon, EmuTOS with "Hard disks on SCSI" now also works with slow SD
+cards (installing and copying no longer stop with "Your output device is not receiving data"); see
+`VERSIONS.md`. 1.4 (November 2, 2026) brought the first, too short, fix for this. `VERSIONS.md`. 1.3 (November 1, 2026): Space on the "TOS:" line removes a chosen TOS; for the
 Falcon a faster turbo with the caches off, cartridges refused cleanly, and `FASTRAM.PRG`
 (`extras/` in the zip) gives TOS 4.04 the Fast RAM. 1.2 (October 27, 2026) brought the menu look in the style of the
 Atari GEM desktop, the Falcon option "Hard disks on SCSI" and a ready IDE hard disk image. 1.1.6 (October 25, 2026) added the
@@ -540,9 +540,10 @@ e.g. on a boot floppy or on the hard disk itself.
 disk (writing is the slowest part). Drivers wait long enough, with one exception: EmuTOS on the
 Falcon with "Hard disks on SCSI" gives up when a transfer takes longer than it would on a real
 disk, and shows "Your output device is not receiving data". The EmuTOS in the zip (`tosfalc.img`,
-from 1.4) has a longer time limit; a copy of EmuTOS from the EmuTOS website does not, so with it
-use IDE (the default) instead of SCSI. If the message appears on IDE, please report it (with the
-image and the step), as that case is not understood yet.
+from 1.5) allows at least 10 seconds per transfer; a copy of EmuTOS from the EmuTOS website does
+not, so with it use IDE (the default) instead of SCSI. A tester measured about 31 seconds for
+copying 1 MB (read and write, about 33 KB/s each way) on SCSI, IDE and with TOS 4.04 and the ICD
+driver alike.
 
 **A ready image for the Falcon:** `extras/falcon128.img` in the zip is a blank 128 MB IDE image
 with four FAT16 partitions of 32 MB (C: to F:, "TOS & Windows compatible", no byte swapping).
@@ -683,8 +684,8 @@ between the ST and the Falcon closes the menu, loads the TOS of the new machine 
 
 **TOS**: the Falcon needs a Falcon TOS, the ST an ST TOS, and each machine has its own. At power on
 and after switching the machine in the menu, the core loads `atarist/tos.img` for the ST and
-`atarist/tosfalc.img` for the Falcon (EmuTOS for the Falcon, 512 KB, in the zip; from 1.4 with one
-byte changed for hard disks on SCSI, see [Hard disks](#hard-disks) and
+`atarist/tosfalc.img` for the Falcon (EmuTOS for the Falcon, 512 KB, in the zip; from 1.4 with a
+longer time limit for hard disks on SCSI, see [Hard disks](#hard-disks) and
 `tools/emutos_scsi_timeout.py`; the EmuTOS source is at [emutos.sourceforge.io](https://emutos.sourceforge.io)). A TOS loaded with
 the menu item "TOS:" replaces it for the machine that runs, and with `fcmount` on the SD card it is
 remembered for that machine: switching from the ST with TOS 2.06 to the Falcon and back gives the

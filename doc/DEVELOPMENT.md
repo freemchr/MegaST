@@ -125,7 +125,10 @@ simulation):
 max(1 s, length / 1024) ticks, i.e. 200 KB/s. The patch makes that max(10 s, length / 8): at least
 1.6 KB/s, 320 ms per sector (`asr.l #10` -> `#3`; `cmpi.l #200` -> `#2000`; `moveq #$37,d6; not.b d6`,
 which makes 200, -> `move.w #2000,d6`). 1.4 had length / 64 (12.8 KB/s) with the 1 s minimum, which
-was still too little on a tester's SD card (Signum install, 1.5-test1 has the new values). Upstream
+was still too little on a tester's SD card (Signum install; 1.5 has the new values, confirmed on
+the tester's R6, issue #34). His stopwatch: copying 1 MB takes about 31 s on SCSI, IDE and with
+TOS 4.04 + ICD alike (about 33 KB/s each way), so single transfers must stall for more than 1 s
+now and then. Upstream
 EmuTOS uses length / 64 since emutos#81. Apply the patch to every new EmuTOS image before a release
 (the offset depends on the build: find `moveq #10,d0; asr.l d0,d6; cmpi.l #200,d6` in a disassembly).
 `tos.img` (ST, ACSI) is unchanged. The real cure is a faster SD path: the firmware writes unbuffered
