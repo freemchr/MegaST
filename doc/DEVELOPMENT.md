@@ -84,7 +84,9 @@ simulation):
 * `CORE/sim/build.sh`: Verilator simulation of the whole Atari ST machine (`atarist_m65.sv`) with
   an SDRAM model; boots TOS 1.04, 2.06 and EmuTOS, ACSI hard disk, `CROP=1` for zoom-in,
   `VFLAGS=-DRTC_TRACE` traces the real time clock, `RFLOPPY=<.st>` boots from a flux level model of the
-  internal floppy drive through `wd1772_m65.v` (`VFLAGS=-DFDC_TRACE` logs every FDC access)
+  internal floppy drive through `wd1772_m65.v` (`VFLAGS=-DFDC_TRACE` logs every FDC access),
+  `FLOPPY=<.st>` mounts an image (`FLOPPY_DRIVE=B`: as drive B:, e.g. next to `RFLOPPY` for issue #33;
+  `FLOPPY_OUT=<file>` saves the image with the sectors the ST wrote)
 * `CORE/sim/tos_loader/run.sh`, `CORE/sim/keyboard/run.sh`, `CORE/sim/floppy_swap/run.sh`,
   `CORE/sim/fdc_bridge/run.sh`, `CORE/sim/rmb_guard/run.sh`, `CORE/sim/real_floppy/run.sh`: GHDL tests of the TOS/cartridge loader,
   the keyboard (numeric keypad, "Keyboard as printed"), the floppy swap (and eject at a firmware

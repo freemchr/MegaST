@@ -11,18 +11,25 @@
 |    (issues #28, #29). Programs are started with other modes and keep their flags,
 |  - stays resident for the hook and the buffer.
 | After its message it waits 3 seconds (a key ends the wait), so the message can be read.
-| It does nothing when TOS already knows Fast RAM (ramvalid set and ramtop above $01000000).
+| It does nothing when GEMDOS already has Fast RAM (Mxalloc(-1, 1) > 0, EmuTOS). ramvalid and ramtop
+| are not asked: they survive a reset in low memory, but TOS 4.04 does not add the RAM again (#29).
 | Position independent, no relocation table (tools/fastram/build.sh).
 | MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
 	.text
 	move.l	4(sp),a3		| basepage
+	move.w	#1,-(sp)
+	move.l	#-1,-(sp)
+	move.w	#0x44,-(sp)
+	trap	#1			| Mxalloc(-1, 1): free TT-RAM that GEMDOS knows
+	addq.l	#8,sp
+	lea	m_known(pc),a0
+	tst.l	d0
+	bgt	quit
 	pea	probe(pc)
 	move.w	#38,-(sp)
 	trap	#14			| Supexec(probe): fsize = Fast RAM size, -1: already known
 	addq.l	#6,sp
 	move.l	fsize(pc),d6
-	lea	m_known(pc),a0
-	bmi	quit
 	lea	m_none(pc),a0
 	beq	quit
 	move.l	d6,-(sp)
@@ -85,14 +92,9 @@ pa_key:	move.w	#2,-(sp)
 	addq.l	#4,sp
 	rts
 
-| supervisor: fsize = the Fast RAM size (0: none), -1 when TOS knows it already
+| supervisor: fsize = the Fast RAM size (0: none)
 probe:	movem.l	d2-d7/a2-a6,-(sp)
-	moveq	#-1,d7
-	cmp.l	#0x1357BD13,0x5a8.w
-	bne.s	pr_go
-	cmp.l	#0x01000000,0x5a4.w
-	bhi	pr_end
-pr_go:	moveq	#0,d7
+	moveq	#0,d7
 	movec	vbr,a5
 	move.l	8(a5),a4		| the bus error vector
 	lea	berr(pc),a0

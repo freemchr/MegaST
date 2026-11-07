@@ -1,3 +1,19 @@
+Version 1.6 - in progress (1.6-test1)
+=====================================
+
+* **ST: a floppy image as B: next to the real floppy drive as A:** (issue #33): with "Real floppy
+  drive as A:" on, drive B: was always a missing drive. Now a disk image mounted as "Floppy B:" is
+  drive B: (read and write), e.g. to copy a real disk to an image with a copy program. The core
+  uses the image controller while B: is the selected drive and the real drive's WD1772 for A:;
+  writes to the track, sector and data registers go to both, as an ST has one controller for both
+  drives. In the simulation, with the real drive as A:, TOS 1.04 reads and writes B: (the written
+  image checked byte by byte) and EmuTOS reads B:. Without an image, B: stays a missing drive as
+  before. The Falcon does not have this yet.
+* **`FASTRAM.PRG` after a short reset** (issue #29, TOS 4.04 on the Falcon): after a reset with the
+  reset button the program said that TOS knows the Fast RAM already, but TOS had none. The marks it
+  checked survive a reset in memory. It now asks GEMDOS (`Mxalloc`) instead; in the simulation the
+  Fast RAM is there again after a reset (`extras/FASTRAM.PRG` in the zip).
+
 Version 1.5 - November 4, 2026
 ==============================
 

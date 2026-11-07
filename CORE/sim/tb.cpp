@@ -45,8 +45,10 @@ int main(int argc, char** argv) {
         printf("hard disk image: %zu bytes\n", hd.size());
     }
 
-    // FLOPPY=<.st image>: drive A, mounted at the start or at frame FLOPPY_AT (while TOS runs)
+    // FLOPPY=<.st image>: drive A, mounted at the start or at frame FLOPPY_AT (while TOS runs);
+    // FLOPPY_DRIVE=B: the image is in drive B (e.g. with RFLOPPY as A:, issue #33)
     const char* fd_name = getenv("FLOPPY");
+    int fd_drv = getenv("FLOPPY_DRIVE") && (getenv("FLOPPY_DRIVE")[0] | 0x20) == 'b' ? 1 : 0;
     int fd_at = getenv("FLOPPY_AT") ? atoi(getenv("FLOPPY_AT")) : -1;
     std::vector<uint8_t> fd;
     if (fd_name) {
@@ -119,7 +121,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 100; i++) cycle32();
     if (fd_name && fd_at < 0) {
         top->img_size = fd.size();
-        top->fd_img_mounted = 1; cycle32(); cycle32();
+        top->fd_img_mounted = 1 << fd_drv; cycle32(); cycle32();
         top->fd_img_mounted = 0;
     }
     // mount the hard disk image (ACSI target 0), like vdrives.vhd does
@@ -217,7 +219,7 @@ int main(int argc, char** argv) {
         if (fd_name && frame == fd_at && fd_state == 0) {
             printf("floppy mounted at frame %d\n", frame);
             top->img_size = fd.size();
-            top->fd_img_mounted = 1; cycle32(); cycle32();
+            top->fd_img_mounted = 1 << fd_drv; cycle32(); cycle32();
             top->fd_img_mounted = 0;
             fd_at = -1;
         }
@@ -225,9 +227,9 @@ int main(int argc, char** argv) {
             if (fd_wait) fd_wait--;
             else switch (fd_state) {
             case 0:
-                if (top->fd_sd_rd & 1) { fd_lba = top->fd_sd_lba; top->fd_sd_ack = 1; fd_idx = 0; fd_state = 1; fd_reads++;
+                if ((top->fd_sd_rd >> fd_drv) & 1) { fd_lba = top->fd_sd_lba; top->fd_sd_ack = 1; fd_idx = 0; fd_state = 1; fd_reads++;
                                          printf("floppy read sector %u (frame %d)\n", fd_lba, frame); }
-                else if (top->fd_sd_wr & 1) { fd_lba = top->fd_sd_lba; top->fd_sd_ack = 1; fd_idx = 0; fd_state = 3;
+                else if ((top->fd_sd_wr >> fd_drv) & 1) { fd_lba = top->fd_sd_lba; top->fd_sd_ack = 1; fd_idx = 0; fd_state = 3;
                                          printf("floppy WRITE sector %u (frame %d)\n", fd_lba, frame); }
                 break;
             case 1: {
@@ -239,10 +241,13 @@ int main(int argc, char** argv) {
                 top->sd_buff_wr = 0; fd_wait = 8;
                 if (++fd_idx == 256) { top->fd_sd_ack = 0; fd_state = 0; fd_wait = 20; } else fd_state = 1;
                 break;
-            case 3:     // write: step through the sector buffer, the data is not stored
-                top->sd_buff_addr = fd_idx; fd_wait = 3;
-                if (++fd_idx == 256) { top->fd_sd_ack = 0; fd_state = 0; fd_wait = 20; }
-                break;
+            case 3:     // write: read one word from the sector buffer into the image (FLOPPY_OUT saves it)
+                top->sd_buff_addr = fd_idx; fd_state = 4; fd_wait = 3; break;
+            case 4: {
+                size_t o = (size_t)fd_lba * 512 + fd_idx * 2;
+                if (o + 1 < fd.size()) { fd[o] = top->fd_sd_buff_din & 0xff; fd[o + 1] = top->fd_sd_buff_din >> 8; }
+                if (++fd_idx == 256) { top->fd_sd_ack = 0; fd_state = 0; fd_wait = 20; } else fd_state = 3;
+                break; }
             }
         }
 
@@ -321,6 +326,10 @@ int main(int argc, char** argv) {
             frame++; y = 0; maxx = 0; lines = 0; vs_ticks = ticks; hfirst = 1 << 30; hlast = -1;
         }
         old_vs = top->video_vs;
+    }
+    if (fd_name && getenv("FLOPPY_OUT")) {   // FLOPPY_OUT=<file>: the floppy image with the writes
+        FILE* h = fopen(getenv("FLOPPY_OUT"), "wb");
+        if (h) { fwrite(fd.data(), 1, fd.size(), h); fclose(h); printf("floppy image saved: %s\n", getenv("FLOPPY_OUT")); }
     }
     if (hd_name && getenv("HD_OUT")) {
         FILE* h = fopen(getenv("HD_OUT"), "wb");

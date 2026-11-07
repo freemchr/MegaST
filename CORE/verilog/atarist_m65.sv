@@ -1230,18 +1230,38 @@ wire       fdc_rw;
 wire [7:0] fdc_din;
 wire [7:0] fdc_dout;
 
-// MEGA65: with cfg_real_floppy all FDC accesses go to the WD1772 of the internal drive (drive A:), and
-// the image controller below is idle. Drive B: is then absent, like on an ST with one drive.
+// MEGA65: with cfg_real_floppy the FDC accesses go to the WD1772 of the internal drive (drive A:).
+// Drive B: stays an image drive when an image is in it (issue #33): while B: is the last drive the
+// PSG selected, the accesses go to the image controller below. A real ST has one FDC for both drives
+// and TOS writes the track register when it changes drives, so two controllers behave the same.
+// Without an image in B: the WD1772 answers for B: as an absent drive, like an ST with one drive.
+// The choice stays while no drive is selected (motor off, status reads). Writes to the track, sector
+// and data registers go to both controllers, as they are one set of registers on an ST: EmuTOS
+// writes the track register before it selects the drive.
 wire       img_fdc_irq, img_fdc_drq, rfd_irq, rfd_drq;
 wire [7:0] img_fdc_dout, rfd_dout;
-assign fdc_irq  = cfg_real_floppy ? rfd_irq  : img_fdc_irq;
-assign fdc_drq  = cfg_real_floppy ? rfd_drq  : img_fdc_drq;
-assign fdc_dout = cfg_real_floppy ? rfd_dout : img_fdc_dout;
+reg        img_b_present = 1'b0;   // an image in drive B: (like fdn_present[1] in fdc1772)
+reg        img_mounted_b_d = 1'b0;
+reg        fdc_on_b = 1'b0;        // the last selected drive is B: with an image
+wire       use_rfd = cfg_real_floppy & ~fdc_on_b;
+wire       fdc_bcast = cfg_real_floppy & ~fdc_rw & (fdc_addr != 2'd0);   // TR, SR, DR write: both
+
+always @(posedge clk_32) begin
+	img_mounted_b_d <= img_mounted[1];
+	if (~img_mounted_b_d && img_mounted[1]) img_b_present <= |img_size;
+	if (peripheral_reset)            fdc_on_b <= 1'b0;
+	else if (floppy_sel == 2'b01)    fdc_on_b <= img_b_present;   // B: selected (low active)
+	else if (~floppy_sel[0])         fdc_on_b <= 1'b0;            // A: selected
+end
+
+assign fdc_irq  = use_rfd ? rfd_irq  : img_fdc_irq;
+assign fdc_drq  = use_rfd ? rfd_drq  : img_fdc_drq;
+assign fdc_dout = use_rfd ? rfd_dout : img_fdc_dout;
 
 wd1772_m65 wd1772_m65 (
 	.clk_32   ( clk_32                        ),
 	.reset    ( peripheral_reset | ~cfg_real_floppy ),
-	.cpu_sel  ( fdc_sel & cfg_real_floppy     ),
+	.cpu_sel  ( fdc_sel & (use_rfd | fdc_bcast) ),
 	.cpu_addr ( fdc_addr                      ),
 	.cpu_rw   ( fdc_rw                        ),
 	.cpu_din  ( fdc_din                       ),
@@ -1291,7 +1311,7 @@ fdc1772 #(.IMG_TYPE(1)) fdc1772 (
 	.drq            ( img_fdc_drq      ),
 
 	.cpu_addr       ( fdc_addr         ),
-	.cpu_sel        ( fdc_sel & ~cfg_real_floppy ),
+	.cpu_sel        ( fdc_sel & (~use_rfd | fdc_bcast) ),
 	.cpu_rw         ( fdc_rw           ),
 	.cpu_din        ( fdc_din          ),
 	.cpu_dout       ( img_fdc_dout     ),

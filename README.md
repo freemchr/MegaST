@@ -590,7 +590,9 @@ Real floppy drive
 
 Since 1.1 the ST can use the MEGA65's internal 3.5" drive as drive A:. Switch on "Real floppy
 drive as A:" in "Drives & images" and choose "Reset". Drive A: is then the disk in the
-MEGA65's drive; drive B: and the floppy images are not used until you switch it off again. With
+MEGA65's drive. Since 1.6 drive B: can still be a floppy image (mount it as "Floppy B:"), e.g. to
+copy a real disk to an image (issue #33; ST only, on the Falcon B: is not used while the real
+drive is on). Without an image B: is a missing drive, as on an ST with one drive. With
 EmuTOS this needs 1.1.1 or newer (1.1 showed no drive icons, issue #24).
 Up to 1.1.1 a reset took 5 to 10 seconds longer while the real drive was on (TOS waited for the
 missing drive B:); fixed in 1.1.2. With no disk in the drive, TOS still waits a moment for drive A:.
