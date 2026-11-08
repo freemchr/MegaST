@@ -98,6 +98,9 @@ simulation):
   and the converted one on 32 MHz side by side on a flux level drive model (`floppy_model.vhd`, ST MFM
   tracks with CRCs); every output identical at every 16 MHz edge, restore, seek, read sector (every byte),
   read address, step, side 1, force interrupt (also with no command running, issue #24) (about 4 minutes)
+* `CORE/sim/ascal_reset/run.sh [trials] [seed]`: the HDMI scaler (ascal, avm_decrease, arbiter, HyperRAM model)
+  with resets at random moments, reset button and Help-menu reset (issue #26); `BUG=1` puts the old ascal
+  line back (froze 4 of 48), with the fix none of 64
 * `CORE/sim/fastseek/run.sh`: the fast seek of the firmware in the QNICE emulator (FAT32 image
   with fragmented files, compared with the FAT32 library)
 * `CORE/sim/mntmem/run.sh`: remembering the mounted images (`M2M/rom/mntmem.asm`) in the QNICE

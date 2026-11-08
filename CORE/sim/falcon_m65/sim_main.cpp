@@ -259,6 +259,10 @@ int main(int argc, char **argv) {
     std::vector<uint8_t> fb(2048 * 1200 * 3);
     int fx = 0, fy = 0, maxx = 0, frame_no = 0;
     bool prev_hb = true, prev_vb = true, prev_kbd_rd = false;
+    // vsync as the HDMI scaler (ascal) sees it: sampled with ce_pix, a rising edge ends an input frame
+    // (issue #26: HDMI froze after a reset). A gap of more than 40 ms is logged with the number of
+    // vblank starts in it.
+    bool prev_vs = false; double vs_last_ms = 0; int vs_gap_vb = 0, vs_edges = 0;
     int kbd_last = -1;
     double kbd_last_ms = -1e9;
 
@@ -413,6 +417,13 @@ int main(int argc, char **argv) {
 
         if (top->ce_pix) {
             bool hb = top->hblank, vb = top->vblank;
+            if (top->vsync && !prev_vs) {
+                if (now_ms - vs_last_ms > 40)
+                    printf("[%9.3f ms] vsync gap %.1f ms (%d vblank starts in it)\n", now_ms, now_ms - vs_last_ms, vs_gap_vb);
+                vs_last_ms = now_ms; vs_gap_vb = 0; vs_edges++;
+            }
+            prev_vs = top->vsync;
+            if (vb && !prev_vb) vs_gap_vb++;
             if (!hb && !vb) {
                 if (fx < 2048 && fy < 1200) {
                     uint8_t *p = &fb[(fy * 2048 + fx) * 3];
@@ -459,6 +470,7 @@ int main(int argc, char **argv) {
             printf("NVRAM buffer saved to %s\n", nvram_name.c_str());
         }
     }
+    printf("vsync: %d rising edges, the last at %.3f ms (%d vblank starts since)\n", vs_edges, vs_last_ms, vs_gap_vb);
     printf("simulated %.0f ms; SDRAM errors: %s\n", cyc / CLK_HZ * 1e3, top->dbg_sdram_err ? "YES" : "none");
     for (int d = 0; d < 4; d++) if (!img[d].empty()) {
         printf("drive %d: %d sectors read, %d written\n", d, sectors_rd[d], sectors_wr[d]);

@@ -82,6 +82,7 @@ Simulate first. Every hardware round trip costs the maintainer time.
   `FLOPPY=<.st>` mounts an image (`FLOPPY_DRIVE=B` as drive B:, `FLOPPY_OUT=<file>` saves it with the writes).
   Needs Verilator and GHDL from the OSS CAD Suite (`~/opt/oss-cad-suite/bin` on this machine).
 * `CORE/sim/{keyboard,tos_loader,floppy_swap,fdc_bridge,rmb_guard,real_floppy}/run.sh`: GHDL unit tests.
+* `CORE/sim/ascal_reset/run.sh [trials] [seed]`: HDMI scaler and HyperRAM path across random resets (#26; `BUG=1` = old ascal line).
 * `CORE/sim/real_floppy/run_wf1772.sh`: WF1772 floppy controller, original vs. clock enable version (4 min).
 * `CORE/sim/fastseek/run.sh`: firmware fast seek in the QNICE emulator.
 * `CORE/sim/mntmem/run.sh`: remembering the mounted images (`/atarist/fcmount`) in the QNICE emulator.

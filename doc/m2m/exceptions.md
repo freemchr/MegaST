@@ -201,6 +201,19 @@ than the 4:3 area of 576p (720), 720x480 (720) and 640x480 (640). Without downsc
 input pixel per output pixel, so it cut off the right part of the line: the picture looked shifted to the right
 (left border wide, right border narrow), only 800x600 and 720p were right. Generic, a candidate for upstream.
 
+### HDMI: scaler write request cleared at reset (issue #26)
+
+`M2M/vhdl/av_pipeline/ascal.vhd`, process `Avaloir`: in the reset branch, `avl_write_i<='0';` was commented out,
+so a write request to the HyperRAM survived the reset. The MEGA65 reset button resets the HyperRAM side
+(`hr_rst`: HyperRAM controller, `avm_arbit_general`, `avm_decrease`, and ascal's `reset_na`). When the reset came
+in the middle of a write burst, the freshly reset arbiter and width converter took the still pending
+request as the first beat of a new burst; their beat count then differed from ascal's by one and the
+memory path stopped for good. HDMI showed a frozen picture (the last lines read) while the core kept
+running; the next reset usually cleared it. The Help-menu reset does not reset `hr_rst` and never froze.
+`CORE/sim/ascal_reset/run.sh` (GHDL, scaler, arbiter, converter and a HyperRAM model, random resets) froze
+in 4 of 48 resets before and in none of 64 with the line restored (`BUG=1` puts the old line back).
+Generic, a candidate for upstream (M2M and MiSTer's `ascal.vhd`).
+
 ### HDMI: 16 bpp scaler frame buffer
 
 `M2M/vhdl/av_pipeline/digital_pipeline.vhd`, `av_pipeline.vhd`, `framework.vhd`: the pixel format of

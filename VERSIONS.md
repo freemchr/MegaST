@@ -1,6 +1,13 @@
-Version 1.6 - in progress (1.6-test1)
+Version 1.6 - in progress (1.6-test2)
 =====================================
 
+* **HDMI picture frozen after a reset** (issue #26): sometimes, after pressing the reset button, the
+  HDMI picture stood still (one picture, or one line repeated down the screen) while the machine went
+  on running behind it; another reset usually brought it back. The HDMI scaler kept a pending write
+  to its picture memory (HyperRAM) through the reset, and the reset memory interface then counted
+  its data one word off and stopped. The scaler now clears it at reset (`M2M/vhdl/av_pipeline/ascal.vhd`).
+  In a simulation of the scaler and its memory with resets at random moments, 4 of 48 resets froze
+  the picture before, none of 64 with the fix.
 * **ST: a floppy image as B: next to the real floppy drive as A:** (issue #33): with "Real floppy
   drive as A:" on, drive B: was always a missing drive. Now a disk image mounted as "Floppy B:" is
   drive B: (read and write), e.g. to copy a real disk to an image with a copy program. The core

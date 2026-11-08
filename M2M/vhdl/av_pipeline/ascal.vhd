@@ -1644,7 +1644,7 @@ BEGIN
       avl_readdataack<='0';
       avl_readack<='0';
       avl_read_i<='0';
-      --avl_write_i<='0';
+      avl_write_i<='0'; -- MegaST: was commented out; a write left pending at a HyperRAM reset froze the picture (issue #26)
       avl_write_sync<='0';
       avl_write_sync2<='0';
       avl_write_pulse<='0';
