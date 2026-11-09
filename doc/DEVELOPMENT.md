@@ -123,6 +123,54 @@ simulation):
   run really takes longer (520 sectors at 20 ms: about 10 s more). `tests/bigfile.s` writes and reads
   back 128 KB in one call, from ST-RAM and (with `--fastram 1..3`) from TT-RAM through EmuTOS's FRB.
 
+### Falcon FPU: the 68882 on the RISC-V
+
+The Falcon's 68882 is the FPU bridge of Falcon_MiSTer (`falcon_system.sv`, `FALCON_FPU_LOCAL`) and a
+PicoRV32 at 96 MHz (`CORE/verilog/fpu_rv.v`) that runs Hatari's 68882 emulation (`CORE/falcon_fpu`:
+`engine/` = Hatari's `fpp.c` and softfloat, unmodified, plus the shim; `rv/` = the service, built
+into `rv/fpu_rv.mem` by `rv/build.sh`, `HATARI=` the Hatari 2.6.1 source tree, xPack
+`riscv-none-elf-gcc`). The 68030 waits for each instruction. Measured in the Falcon bench
+(`tests/fpulat.s`): the hand-over from the 68030 to the RISC-V and back costs about 3 to 5 us; the
+rest is the RISC-V program, which runs about 4 clocks per instruction.
+
+Most of an instruction used to be Hatari's general code (function pointers for every check, copies
+of the FPU state, a full set-up per request) rather than the arithmetic. Two changes (2026-11-09):
+
+* `rv/sys.c`: `memset`/`memcpy` a word at a time (newlib-nano's go byte by byte: 4600 cycles to clear
+  the 256 byte operand buffer of every request with operands)
+* `engine/fpe_sf.c` (`fpe_sf_exec()`): a short path for FMOVE, FADD, FSUB, FMUL, FDIV, FSQRT, FABS,
+  FNEG, FCMP, FTST with a register or a memory operand (.L .S .X .W .D .B) and for FMOVE FPn to
+  memory (same formats), when no exception is enabled or pending. It does Hatari's steps in Hatari's
+  order with the same softfloat calls (the comment lists them); everything else (packed decimal,
+  FSIN and the other transcendental functions, FMOVEM, control registers, exceptions) takes
+  Hatari's own path. `fpe_sf_off = 1` turns it off.
+
+RISC-V cycles per instruction (`rv/bench.c` in `CORE/sim/fpu_rv`, `./build.sh ../../falcon_fpu/rv/bench.mem`):
+
+| | before | short path |
+|---|---|---|
+| FMOVE FP1,FP0 | 2413 | 1277 |
+| FADD / FMUL FP1,FP0 | 3066 / 3024 | 1771 / 1741 |
+| FDIV / FSQRT | 4915 / 4876 | 3622 / 3763 |
+| FMOVE.D <ea>,FP0 / FMOVE.D FP0,<ea> | 8204 / 7063 | 1548 / 1166 |
+| FADD.D / FMUL.D <ea>,FP0 | about 8800 | 2043 / 2009 |
+| FSIN | 17898 | 18280 (Hatari's path) |
+
+Checks (all must pass after a change in `engine/` or `rv/`):
+
+* `engine/fpe_shortcheck.c`: the short path against Hatari's path on the host, bit for bit (the eight
+  registers, FPSR, FPCR, FPIAR, the bytes stored, the returned flags and the exception status):
+  random single instructions (zeros, denormals, unnormals, infinities, NaNs, signaling NaNs, every
+  rounding mode and precision, sometimes an enable byte) and sequences of 40 instructions (with
+  Hatari-path instructions, exceptions and the CPU taking them). `HOST_ONLY=1 engine/build.sh`, then
+  `cc -O2 -I. fpe_shortcheck.c build/host/libfpe.a -lm -o build/fpe_shortcheck` and
+  `build/fpe_shortcheck 25000000 <seed>` (several seeds in parallel; a deliberately broken short path
+  must make it fail, which was checked for the status bits, the events, .S loads and .D stores)
+* `engine/fpe_selftest.c` on the host and `rv/selftest.mem` on the RISC-V (`CORE/sim/fpu_rv`, about
+  40 minutes): 24546 checks of the engine against `fpp.c` driven with real effective addresses
+* `falcon_fpu/fputest` (FPUTEST.TOS) in the Falcon bench: every operation, format, rounding mode,
+  condition and the exception round trips through the bridge, against results of the host engine
+
 ### EmuTOS in the release zip
 
 `atarist/tosfalc.img` is the Falcon EmuTOS with one change, made by `tools/emutos_scsi_timeout.py`

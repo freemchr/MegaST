@@ -27,12 +27,12 @@ HF="$ARCH -std=gnu99 -O2 -w -fwrapv -ffunction-sections -fdata-sections -Wno-inc
 LF="$ARCH -nostartfiles -specs=nano.specs -T link.ld -Wl,--gc-sections"
 
 objs=""
-for f in $E/fpe_fpp.c $H/cpu/fpp_softfloat.c $H/cpu/softfloat/softfloat.c $H/cpu/softfloat/softfloat_fpsp.c \
+for f in $E/fpe_fpp.c $E/fpe_sf.c $H/cpu/softfloat/softfloat.c $H/cpu/softfloat/softfloat_fpsp.c \
          $H/cpu/softfloat/softfloat_decimal.c $E/fpe_shim.c; do
 	o="$O/$(basename "$f" .c).o"; $CC $HF $INC -c "$f" -o "$o"; objs="$objs $o"
 done
 $CC $ARCH -c start.S -o $O/start.o
-$CC $ARCH -std=gnu99 -O2 -Wall -Wextra -I. -c sys.c -o $O/sys.o
+$CC $ARCH -std=gnu99 -O2 -Wall -Wextra -fno-builtin -fno-tree-loop-distribute-patterns -I. -c sys.c -o $O/sys.o
 $CC $ARCH -std=gnu99 -O2 -Wall -Wextra -Wno-unused-parameter -I. -I.. -c fpu_rv.c -o $O/fpu_rv.o
 $CC $ARCH -std=gnu99 -O2 -Wall -I. -I.. $BENCHF -c bench.c -o $O/bench.o
 $CC $HF $INC -c $E/fpe_selftest.c -o $O/fpe_selftest.o

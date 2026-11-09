@@ -1,6 +1,16 @@
-Version 1.6 - in progress (1.6-test2)
+Version 1.6 - in progress (1.6-test3)
 =====================================
 
+* **Falcon: the FPU is faster** (issue #35): the 68882 runs as a program on a small RISC-V CPU in
+  the FPGA, and most of each instruction went into general code around the calculation. A short
+  path now does the common instructions (FMOVE, FADD, FSUB, FMUL, FDIV, FSQRT, FABS, FNEG, FCMP,
+  FTST, from registers and memory, and FMOVE to memory) directly, with the same results bit for bit.
+  Measured with FPUBENCH on an R6: loads, stores and memory operands about 3.8 times faster
+  (FMOVE.L D7,FP0 88 -> 23 us, FMOVE.X FP0,(A4) 87 -> 23 us, FMOVE/FMUL.D (A4) 96 -> 25 us), FADD,
+  FMUL, FDIV about 1.6 times (FADD 37 -> 24 us), FSQRT 1.3 times. FSIN, FETOX and the other
+  transcendental functions are unchanged (about 190 us). Checked against the original path with
+  200 million random instructions and 10 million instruction sequences, the engine self-test and
+  FPUTEST.
 * **HDMI picture frozen after a reset** (issue #26): sometimes, after pressing the reset button, the
   HDMI picture stood still (one picture, or one line repeated down the screen) while the machine went
   on running behind it; another reset usually brought it back. The HDMI scaler kept a pending write

@@ -16,8 +16,13 @@
  * fpu_mmu_fixup, fpsr_clear_status(), the source fetch and its normalization, the destination
  * normalization of dyadic operations, the unimplemented-datatype check after them,
  * fp_arithmetic() (the operation, condition codes and status) and the register write.
- * Returns 0 when it did not take the instruction (the caller runs fpuop_arithmetic()). */
+ * Returns 0 when it did not take the instruction (the caller runs fpuop_arithmetic()).
+ * The common instructions (FMOVE, FADD, FSUB, FMUL, FDIV, FSQRT, FABS, FNEG, FCMP, FTST) do not get
+ * here: fpe_exec() runs them in fpe_sf_exec() (fpe_sf.c), the same steps without fpp.c's function
+ * pointers.  fpe_mmu_fixup gives it fpp.c's static fpu_mmu_fixup. */
 #include "fpp.c"
+
+bool *const fpe_mmu_fixup = &fpu_mmu_fixup;
 
 int fpe_fast_arith(uae_u32 opcode, uae_u16 extra, uaecptr pc)
 {

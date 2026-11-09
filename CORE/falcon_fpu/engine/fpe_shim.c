@@ -217,8 +217,25 @@ int fpe_fast_arith(uae_u32 opcode, uae_u16 extra, uaecptr pc);     /* fpe_fpp.c 
 
 static int popcnt8(unsigned v) { int n = 0; for (v &= 0xff; v; v >>= 1) n += v & 1; return n; }
 
+int fpe_sf_exec(uint16_t extra, const uint8_t *in, int in_len, uint8_t *out, int *out_len); /* fpe_sf.c */
+
+static int fpe_exec_full(uint16_t cmd, const uint8_t *in, int in_len, uint16_t aux, uint32_t iaddr,
+                         uint8_t *out, int *out_len) __attribute__((noinline));
+
+/* the common instructions first (fpe_sf.c), before the set-up below */
 int fpe_exec(uint16_t cmd, const uint8_t *in, int in_len, uint16_t aux, uint32_t iaddr,
              uint8_t *out, int *out_len)
+{
+	int n;
+	if (inited && (in || in_len == 0) && out && fpe_sf_exec(cmd, in, in_len, out, &n)) {
+		if (out_len) *out_len = n;
+		return 0;
+	}
+	return fpe_exec_full(cmd, in, in_len, aux, iaddr, out, out_len);
+}
+
+static int fpe_exec_full(uint16_t cmd, const uint8_t *in, int in_len, uint16_t aux, uint32_t iaddr,
+                         uint8_t *out, int *out_len)
 {
 	uint32_t opcode = 0xF210;               /* FPU instruction, EA = (A0) */
 	uint32_t a0 = 0;

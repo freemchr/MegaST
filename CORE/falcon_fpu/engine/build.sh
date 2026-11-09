@@ -18,7 +18,7 @@ CC="${CC:-arm-none-linux-gnueabihf-gcc}"
 HOSTCC="${HOSTCC:-cc}"
 AR_ARM="${AR_ARM:-${CC%gcc}ar}"
 INC="-I. -Ishim -I$H/cpu -I$H/cpu/softfloat -I$H/includes -I$H/debug"
-SRC="fpe_fpp.c $H/cpu/fpp_softfloat.c $H/cpu/softfloat/softfloat.c $H/cpu/softfloat/softfloat_fpsp.c $H/cpu/softfloat/softfloat_decimal.c"
+SRC="fpe_fpp.c fpe_sf.c $H/cpu/softfloat/softfloat.c $H/cpu/softfloat/softfloat_fpsp.c $H/cpu/softfloat/softfloat_decimal.c"
 # -fwrapv: Hatari builds with it.  -w: Hatari's code is warning-noisy; the shim itself is built with -Wall.
 HF="-std=gnu99 -O2 -w -fwrapv"
 mkdir -p "$OUT/host" "$OUT/arm"

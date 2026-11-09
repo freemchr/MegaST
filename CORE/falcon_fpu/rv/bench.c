@@ -38,5 +38,22 @@ int main(void)
 		printf("%-14s %6lu cycles  %3lu.%02lu us at 96 MHz\n", t[i].name, (unsigned long)c,
 		       (unsigned long)(c / 96), (unsigned long)(c % 96 * 100 / 96));
 	}
+#ifndef BENCH_ONLY
+	{       /* memory operands: FMOVE.D <ea>,FP0 (8 bytes in) and FMOVE.D FP0,<ea> (8 bytes out) */
+		static const struct { const char *name; uint16_t cmd; int in; } m[] = {
+			{ "FMOVE.D in", 0x5400, 8 }, { "FMOVE.D out", 0x7400, 0 },
+			{ "FADD.D in", 0x5422, 8 }, { "FMUL.D in", 0x5423, 8 },
+		};
+		for (unsigned i = 0; i < sizeof m / sizeof m[0]; i++) {
+			load(0, pi);
+			uint32_t c0 = rv_cycles();
+			for (int k = 0; k < BENCH_N; k++)
+				fpu_request(FPU_KIND_EXEC, m[i].cmd, 0, 0, m[i].in ? pi : 0, m[i].in, out, &n);
+			uint32_t c = (rv_cycles() - c0) / BENCH_N;
+			printf("%-14s %6lu cycles  %3lu.%02lu us at 96 MHz\n", m[i].name, (unsigned long)c,
+			       (unsigned long)(c / 96), (unsigned long)(c % 96 * 100 / 96));
+		}
+	}
+#endif
 	return 0;
 }
