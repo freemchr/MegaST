@@ -289,6 +289,12 @@ with `MEGA65` comments:
   (which counts the reset only on `cpu_ce` clocks) never took the reset while the devices did: the
   program ran on with reset video registers (garbage on the screen). Found in simulation (20 of 50
   resets missed the CPU, 0 with the fix). Generic, a candidate for upstream.
+* `rtl/AP68030/rtl/core/ap030_exec_c.vh` (`S_CPSCC2`): cpScc to memory sets the operand size (byte)
+  and the EA selector again before the EA. An interrupt during the condition's come-again (FPU busy,
+  IA) is taken with a mid-instruction frame; after its RTE the size was whatever the handler's last
+  instruction left, so FScc (An)+ / -(An) moved An by 4 (or 2) instead of 1. FPUTEST failed with
+  that depending on when interrupts landed; found in the Falcon bench (`tests/fscc_irq.s`: Timer A at
+  30 kHz during FSIN + FSNE (A1)+). Generic, a candidate for upstream.
 * `rtl/falcon/falcon_cpuclk.sv`, `falcon_system.sv`: after a 68030 access to the DSP host port the
   processor runs at the Falcon rate for 512 clocks (`sync`, restarted by every access; the debt is
   kept and caught up afterwards). While the processor caught up at 32 MHz, the code between two host

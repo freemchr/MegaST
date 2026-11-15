@@ -28,7 +28,7 @@ static void value(uint16_t *se, uint64_t *m)
 {
 	uint16_t s = rn(2) ? 0x8000 : 0;
 	uint64_t r = rnd();
-	switch (rn(14)) {
+	switch (rn(15)) {
 	case 0:  *se = s; *m = 0; break;                                            /* zero */
 	case 1:  *se = s; *m = r >> (1 + rn(63)); break;                            /* denormal */
 	case 2:  *se = s; *m = r | 0x8000000000000000ull; break;                    /* pseudo-denormal */
@@ -42,6 +42,12 @@ static void value(uint16_t *se, uint64_t *m)
 	case 10: *se = s | (0x7ffe - rn(80)); *m = r | 0x8000000000000000ull; break; /* huge */
 	case 11: *se = s | (0x3fff - 40 + rn(80));                                  /* short mantissa */
 		 *m = (r | 0x8000000000000000ull) & ~((1ull << (rn(2) ? 40 : 11)) - 1); break;
+	case 12: {      /* short mantissa at the edges of the double and single exponent range
+	                 * (exact() in fpe_sf.c: $3C01-$43FE, $3F81-$407E) */
+		static const uint16_t edge[4] = { 0x3c01, 0x43fe, 0x3f81, 0x407e };
+		*se = s | (edge[rn(4)] - 2 + rn(5));
+		*m = (r | 0x8000000000000000ull) & ~((1ull << (rn(2) ? 40 : 11)) - 1); break;
+	}
 	default: *se = s | (0x3fff - 64 + rn(128)); *m = r | 0x8000000000000000ull; break;
 	}
 }

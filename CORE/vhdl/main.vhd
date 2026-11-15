@@ -25,6 +25,7 @@ entity main is
       clk_main_i              : in  std_logic;              -- 32.083 MHz
       clk_sdram_i             : in  std_logic;              -- 96.25 MHz, phase aligned to clk_main_i
       clk_ikbd_i              : in  std_logic;              --  2.005 MHz, phase aligned to clk_main_i
+      clk_fpu_i               : in  std_logic;              -- 80.208 MHz, phase aligned: Falcon FPU's RISC-V
       reset_soft_i            : in  std_logic;
       reset_hard_i            : in  std_logic;
       eject_i                 : in  std_logic;              -- the firmware restarts and forgets the mounted images
@@ -325,6 +326,7 @@ component falcon_m65 is
    port (
       clk_32          : in    std_logic;
       clk_96          : in    std_logic;
+      clk_fpu         : in    std_logic;
       reset           : in    std_logic;
       cold_reset      : in    std_logic;
       por             : in    std_logic;
@@ -854,6 +856,7 @@ begin
          port map (
             clk_32          => clk_main_i,
             clk_96          => clk_sdram_i,
+            clk_fpu         => clk_fpu_i,
             reset           => f_reset,
             cold_reset      => f_cold_reset,
             por             => f_por,

@@ -8,8 +8,13 @@ R=../../Falcon_MiSTer/rtl
 F=$R/falcon
 V=../../verilog
 # FPU=1: with the 68882 (the bridge's service on the RISC-V, fpu_rv.v; image falcon_fpu/rv/fpu_rv.mem),
-# built into obj_fpu
-if [ -n "$FPU" ]; then
+# built into obj_fpu; H3=1 (with FPU=1): Hazard3 instead of PicoRV32 (fpu_rv_h3.v, image fpu_rv_h3.mem) on
+# its 80.2 MHz clock as in the core (sim_main.cpp FPU80), obj_h3
+if [ -n "$FPU" ] && [ -n "$H3" ]; then
+	DEFS="+define+FALCON_FPU_LOCAL -CFLAGS -DFPU80"; MDIR=${MDIR:-obj_h3}
+	EXTRA="-I../../hazard3/hdl $V/fpu_rv_h3.v $(sed -n 's|^file |../../hazard3/hdl/|p' ../../hazard3/hdl/hazard3.f)"
+	ln -sf ../../falcon_fpu/rv/fpu_rv_h3.mem fpu_rv_h3.mem
+elif [ -n "$FPU" ]; then
 	DEFS="+define+FALCON_FPU_LOCAL"; EXTRA="$V/fpu_rv.v ../../picorv32/picorv32.v"; MDIR=${MDIR:-obj_fpu}
 	ln -sf ../../falcon_fpu/rv/fpu_rv.mem fpu_rv.mem
 else

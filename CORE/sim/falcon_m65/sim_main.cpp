@@ -61,16 +61,34 @@ static const double CLK_HZ = 32083333.0;
 static Vtb_top *top;
 static uint64_t cyc = 0;
 
+#ifdef FPU80
+// as the MMCM makes them (clk.vhd, VCO 962.5 MHz): clk_32 = VCO/30, clk_96 = VCO/10, clk_fpu =
+// VCO/12 (80.2 MHz, the FPU's RISC-V with H3=1); all rise together every 60 VCO periods. One
+// tick is a clk_32 period (30 VCO periods), its rising edge at VCO period 15 as below.
+static unsigned vco = 0;
 static void tick() {
-    // clk_96: three rising edges per clk_32, one of them with the rising edge of clk_32
-    top->clk_32 = 0; top->clk_96 = 1; top->eval();
-    top->clk_96 = 0; top->eval();
-    top->clk_32 = 1; top->clk_96 = 1; top->eval();
-    top->clk_96 = 0; top->eval();
-    top->clk_96 = 1; top->eval();
-    top->clk_96 = 0; top->eval();
+    for (unsigned u = 0; u < 30; u++, vco = (vco + 1) % 60) {
+        unsigned t = (vco + 45) % 60;           // clk_32 rises at u = 15
+        bool c32 = t % 30 < 15, c96 = t % 10 < 5, cf = t % 12 < 6;
+        if (c32 != top->clk_32 || c96 != top->clk_96 || cf != top->clk_fpu) {
+            top->clk_32 = c32; top->clk_96 = c96; top->clk_fpu = cf; top->eval();
+        }
+    }
     cyc++;
 }
+#else
+static void tick() {
+    // clk_96: three rising edges per clk_32, one of them with the rising edge of clk_32;
+    // clk_fpu = clk_96 (PicoRV32)
+    top->clk_32 = 0; top->clk_96 = top->clk_fpu = 1; top->eval();
+    top->clk_96 = top->clk_fpu = 0; top->eval();
+    top->clk_32 = 1; top->clk_96 = top->clk_fpu = 1; top->eval();
+    top->clk_96 = top->clk_fpu = 0; top->eval();
+    top->clk_96 = top->clk_fpu = 1; top->eval();
+    top->clk_96 = top->clk_fpu = 0; top->eval();
+    cyc++;
+}
+#endif
 
 struct Key { int idx; double t, d; };
 struct Joy { double t; uint32_t bits; double d; bool pad; };

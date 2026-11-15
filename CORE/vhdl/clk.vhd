@@ -13,6 +13,8 @@
 --   VCO = 100 MHz * 9.625 = 962.5 MHz
 --   CLKOUT0 = VCO / 10       = 96.25 MHz
 --   CLKOUT1 = VCO / 30       = 32.083 MHz
+--   CLKOUT2 = VCO / 12       = 80.208 MHz (the RISC-V of the Falcon's FPU, fpu_rv_h3.v: Hazard3
+--                                         does not reach 96 MHz in the whole design)
 --   CLKOUT6 = VCO / 60       = 16.042 MHz (only used as cascade source for CLKOUT4)
 --   CLKOUT4 = CLKOUT6 / 8    =  2.005 MHz (CLKOUT4_CASCADE)
 --
@@ -39,7 +41,8 @@ entity clk is
       main_clk_o      : out std_logic;   -- 32.083 MHz main clock
       main_rst_o      : out std_logic;   -- main's reset, synchronized
       sdram_clk_o     : out std_logic;   -- 96.25 MHz SDRAM clock
-      ikbd_clk_o      : out std_logic    -- 2.005 MHz IKBD clock
+      ikbd_clk_o      : out std_logic;   -- 2.005 MHz IKBD clock
+      fpu_clk_o       : out std_logic    -- 80.208 MHz, phase aligned: the Falcon FPU's RISC-V
    );
 end entity clk;
 
@@ -50,6 +53,7 @@ signal clkfb_mmcm        : std_logic;
 signal sdram_clk_mmcm    : std_logic;
 signal main_clk_mmcm     : std_logic;
 signal ikbd_clk_mmcm     : std_logic;
+signal fpu_clk_mmcm      : std_logic;
 signal main_clk          : std_logic;
 
 signal main_locked       : std_logic;
@@ -76,6 +80,10 @@ begin
          CLKOUT1_PHASE        => 0.000,
          CLKOUT1_DUTY_CYCLE   => 0.500,
          CLKOUT1_USE_FINE_PS  => FALSE,
+         CLKOUT2_DIVIDE       => 12,         -- 80.208 MHz
+         CLKOUT2_PHASE        => 0.000,
+         CLKOUT2_DUTY_CYCLE   => 0.500,
+         CLKOUT2_USE_FINE_PS  => FALSE,
          CLKOUT4_DIVIDE       => 8,          -- 16.042 MHz / 8 = 2.005 MHz
          CLKOUT4_PHASE        => 0.000,
          CLKOUT4_DUTY_CYCLE   => 0.500,
@@ -90,6 +98,7 @@ begin
          CLKFBOUT            => clkfb_mmcm,
          CLKOUT0             => sdram_clk_mmcm,
          CLKOUT1             => main_clk_mmcm,
+         CLKOUT2             => fpu_clk_mmcm,
          CLKOUT4             => ikbd_clk_mmcm,
          -- Input clock control
          CLKFBIN             => clkfb,
@@ -144,6 +153,12 @@ begin
       port map (
          I => ikbd_clk_mmcm,
          O => ikbd_clk_o
+      );
+
+   fpu_clk_bufg : BUFG
+      port map (
+         I => fpu_clk_mmcm,
+         O => fpu_clk_o
       );
 
    main_clk_o <= main_clk;

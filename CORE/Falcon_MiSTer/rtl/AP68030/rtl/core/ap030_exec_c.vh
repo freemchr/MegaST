@@ -225,7 +225,14 @@ S_CPSCC2: begin
 	// processor register), and after a mid-instruction frame's RTE dst
 	// holds whatever the handler left there
 	if (ir[5:3] == 3'b000) begin wreg({1'b0, ir[2:0]}, {rf_a[31:8], {8{cp_resp[0]}}}); finish; end
-	else begin ea_ret <= S_CPSCC_WR; state <= S_EA; end
+	else begin
+		// MEGA65: the EA's operand size again (byte): after a mid-instruction
+		// frame's RTE (an interrupt during come-again) g_size and ea_sel hold
+		// what the handler's last instructions left, and (An)+/-(An) moved An
+		// by 2 or 4 instead of 1
+		g_size <= `SZ_B; ea_sel <= 1'b0; g_dstk <= DK_NONE;
+		ea_ret <= S_CPSCC_WR; state <= S_EA;
+	end
 end
 S_CPSCC_WR: begin finish; wr(ea, `SZ_B, {24'd0, {8{cp_resp[0]}}}, S_FETCH); end   // cpScc memory destination
 S_CPTRAP2: begin : cptrapcc

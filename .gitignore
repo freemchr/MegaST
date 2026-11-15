@@ -37,12 +37,17 @@ stcfg
 # Python
 __pycache__/
 
-# Falcon FPU: build outputs (fpu_rv.mem is committed: the FPGA build reads it)
+# Falcon FPU: build outputs (fpu_rv_h3.mem and fpu_rv.mem are committed: the FPGA build and the
+# PicoRV32 simulations read them)
 CORE/falcon_fpu/*/build/
 CORE/falcon_fpu/rv/bench.mem
 CORE/falcon_fpu/rv/selftest.mem
+CORE/falcon_fpu/rv/build_h3/
+CORE/falcon_fpu/rv/bench_h3.mem
+CORE/falcon_fpu/rv/selftest_h3.mem
 CORE/sim/*/obj_*/
 CORE/sim/*/*.log
 CORE/sim/*/build.err
 CORE/sim/*/build_dbg.sh
 CORE/sim/*/fpu_rv.mem
+CORE/sim/*/fpu_rv_h3.mem

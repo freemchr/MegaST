@@ -126,50 +126,75 @@ simulation):
 ### Falcon FPU: the 68882 on the RISC-V
 
 The Falcon's 68882 is the FPU bridge of Falcon_MiSTer (`falcon_system.sv`, `FALCON_FPU_LOCAL`) and a
-PicoRV32 at 96 MHz (`CORE/verilog/fpu_rv.v`) that runs Hatari's 68882 emulation (`CORE/falcon_fpu`:
-`engine/` = Hatari's `fpp.c` and softfloat, unmodified, plus the shim; `rv/` = the service, built
-into `rv/fpu_rv.mem` by `rv/build.sh`, `HATARI=` the Hatari 2.6.1 source tree, xPack
-`riscv-none-elf-gcc`). The 68030 waits for each instruction. Measured in the Falcon bench
-(`tests/fpulat.s`): the hand-over from the 68030 to the RISC-V and back costs about 3 to 5 us; the
-rest is the RISC-V program, which runs about 4 clocks per instruction.
+RISC-V that runs Hatari's 68882 emulation (`CORE/falcon_fpu`: `engine/` = Hatari's `fpp.c` and
+softfloat, unmodified, plus the shim; `rv/` = the service, built by `rv/build.sh`, `HATARI=` the
+Hatari 2.6.1 source tree, xPack `riscv-none-elf-gcc`). The 68030 waits for each instruction; the
+hand-over from the 68030 to the RISC-V and back costs about 3 to 5 us (`tests/fpulat.s`).
+
+The RISC-V of the core is Hazard3 (Luke Wren, Apache 2.0, `CORE/hazard3`, copied unmodified;
+`CORE/verilog/fpu_rv_h3.v`, image `rv/fpu_rv_h3.mem` from `H3=1 rv/build.sh`) on its own clock,
+80.2 MHz (`clk.vhd` CLKOUT2 = VCO/12; 1.6-test3 and earlier: PicoRV32 at 96 MHz,
+`fpu_rv.v` + `picorv32.v`, image `rv/fpu_rv.mem`, still built by `rv/build.sh` and used by the
+simulations without `H3=1`). PicoRV32 needs about 4.5 clocks per instruction, Hazard3 about 1.2.
+Hazard3 does not reach 96 MHz in the whole design (WNS -1.2 ns, register file to the RAM address;
+out of context it just met), so: RV32IM without the bit manipulation extensions and without
+`MULH_FAST` (-2.6 ns), the register file in LUT RAM (`HAZARD3_REGFILE_RAM_STYLE_DISTRIBUTED`, a Verilog
+define of the R4..R6 projects), 80.2 MHz. The bridge's mailbox accesses (clk_32) are sampled in the
+RISC-V's clock first; the nearest clk_32 and 80 MHz edges are 6.2 ns apart (same MMCM), Vivado times
+the crossings. The Falcon bench models the three clocks with that phase (`H3=1`: `sim_main.cpp`
+`FPU80`).
 
 Most of an instruction used to be Hatari's general code (function pointers for every check, copies
-of the FPU state, a full set-up per request) rather than the arithmetic. Two changes (2026-11-09):
+of the FPU state, a full set-up per request) rather than the arithmetic. Changes:
 
 * `rv/sys.c`: `memset`/`memcpy` a word at a time (newlib-nano's go byte by byte: 4600 cycles to clear
-  the 256 byte operand buffer of every request with operands)
+  the 256 byte operand buffer of every request with operands) (2026-11-09)
 * `engine/fpe_sf.c` (`fpe_sf_exec()`): a short path for FMOVE, FADD, FSUB, FMUL, FDIV, FSQRT, FABS,
   FNEG, FCMP, FTST with a register or a memory operand (.L .S .X .W .D .B) and for FMOVE FPn to
   memory (same formats), when no exception is enabled or pending. It does Hatari's steps in Hatari's
   order with the same softfloat calls (the comment lists them); everything else (packed decimal,
   FSIN and the other transcendental functions, FMOVEM, control registers, exceptions) takes
-  Hatari's own path. `fpe_sf_off = 1` turns it off.
+  Hatari's own path. `fpe_sf_off = 1` turns it off. (2026-11-09)
+* `fpe_sf_exec()` is called first (`fpe_shim.c`) and hands everything else to the full path; values
+  that are exact at the rounding precision skip `roundAndPackFloatx80` (FMOVE, FABS, FNEG);
+  `norm()` returns at once for a normalized value; the status only when it changed (2026-11-15)
 
-RISC-V cycles per instruction (`rv/bench.c` in `CORE/sim/fpu_rv`, `./build.sh ../../falcon_fpu/rv/bench.mem`):
+RISC-V cycles per instruction (`rv/bench.c` in `CORE/sim/fpu_rv`, `./build.sh ../../falcon_fpu/rv/bench.mem`,
+`H3=1 ./build.sh` for Hazard3):
 
-| | before | short path |
-|---|---|---|
-| FMOVE FP1,FP0 | 2413 | 1277 |
-| FADD / FMUL FP1,FP0 | 3066 / 3024 | 1771 / 1741 |
-| FDIV / FSQRT | 4915 / 4876 | 3622 / 3763 |
-| FMOVE.D <ea>,FP0 / FMOVE.D FP0,<ea> | 8204 / 7063 | 1548 / 1166 |
-| FADD.D / FMUL.D <ea>,FP0 | about 8800 | 2043 / 2009 |
-| FSIN | 17898 | 18280 (Hatari's path) |
+| | before | short path (1.6-test3) | trimmed, PicoRV32 | Hazard3 |
+|---|---|---|---|---|
+| FMOVE FP1,FP0 | 2413 | 1277 | 879 | 260 |
+| FADD / FMUL FP1,FP0 | 3066 / 3024 | 1771 / 1741 | 1545 / 1588 | 445 / 531 |
+| FDIV / FSQRT | 4915 / 4876 | 3622 / 3763 | 3479 / 3615 | 1266 / 1336 |
+| FMOVE.D <ea>,FP0 / FMOVE.D FP0,<ea> | 8204 / 7063 | 1548 / 1166 | 1147 / 977 | 334 / 290 |
+| FSIN | 17898 | 18280 (Hatari's path) | 18200 | 5950 |
+
+As the 68030 sees it (`tests/fpulat.s`, us per instruction, 200 Hz ticks: +-2.5 us): 1.6-test3
+FMOVE 17.5, FADD/FMUL 22.5, FDIV/FSQRT 42.5, FMOVE.D in/out 22.5, FSIN 190; Hazard3 at 80 MHz:
+5, 7.5, 17.5, 7.5/10, 70.
 
 Checks (all must pass after a change in `engine/` or `rv/`):
 
 * `engine/fpe_shortcheck.c`: the short path against Hatari's path on the host, bit for bit (the eight
   registers, FPSR, FPCR, FPIAR, the bytes stored, the returned flags and the exception status):
-  random single instructions (zeros, denormals, unnormals, infinities, NaNs, signaling NaNs, every
-  rounding mode and precision, sometimes an enable byte) and sequences of 40 instructions (with
-  Hatari-path instructions, exceptions and the CPU taking them). `HOST_ONLY=1 engine/build.sh`, then
+  random single instructions (zeros, denormals, unnormals, infinities, NaNs, signaling NaNs, values at
+  the edges of the exponent range of each rounding precision, every rounding mode and precision,
+  sometimes an enable byte) and sequences of 40 instructions (with Hatari-path instructions,
+  exceptions and the CPU taking them). `HOST_ONLY=1 engine/build.sh`, then
   `cc -O2 -I. fpe_shortcheck.c build/host/libfpe.a -lm -o build/fpe_shortcheck` and
   `build/fpe_shortcheck 25000000 <seed>` (several seeds in parallel; a deliberately broken short path
-  must make it fail, which was checked for the status bits, the events, .S loads and .D stores)
-* `engine/fpe_selftest.c` on the host and `rv/selftest.mem` on the RISC-V (`CORE/sim/fpu_rv`, about
-  40 minutes): 24546 checks of the engine against `fpp.c` driven with real effective addresses
-* `falcon_fpu/fputest` (FPUTEST.TOS) in the Falcon bench: every operation, format, rounding mode,
-  condition and the exception round trips through the bridge, against results of the host engine
+  must make it fail, which was checked for the status bits, the events, .S loads, .D stores and the
+  exponent limits of the exact test)
+* `engine/fpe_selftest.c` on the host and `rv/selftest.mem` / `rv/selftest_h3.mem` on the RISC-V
+  (`CORE/sim/fpu_rv`, `H3=1 ./build.sh` for Hazard3; about 40 / 15 minutes): 24546 checks of the
+  engine against `fpp.c` driven with real effective addresses
+* `falcon_fpu/fputest` (FPUTEST.TOS) in the Falcon bench (`FPU=1 H3=1 build.sh`): every operation,
+  format, rounding mode, condition and the exception round trips through the bridge, against results
+  of the host engine
+* `tests/fscc_irq.s` in the Falcon bench: FScc (A1)+ / -(A1) while the FPU is busy and Timer A
+  interrupts at 30 kHz (the AP68030 fix of 2026-11-15, `doc/m2m/exceptions.md`): A1 must move by
+  exactly one byte per FScc
 
 ### EmuTOS in the release zip
 

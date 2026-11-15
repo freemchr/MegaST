@@ -1,0 +1,4 @@
+Hazard3 RISC-V processor by Luke Wren, https://github.com/Wren6991/Hazard3
+Apache License 2.0 (LICENSE). Copied unmodified from commit 8af992930f71a69b0e06c38734c1094f41a05ca0 2026-03-12:
+hdl/ without hdl/debug/ (the debug module is not used).
+Used by CORE/verilog/fpu_rv_h3.v (the RISC-V of the Falcon's FPU).

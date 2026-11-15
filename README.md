@@ -784,4 +784,6 @@ License
 -------
 
 GPL v3, see [LICENSE](LICENSE). The MiSTer core is licensed under GPL v2 or later (FX68K:
-GPL v3). TOS is copyrighted by Atari and is not part of this repository.
+GPL v3). The Falcon's FPU runs Hatari's 68882 emulation (GPL v2 or later) on the Hazard3 RISC-V
+CPU by Luke Wren (Apache 2.0, `CORE/hazard3`). TOS is copyrighted by Atari and is not part of this
+repository.

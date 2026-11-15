@@ -26,6 +26,7 @@ module falcon_m65 #(
 ) (
 	input             clk_32,
 	input             clk_96,
+	input             clk_fpu,        // 80.208 MHz, phase aligned: the FPU's RISC-V (fpu_rv_h3.v)
 	input             reset,          // machine reset
 	input             cold_reset,     // cold reset (power on, TOS loaded)
 	input             por,            // power on / Falcon not selected: also resets the memory arbiter
@@ -475,10 +476,11 @@ falcon_system #(.CLK_HZ(CLK_HZ)) system (
 );
 
 `ifdef FALCON_FPU_LOCAL
-// the 68882: the bridge in falcon_system, its service on a RISC-V (fpu_rv.v: Hatari's FPU
-// emulation, what the ARM runs on MiSTer)
+// the 68882: the bridge in falcon_system, its service on a RISC-V (Hatari's FPU emulation, what the
+// ARM runs on MiSTer): fpu_rv_h3.v (Hazard3) on clk_fpu (80 MHz); the simulation without H3 has
+// fpu_rv.v (PicoRV32) there
 fpu_rv fpu (
-	.clk_96(clk_96), .clk_32(clk_32),
+	.clk_96(clk_fpu), .clk_32(clk_32),
 	.d3_req(fpu_req), .d3_we(fpu_we), .d3_addr(fpu_addr), .d3_be(fpu_be), .d3_wdata(fpu_wdata),
 	.d3_rdata(fpu_rdata), .d3_ack(fpu_ack),
 	.dbg_out(), .dbg_byte(), .dbg_exit(), .dbg_code()

@@ -9,6 +9,9 @@ _start:
 	la	gp, __global_pointer$
 	.option pop
 	la	sp, __stack_top
+#ifdef H3
+	csrw	mcountinhibit, zero	/* Hazard3 starts with its counters stopped (rdcycle) */
+#endif
 	la	t0, __bss_start
 	la	t1, __bss_end
 1:	bgeu	t0, t1, 2f

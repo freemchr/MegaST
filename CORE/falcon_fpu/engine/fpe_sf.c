@@ -34,7 +34,7 @@
  * and copies of fpdata, and fpe_exec() saves and sets up far more than this needs: on the FPGA's
  * RISC-V that cost more than the operation itself.
  * fpe_sf_off = 1 turns it off (the engine then runs fpp.c's own path; fpe_shortcheck.c compares
- * the two).  Returns 0 when it does not take the command.
+ * the two).  A command it does not take goes on to fpe_exec_full(); returns what fpe_exec() does.
  * MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3 */
 #include "fpp_softfloat.c"
 
@@ -60,13 +60,36 @@ static inline uae_u32 be32(const uint8_t *p) { return (uae_u32)p[0] << 24 | p[1]
 static inline void put32(uint8_t *p, uae_u32 v) { p[0] = v >> 24; p[1] = v >> 16; p[2] = v >> 8; p[3] = v; }
 static inline floatx80 norm(floatx80 a)
 {
+	if ((uae_u32)(a.low >> 32) & 0x80000000u)       /* integer bit set: neither unnormal nor denormal */
+		return a;
 	return (floatx80_is_unnormal(a) || floatx80_is_denormal(a)) ? floatx80_normalize(a) : a;
+}
+
+/* roundAndPackFloatx80(prec, sign, exp, sig, 0, &fs), as floatx80_move/abs/neg call it for a
+ * number with 0 < exp < $7FFF, returns packFloatx80(sign, exp, sig) and raises nothing when sig
+ * is normalized, the bits below the rounding precision are zero (nothing to round, no carry) and
+ * exp is inside the range of the precision (no overflow, no underflow):
+ *   80 (and any other value: precision80)  exp $0001-$7FFE
+ *   64  sig & $7FF = 0,        exp $3C01-$43FE (expOffset $3C00)
+ *   32  sig & $FF_FFFFFFFF = 0, exp $3F81-$407E (expOffset $3F80) */
+static inline int exact(floatx80 a)
+{
+	unsigned e = a.high & 0x7fff;
+	if (!((uae_u32)(a.low >> 32) & 0x80000000u))
+		return 0;
+	switch (fs.floatx80_rounding_precision) {
+	case 64: return ((uae_u32)a.low & 0x7ff) == 0 && e >= 0x3c01 && e <= 0x43fe;
+	case 32: return (a.low & 0xffffffffffULL) == 0 && e >= 0x3f81 && e <= 0x407e;
+	default: return e >= 1 && e <= 0x7ffe;
+	}
 }
 
 /* fpsr_make_status(): fp_get_status(), then the accrued exception byte */
 static uae_u32 make_status(uae_u32 fpsr)
 {
 	unsigned f = fs.float_exception_flags;
+	if (!f)         /* the exception byte is clear (fpsr_clear_status()): nothing to accrue */
+		return fpsr;
 	if (f & float_flag_signaling) fpsr |= FPSR_SNAN;
 	if (f & float_flag_invalid)   fpsr |= FPSR_OPERR;
 	if (f & float_flag_divbyzero) fpsr |= FPSR_DZ;
@@ -82,29 +105,33 @@ static uae_u32 make_status(uae_u32 fpsr)
 	return fpsr;
 }
 
-int fpe_sf_exec(uae_u16 extra, const uint8_t *in, int in_len, uint8_t *out, int *out_len)
+int fpe_exec_full(uae_u16 cmd, const uint8_t *in, int in_len, uae_u16 aux, uae_u32 iaddr,
+                  uint8_t *out, int *out_len);         /* fpe_shim.c */
+
+/* the opmodes taken, bit n = opmode n: $00 $04 $05 $18 $1A | $20 $22 $23 $28 $38-$3F */
+#define SF_OPS ((uint64_t)0xff00010du << 32 | 0x05000031u)
+
+/* called by fpe_exec() with all its arguments; what it does not take goes on to fpe_exec_full()
+ * (a tail call: nothing to save around it) */
+int fpe_sf_exec(uae_u16 extra, const uint8_t *in, int in_len, uae_u16 aux, uae_u32 iaddr,
+                uint8_t *out, int *out_len)
 {
 	unsigned cls = extra >> 13, fmt = (extra >> 10) & 7, op = extra & 0x7f;
 	if (regs.fp_exp_pend || regs.fp_unimp_pend || (regs.fpcr & 0xff00) ||
 	    currprefs.fpu_model != 68882 || currprefs.cpu_model != 68030 || fpe_sf_off)
-		return 0;
+		goto full;
 	if (cls == 3) {                                         /* FMOVE FPn,<ea> */
 		if (!fsize[fmt] || in_len != 0)
-			return 0;
+			goto full;
 	} else {
 		if (cls == 0) {
-			if (in_len != 0) return 0;
+			if (in_len != 0) goto full;
 		} else if (cls == 2) {
-			if (!fsize[fmt] || in_len != fsize[fmt]) return 0;
+			if (!fsize[fmt] || in_len != fsize[fmt]) goto full;
 		} else
-			return 0;
-		switch (op) {
-		case 0x00: case 0x04: case 0x05: case 0x18: case 0x1a: case 0x20: case 0x22: case 0x23:
-		case 0x28: case 0x38: case 0x39: case 0x3c: case 0x3d: case 0x3a: case 0x3b: case 0x3e: case 0x3f:
-			break;
-		default:
-			return 0;
-		}
+			goto full;
+		if (op >= 0x40 || !((SF_OPS >> op) & 1))
+			goto full;
 	}
 
 	/* fpe_exec(): fpe_shim_clear_events() (no event can happen here) */
@@ -134,8 +161,8 @@ int fpe_sf_exec(uae_u16 extra, const uint8_t *in, int in_len, uint8_t *out, int 
 		default: out[0] = (uae_u8)(uae_s8)floatx80_to_int8(v, &fs); break;
 		}
 		regs.fpsr = make_status(fpsr);
-		*out_len = fsize[fmt];
-		return 1;
+		if (out_len) *out_len = fsize[fmt];
+		return 0;
 	}
 
 	floatx80 src;
@@ -152,16 +179,21 @@ int fpe_sf_exec(uae_u16 extra, const uint8_t *in, int in_len, uint8_t *out, int 
 	}
 	/* fp_is_dyadic() (fpp.c): of the FCMP opmodes only $38 counts, so the destination of the
 	 * aliases $39, $3C and $3D is not normalized */
-	floatx80 dst = regs.fp[reg].fpx, r;
-	if ((op & 0x30) == 0x20 || op == 0x38)
-		dst = norm(dst);
+	floatx80 dst, r;
+	if (op & 0x20) {                                /* dyadic: FDIV FADD FMUL FSUB FCMP */
+		dst = regs.fp[reg].fpx;
+		if ((op & 0x30) == 0x20 || op == 0x38)
+			dst = norm(dst);
+	}
 
 	int write = 1;
 	switch (op) {
-	case 0x00: r = floatx80_move(src, &fs); break;
+	/* FMOVE, FABS, FNEG of a normalized number that the precision holds: what their
+	 * roundAndPackFloatx80() returns (exact()) */
+	case 0x00: r = exact(src) ? src : floatx80_move(src, &fs); break;
 	case 0x04: case 0x05: r = floatx80_sqrt(src, &fs); break;
-	case 0x18: r = floatx80_abs(src, &fs); break;
-	case 0x1a: r = floatx80_neg(src, &fs); break;
+	case 0x18: if (exact(src)) { r = src; r.high &= 0x7fff; } else r = floatx80_abs(src, &fs); break;
+	case 0x1a: if (exact(src)) { r = src; r.high ^= 0x8000; } else r = floatx80_neg(src, &fs); break;
 	case 0x20: r = floatx80_div(dst, src, &fs); break;
 	case 0x22: r = floatx80_add(dst, src, &fs); break;
 	case 0x23: r = floatx80_mul(dst, src, &fs); break;
@@ -182,6 +214,8 @@ int fpe_sf_exec(uae_u16 extra, const uint8_t *in, int in_len, uint8_t *out, int 
 
 	if (write)
 		regs.fp[reg].fpx = r;
-	*out_len = 0;
-	return 1;
+	if (out_len) *out_len = 0;
+	return 0;
+full:
+	return fpe_exec_full(extra, in, in_len, aux, iaddr, out, out_len);
 }

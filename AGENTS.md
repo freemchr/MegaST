@@ -101,8 +101,8 @@ Simulate first. Every hardware round trip costs the maintainer time.
 * `CORE/sim/nvram/run.sh`: the Falcon NVRAM file (`/atarist/fcnvram`, `CORE/m2m-rom/nvram.asm`), QNICE emulator.
 * Falcon FPU (`CORE/falcon_fpu`, the 68882 on the RISC-V): after any change in `engine/` or `rv/`,
   `engine/fpe_shortcheck` (short path against Hatari's path, bit for bit, many seeds), the engine
-  self-test on the host and on the RISC-V (`CORE/sim/fpu_rv`, `selftest.mem`), FPUTEST in the Falcon
-  bench; speed with `rv/bench.c`. Details in `doc/DEVELOPMENT.md` ("Falcon FPU").
+  self-test on the host and on the RISC-V (`CORE/sim/fpu_rv`, `H3=1`: Hazard3, the core's CPU, `selftest_h3.mem`),
+  FPUTEST and `tests/fscc_irq.s` in the Falcon bench (`FPU=1 H3=1`); speed with `rv/bench.c`. Details in `doc/DEVELOPMENT.md` ("Falcon FPU").
 * `CORE/sim/fcswitch/run.sh`: which TOS the firmware loads again after a switch between ST and Falcon
   (`CORE/m2m-rom/fcswitch.asm`), QNICE emulator.
 * `CORE/sim/acsi_write/run.sh <emutos tos.img> [delay]`: hard disk writes (64 KB, every sector checked).

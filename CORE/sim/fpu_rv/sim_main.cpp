@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
         // clk_32 every third clk_96
         top->clk_96 = 1; top->clk_32 = (cyc % 3) == 0; top->eval();
         if (top->dbg_out) putchar(top->dbg_byte);
+#ifndef H3     // PicoRV32's bus (fpu_rv.v); Hazard3 (fpu_rv_h3.v, H3=1) has no trace or profile here
         if (cyc < trace) {
             auto *r = top->rootp;
             printf("%5llu v%d i%d rdy%d a%08x w%x wd%08x rd%08x | la r%d w%d a%08x\n", (unsigned long long)cyc,
@@ -49,6 +50,7 @@ int main(int argc, char **argv) {
             if (f && !was) { hist[pc] += cyc - pc_t; cnt[pc]++; pc = r->fpu_rv__DOT__mem_addr; pc_t = cyc; }
             was = f;
         }
+#endif
         top->clk_96 = 0; if ((cyc % 3) == 1) top->clk_32 = 0; top->eval();
         cyc++;
     }

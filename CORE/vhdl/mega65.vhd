@@ -333,6 +333,7 @@ attribute ASYNC_REG of fx_arm_sync : signal is "TRUE";
 signal main_clk               : std_logic;               -- Core main clock (32.083 MHz)
 signal main_rst               : std_logic;
 signal sdram_clk              : std_logic;               -- SDRAM clock (96.25 MHz)
+signal fpu_clk                : std_logic;               -- Falcon FPU's RISC-V (80.208 MHz)
 signal ikbd_clk               : std_logic;               -- IKBD clock (2.005 MHz)
 
 ---------------------------------------------------------------------------------------------
@@ -568,14 +569,15 @@ begin
    iec_srq_n_o          <= '1';
 
    -- MMCME2_ADV clock generators:
-   --   Atari ST: 32.083 MHz (system), 96.25 MHz (SDRAM), 2.005 MHz (IKBD)
+   --   Atari ST: 32.083 MHz (system), 96.25 MHz (SDRAM), 2.005 MHz (IKBD); Falcon FPU 80.208 MHz
    clk_gen : entity work.clk
       port map (
          sys_clk_i         => clk_i,           -- expects 100 MHz
          main_clk_o        => main_clk,        -- CORE's 32.083 MHz clock
          main_rst_o        => main_rst,        -- CORE's reset, synchronized
          sdram_clk_o       => sdram_clk,
-         ikbd_clk_o        => ikbd_clk
+         ikbd_clk_o        => ikbd_clk,
+         fpu_clk_o         => fpu_clk
       ); -- clk_gen
 
    main_clk_o  <= main_clk;
@@ -626,6 +628,7 @@ begin
       port map (
          clk_main_i           => main_clk,
          clk_sdram_i          => sdram_clk,
+         clk_fpu_i            => fpu_clk,
          clk_ikbd_i           => ikbd_clk,
          reset_soft_i         => main_reset_core_i,
          reset_hard_i         => main_reset_m2m_i,

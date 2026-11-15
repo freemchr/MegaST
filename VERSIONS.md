@@ -1,4 +1,4 @@
-Version 1.6 - in progress (1.6-test3)
+Version 1.6 - in progress (1.6-test4)
 =====================================
 
 * **Falcon: the FPU is faster** (issue #35): the 68882 runs as a program on a small RISC-V CPU in
@@ -11,6 +11,19 @@ Version 1.6 - in progress (1.6-test3)
   transcendental functions are unchanged (about 190 us). Checked against the original path with
   200 million random instructions and 10 million instruction sequences, the engine self-test and
   FPUTEST.
+* **Falcon: the FPU is 2 to 3 times faster again** (issue #35, 1.6-test4): the RISC-V CPU that runs
+  the 68882 is now Hazard3 (by Luke Wren) instead of PicoRV32. It does about 3.5 times as much per
+  clock, runs at 80 MHz instead of 96 (it does not reach 96 MHz in this FPGA) and the short path
+  has less work per instruction. FPUBENCH on an R6, 1.6-test3 -> 1.6-test4: FMOVE.L D7,FP0
+  23.0 -> 8.3 us, FMOVE.X FP0,(A4) 23.2 -> 11.9 us, FMOVE/FMUL.D (A4) 25.5 -> 10.7 us, FADD
+  23.9 -> 8.2 us, FMUL 20.9 -> 7.5 us, FSQRT 45.1 -> 19.5 us, FSIN and FETOX about 190 -> 76/78 us.
+  The same checks as for 1.6-test3, the engine self-test on the new CPU and FPUTEST pass.
+* **Falcon: FScc to memory after an interrupt** (1.6-test4): when an interrupt came while an FScc
+  with (An)+ or -(An) waited for the busy FPU, the 68030 moved the address register by 4 instead
+  of 1 byte, and all later stores through it went to the wrong place. Found by FPUTEST in the
+  simulation, depending on when interrupts landed; how often it hit real programs depends on the
+  program. Fixed in the 68030 core (`ap030_exec_c.vh`); a test with a 30 kHz timer interrupt during
+  FSIN + FSNE (A1)+ now moves A1 by exactly one byte per FScc.
 * **HDMI picture frozen after a reset** (issue #26): sometimes, after pressing the reset button, the
   HDMI picture stood still (one picture, or one line repeated down the screen) while the machine went
   on running behind it; another reset usually brought it back. The HDMI scaler kept a pending write

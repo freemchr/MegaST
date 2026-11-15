@@ -5,6 +5,7 @@
 module tb_top (
 	input             clk_32,
 	input             clk_96,
+	input             clk_fpu,        // the FPU's RISC-V: 80.2 MHz with H3 (sim_main.cpp FPU80), else clk_96
 	input             init,
 	input             reset,
 	input             cold_reset,
@@ -97,7 +98,7 @@ wire [15:0] e_dout, e_din;
 wire        e_doe, e_ready;
 
 falcon_m65 #(.CLK_HZ(32083333)) dut (
-	.clk_32(clk_32), .clk_96(clk_96), .reset(reset), .cold_reset(cold_reset), .por(por),
+	.clk_32(clk_32), .clk_96(clk_96), .clk_fpu(clk_fpu), .reset(reset), .cold_reset(cold_reset), .por(por),
 	.ram_mb(ram_mb), .fast_n(fast_n), .monitor(monitor), .cpu_turbo(cpu_turbo), .hd_scsi(hd_scsi), .tos_lang(tos_lang),
 	.dio_addr(dio_addr), .dio_data(dio_data), .dio_strobe(dio_strobe), .dio_strobe_ack(dio_strobe_ack), .cart_loaded(cart_loaded),
 	.nvb_addr(nvb_addr), .nvb_din(nvb_din), .nvb_we(nvb_we), .nvb_dout(nvb_dout),
