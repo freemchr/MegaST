@@ -158,21 +158,58 @@ of the FPU state, a full set-up per request) rather than the arithmetic. Changes
 * `fpe_sf_exec()` is called first (`fpe_shim.c`) and hands everything else to the full path; values
   that are exact at the rounding precision skip `roundAndPackFloatx80` (FMOVE, FABS, FNEG);
   `norm()` returns at once for a normalized value; the status only when it changed (2026-11-15)
+* 1.6-test5 (2026-11-16):
+  * `engine/fpe_fastk.h`: floatx80 add, subtract and multiply for the common case (normalized
+    operands, rounding to nearest, precision 80, no overflow, underflow or exact zero), softfloat's
+    steps and intermediate values without the general code; anything else goes to softfloat.
+    The short path calls it directly; `engine/fpe_fast.c` puts it in front of softfloat's
+    `floatx80_add/sub/mul` for every other caller with `-Wl,--wrap` (`rv/build.sh`, `FAST=0`:
+    without), so the FPSP functions (FSIN, FETOX, ...) use it too. 64-bit shifts and the leading
+    zero count are written with 32-bit operations (RV32IM has no instructions for them; GCC would
+    call libgcc).
+  * `fpe_quick()` (`engine/fpe_sf.c`, `fpe_quick.h`): before `fpe_sf_exec()`, a small function for
+    FMOVE/FADD/FMUL/FSUB from a register or .L .W .B .S .D .X into FPn and FMOVE FPn to .L .S .X .D
+    with normalized operands (the conversions inline). The RISC-V's main loop (`rv/fpu_rv.c`
+    `quick()`) reads only the mailbox words these use and writes STATUS from the FPSR `fpe_quick()`
+    leaves; `serve()`'s set-up cost about as much as the operation.
+  * `fpu_rv_h3.v`: a 64 x 64 bit multiplier at `$30000000` (four 32 x 32 products in DSPs, 5 clocks)
+    for `fk_mul64()` (`FPE_HWMUL`, Hazard3 build only): Hazard3's MULHU takes 18 clocks without
+    `MULH_FAST`, which does not reach 80 MHz, and was half of every multiplication.
+    `rv/bench.c` checks it against the product in C.
+  * The bridge polls STATUS every clock or so instead of every 4 (`GAP_WAIT`, `GAP_BG`,
+    `doc/m2m/exceptions.md`).
+  * Special operands (found with FPUBENCH on the R6: FMUL of an infinity, FMOVE of a zero to and
+    from memory were 1.3 to 1.5 times slower than in 1.6-test4): `fpe_quick()` declined them only
+    after its whole set-up, then `fpe_exec()` called it a second time, and FMUL went through the
+    kernel three times before softfloat. Now `fpe_quick()` checks the operand classes first (a
+    decline is about 20 cycles), takes FMOVE of a zero in and out itself (`q_zero()`), a caller
+    that already tried it sets `fpe_quick_tried` so `fpe_exec()` goes straight to
+    `fpe_sf_exec()`, which calls softfloat's own `floatx80_add/sub/mul` (`FPE_WRAP`); FSUB is
+    the kernel's add of the negated operand (one copy of the code: the self-test image is tight).
+  * Tried and dropped: a faster `__udivdi3` (Hacker's Delight `divlu`) was slower than libgcc's on
+    Hazard3 (DIVU 19 clocks, and GCC turned the remainders into REMU); `MULDIV_UNROLL` 8 (-10 ns)
+    and `MULH_FAST` (-7.9 ns with it) at 80 MHz.
 
 RISC-V cycles per instruction (`rv/bench.c` in `CORE/sim/fpu_rv`, `./build.sh ../../falcon_fpu/rv/bench.mem`,
 `H3=1 ./build.sh` for Hazard3):
 
-| | before | short path (1.6-test3) | trimmed, PicoRV32 | Hazard3 |
-|---|---|---|---|---|
-| FMOVE FP1,FP0 | 2413 | 1277 | 879 | 260 |
-| FADD / FMUL FP1,FP0 | 3066 / 3024 | 1771 / 1741 | 1545 / 1588 | 445 / 531 |
-| FDIV / FSQRT | 4915 / 4876 | 3622 / 3763 | 3479 / 3615 | 1266 / 1336 |
-| FMOVE.D <ea>,FP0 / FMOVE.D FP0,<ea> | 8204 / 7063 | 1548 / 1166 | 1147 / 977 | 334 / 290 |
-| FSIN | 17898 | 18280 (Hatari's path) | 18200 | 5950 |
+| | before | short path (1.6-test3) | trimmed, PicoRV32 | Hazard3 (1.6-test4) | 1.6-test5 |
+|---|---|---|---|---|---|
+| FMOVE FP1,FP0 | 2413 | 1277 | 879 | 260 | 160 |
+| FADD / FMUL FP1,FP0 | 3066 / 3024 | 1771 / 1741 | 1545 / 1588 | 445 / 531 | 244 / 293 |
+| FDIV / FSQRT | 4915 / 4876 | 3622 / 3763 | 3479 / 3615 | 1266 / 1336 | 1284 / 1353 |
+| FMOVE.D <ea>,FP0 / FMOVE.D FP0,<ea> | 8204 / 7063 | 1548 / 1166 | 1147 / 977 | 334 / 290 | 238 / 198 |
+| FSIN | 17898 | 18280 (Hatari's path) | 18200 | 5950 | 4596 |
+| FMUL of an infinity / FMOVE.X of a zero out / FMOVE.D of a zero in | | | | 378 / 269 / 376 | 422 / 156 / 174 |
 
 As the 68030 sees it (`tests/fpulat.s`, us per instruction, 200 Hz ticks: +-2.5 us): 1.6-test3
 FMOVE 17.5, FADD/FMUL 22.5, FDIV/FSQRT 42.5, FMOVE.D in/out 22.5, FSIN 190; Hazard3 at 80 MHz:
-5, 7.5, 17.5, 7.5/10, 70.
+5, 7.5, 17.5, 7.5/10, 70. 1.6-test5 (`fpulat.s` with 10 times as many instructions, +-0.25 us, in the
+Falcon bench): FMOVE 3.5, FADD 4.25, FSQRT 19.75, FMOVE.D in/out 6.75/8.25, FSIN 59, FMUL (the operand
+an infinity after a few hundred) 6.25 (1.6-test4 in the same bench: 5.75, 8.0, 19.25, 9.5/10.75, 76, 8.0;
+the first 1.6-test5 build before the special operand fix: 3.0, 4.0, 20, 6.25/7.75, 58, 8.0). FDIV and FSQRT are a little slower than in 1.6-test4: they
+go through `fpe_quick_cmd()` first, and most of their time is softfloat's 128/64 bit division
+(`estimateDiv128To64()`, libgcc's `__udivdi3`).
 
 Checks (all must pass after a change in `engine/` or `rv/`):
 
@@ -184,11 +221,22 @@ Checks (all must pass after a change in `engine/` or `rv/`):
   exceptions and the CPU taking them). `HOST_ONLY=1 engine/build.sh`, then
   `cc -O2 -I. fpe_shortcheck.c build/host/libfpe.a -lm -o build/fpe_shortcheck` and
   `build/fpe_shortcheck 25000000 <seed>` (several seeds in parallel; a deliberately broken short path
-  must make it fail, which was checked for the status bits, the events, .S loads, .D stores and the
-  exponent limits of the exact test)
+  must make it fail, which was checked for the status bits, the events, .S loads, .D stores, the
+  exponent limits of the exact test, the conversions and rounding ties of `fpe_quick()` and its zero
+  test (denormals with half of the mantissa zero); it runs
+  `fpe_exec()`, so it covers `fpe_quick()`)
+* `engine/fpe_fastcheck.c`: the kernel of `fpe_fastk.h` against softfloat's `floatx80_add/sub/mul`
+  on the host, bit for bit (result, exception flags and the internal result softfloat keeps for
+  exceptions), with random operands and classes aimed at its edges (every exponent difference to
+  140, cancellation, rounding ties, the ends of the exponent range, modes it leaves alone); the
+  build line is in its header (16 billion cases per change; mutants of the shifts, rounding,
+  jamming and limits all fail)
 * `engine/fpe_selftest.c` on the host and `rv/selftest.mem` / `rv/selftest_h3.mem` on the RISC-V
   (`CORE/sim/fpu_rv`, `H3=1 ./build.sh` for Hazard3; about 40 / 15 minutes): 24546 checks of the
-  engine against `fpp.c` driven with real effective addresses
+  engine against `fpp.c` driven with real effective addresses. The self-test image is close to the
+  256 KB RAM: with the 1.6-test5 code its stack ran into the data and the CPU restarted after the
+  second check, so `fpe_selftest.c` itself is built with `-Os` and `rv/build.sh` now stops if less
+  than 8 KB is left above `.bss` (self-test 10 KB, the core's image 45 KB)
 * `falcon_fpu/fputest` (FPUTEST.TOS) in the Falcon bench (`FPU=1 H3=1 build.sh`): every operation,
   format, rounding mode, condition and the exception round trips through the bridge, against results
   of the host engine

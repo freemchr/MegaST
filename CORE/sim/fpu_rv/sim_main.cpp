@@ -2,7 +2,7 @@
 // CORE/falcon_fpu/rv/selftest.mem) and its stdout is printed; ends when the program exits.
 //   ./build.sh && ./obj_dir/Vfpu_rv [--max-mcycles N] [--prof FILE] [--trace N]
 // --prof writes the cycles spent per instruction address (fetch address, cycles until the
-// next fetch, fetches) as "addr cycles count" lines: tools/rvprof.py turns them into a per-function profile.
+// next fetch, fetches; Hazard3: clocks with the instruction in decode, entries) as "addr cycles count" lines: tools/rvprof.py turns them into a per-function profile.
 // The program's clock is clk_96; the bridge side is idle.
 //
 // MEGA65 port done by Chris Freeman in 2026, licensed under GPL v3
@@ -49,6 +49,12 @@ int main(int argc, char **argv) {
             bool f = r->fpu_rv__DOT__mem_valid && r->fpu_rv__DOT__mem_instr;
             if (f && !was) { hist[pc] += cyc - pc_t; cnt[pc]++; pc = r->fpu_rv__DOT__mem_addr; pc_t = cyc; }
             was = f;
+        }
+#else
+        if (prof) {     // Hazard3: every clock to the instruction in decode (stalls count to it)
+            uint32_t a = top->rootp->fpu_rv__DOT__cpu__DOT__core__DOT__d_pc;
+            hist[a]++;
+            if (a != pc) { cnt[a]++; pc = a; }
         }
 #endif
         top->clk_96 = 0; if ((cyc % 3) == 1) top->clk_32 = 0; top->eval();

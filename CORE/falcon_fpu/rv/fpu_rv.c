@@ -16,6 +16,7 @@
 
 #include "fpu_rv.h"
 #include "../fpu_request.h"
+#include "../engine/fpe_quick.h"
 
 #define FPU_MAGIC    0x4650u        /* "FP" */
 #define FPU_VERSION  4u
@@ -85,6 +86,38 @@ static void serve(uint32_t w0)
 	wr32(O_STATUS, fields(fpu_status(seq, flags, fpsr), flags));
 }
 
+/* the fast lane for the commands of the engine's quick path (fpe_quick.h): only the mailbox words
+ * they use, a small buffer, STATUS from the FPSR fpe_quick() leaves; serve()'s set-up (its frame,
+ * fpe_fpcr(), fpe_fpsr(), the general buffers) cost about as much as the operation. Returns 0
+ * when fpe_quick() does not take the command (an exception enabled or pending, or an operand it
+ * leaves to the full path: serve() then reads the request again and does it as before; with
+ * an exception enabled the bridge has also posted IADDR, which only serve() reads). */
+static int quick(uint32_t w0, uint16_t seq)
+{
+	static uint32_t qin[3], qout[3];
+	if (f_hi(w0) != FPU_KIND_EXEC)
+		return 0;
+	uint16_t cmd = f_lo(rd32(O_CMD));
+	if (!fpe_quick_cmd(cmd))
+		return 0;
+	int n = 0, ol = 0;
+	if ((cmd >> 13) == 2) {
+		n = f_lo(rd32(O_RNBYTES));
+		if (n > 12)
+			return 0;
+		for (int i = 0; i < n; i += 4)
+			qin[i >> 2] = rd32(O_RDATA + i);
+	}
+	if (fpe_quick(cmd, (const uint8_t *)qin, n, (uint8_t *)qout, &ol) < 0) {
+		fpe_quick_tried = 1;                    /* serve(): fpe_exec() goes on with the rest */
+		return 0;
+	}
+	for (int i = 0; i < ol; i += 4)                 /* 4, 8 or 12 bytes */
+		wr32(O_ADATA + i, qout[i >> 2]);
+	wr32(O_STATUS, fields(fpu_status(seq, 0, fpe_quick_fpsr), 0));
+	return 1;
+}
+
 int main(void)
 {
 	fpe_reset();
@@ -98,9 +131,11 @@ int main(void)
 	uint32_t next_hb = rv_cycles();
 	for (;;) {
 		uint32_t w0 = rd32(O_RSEQ);                     /* RSEQ, KIND */
-		if (f_lo(w0) != seen) {
-			seen = f_lo(w0);
-			serve(w0);
+		uint16_t seq = f_lo(w0);
+		if (seq != seen) {
+			seen = seq;
+			if (!quick(w0, seq))
+				serve(w0);
 		}
 		if ((int32_t)(rv_cycles() - next_hb) >= 0) {
 			wr16(O_HB, ++hb);

@@ -219,15 +219,24 @@ static int popcnt8(unsigned v) { int n = 0; for (v &= 0xff; v; v >>= 1) n += v &
 
 int fpe_sf_exec(uint16_t extra, const uint8_t *in, int in_len, uint16_t aux, uint32_t iaddr,
                 uint8_t *out, int *out_len);    /* fpe_sf.c: the rest to fpe_exec_full() */
+#include "fpe_quick.h"
 int fpe_exec_full(uint16_t cmd, const uint8_t *in, int in_len, uint16_t aux, uint32_t iaddr,
                   uint8_t *out, int *out_len) __attribute__((noinline));
 
-/* the common instructions first (fpe_sf.c), before the set-up of fpe_exec_full() */
+/* the common instructions first (fpe_sf.c: fpe_quick(), then fpe_sf_exec()), before the set-up of
+ * fpe_exec_full() */
 int fpe_exec(uint16_t cmd, const uint8_t *in, int in_len, uint16_t aux, uint32_t iaddr,
              uint8_t *out, int *out_len)
 {
-	if (inited && (in || in_len == 0) && out)
+	if (inited && (in || in_len == 0) && out) {
+		if (fpe_quick_tried)                                    /* the caller tried it */
+			fpe_quick_tried = 0;
+		else if (fpe_quick_cmd(cmd)) {                          /* fpe_sf.c, fpe_quick.h */
+			int r = fpe_quick(cmd, in, in_len, out, out_len);
+			if (r >= 0) return r;
+		}
 		return fpe_sf_exec(cmd, in, in_len, aux, iaddr, out, out_len);
+	}
 	return fpe_exec_full(cmd, in, in_len, aux, iaddr, out, out_len);
 }
 

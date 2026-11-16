@@ -1,4 +1,4 @@
-Version 1.6 - in progress (1.6-test4)
+Version 1.6 - in progress (1.6-test5)
 =====================================
 
 * **Falcon: the FPU is faster** (issue #35): the 68882 runs as a program on a small RISC-V CPU in
@@ -18,6 +18,16 @@ Version 1.6 - in progress (1.6-test4)
   23.0 -> 8.3 us, FMOVE.X FP0,(A4) 23.2 -> 11.9 us, FMOVE/FMUL.D (A4) 25.5 -> 10.7 us, FADD
   23.9 -> 8.2 us, FMUL 20.9 -> 7.5 us, FSQRT 45.1 -> 19.5 us, FSIN and FETOX about 190 -> 76/78 us.
   The same checks as for 1.6-test3, the engine self-test on the new CPU and FPUTEST pass.
+* **Falcon: the FPU is faster again** (issue #35, 1.6-test5): faster add, subtract and
+  multiply in the 68882 program (also used by FSIN, FETOX and the other functions), a quick path for
+  FMOVE, FADD, FSUB and FMUL with register and memory operands, a 64 x 64 bit multiplier in the FPGA
+  for the RISC-V, and the 68030 side answers sooner. FPUBENCH on an R6, 1.6-test4 -> 1.6-test5:
+  FADD 8.2 -> 4.45 us, FMOVE.L D7,FP0 8.3 -> 5.9 us, FMOVE.X FP0,(A4) 11.9 -> 9.45 us,
+  FMOVE/FMUL.D (A4) 10.7 -> 9.05 us, FSIN 76 -> 59.3 us, FETOX 78 -> 59.65 us; FMUL (in FPUBENCH
+  mostly of an infinity) 7.5 -> 7.8 us, FSQRT 19.5 -> 19.85 us. FPUTEST passes. Results are the same bit for bit: the new add,
+  subtract and multiply against softfloat with 36 billion random cases, the quick path against
+  Hatari's path with 80 million instructions and 4 million instruction sequences, the engine self-test and
+  FPUTEST.
 * **Falcon: FScc to memory after an interrupt** (1.6-test4): when an interrupt came while an FScc
   with (An)+ or -(An) waited for the busy FPU, the 68030 moved the address register by 4 instead
   of 1 byte, and all later stores through it went to the wrong place. Found by FPUTEST in the

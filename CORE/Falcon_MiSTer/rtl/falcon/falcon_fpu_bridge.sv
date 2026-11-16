@@ -176,8 +176,15 @@ localparam int ALIVE_POLLS = 20;                    // 100 ms without a heartbea
 localparam int WD_CLKS     = CLK_HZ / 10;           // reply watchdog, 100 ms
 localparam int PW          = $clog2(POLL_CLKS + 1);
 localparam int WW          = $clog2(WD_CLKS + 1);
+`ifdef FALCON_FPU_LOCAL
+// MEGA65: the mailbox is the RISC-V's block RAM (fpu_rv_h3.v), not DDR3 behind the memory
+// arbiter: polling it costs the CPU nothing, so the reply is seen within about 3 clocks
+localparam [5:0] GAP_WAIT  = 6'd1;
+localparam [5:0] GAP_BG    = 6'd1;
+`else
 localparam [5:0] GAP_WAIT  = 6'd4;                  // STATUS poll gap, CPU waiting
 localparam [5:0] GAP_BG    = 6'd32;                 // ... CPU running (leave it the bus)
+`endif
 
 // dialog states
 localparam [3:0] D_IDLE = 4'd0, D_CMD = 4'd1, D_COND = 4'd2, D_DN = 4'd3, D_IN = 4'd4,

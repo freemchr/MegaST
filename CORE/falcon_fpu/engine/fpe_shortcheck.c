@@ -28,9 +28,11 @@ static void value(uint16_t *se, uint64_t *m)
 {
 	uint16_t s = rn(2) ? 0x8000 : 0;
 	uint64_t r = rnd();
-	switch (rn(15)) {
+	switch (rn(17)) {
 	case 0:  *se = s; *m = 0; break;                                            /* zero */
-	case 1:  *se = s; *m = r >> (1 + rn(63)); break;                            /* denormal */
+	case 1:  *se = s; *m = r >> (1 + rn(63));                                   /* denormal */
+		 if (rn(2)) *m &= rn(2) ? 0xffffffff00000000ull : 0xffffffffull;     /* one half 0 */
+		 break;
 	case 2:  *se = s; *m = r | 0x8000000000000000ull; break;                    /* pseudo-denormal */
 	case 3:  *se = s | (1 + rn(0x7ffe)); *m = r & 0x7fffffffffffffffull; break; /* unnormal */
 	case 4:  *se = s | 0x7fff; *m = 0; break;                                   /* infinity */
@@ -48,6 +50,16 @@ static void value(uint16_t *se, uint64_t *m)
 		*se = s | (edge[rn(4)] - 2 + rn(5));
 		*m = (r | 0x8000000000000000ull) & ~((1ull << (rn(2) ? 40 : 11)) - 1); break;
 	}
+	case 13: {      /* an exact rounding tie at a random bit (the roundings to .S .D .L and of
+	                 * the arithmetic: fpe_fastk.h, q_out() in fpe_sf.c) */
+		unsigned p = 1 + rn(63);
+		*se = s | (rn(2) ? 0x3fff - 40 + rn(80) : 0x3fff + rn(32));
+		*m = ((r | 0x8000000000000000ull) & ~((1ull << p) - 1)) | 1ull << (p - 1); break;
+	}
+	case 14:        /* around 2^31: the limit of the conversion to .L */
+		*se = s | (0x401c + rn(4));
+		*m = rn(2) ? r | 0x8000000000000000ull : 0x8000000000000000ull | (rn(2) ? r >> (1 + rn(63)) : 0);
+		break;
 	default: *se = s | (0x3fff - 64 + rn(128)); *m = r | 0x8000000000000000ull; break;
 	}
 }
@@ -62,7 +74,7 @@ static int operand(unsigned fmt, uint8_t *b)
 		uint32_t sg = rn(2) ? 0x80000000u : 0;
 		switch (rn(8)) {
 		case 0: w = sg; break;
-		case 1: w = sg | ((uint32_t)r & 0x7fffff); break;                  /* denormal */
+		case 1: w = sg | (rn(2) ? (uint32_t)r & 0x7fffff : 1u << rn(23)); break; /* denormal */
 		case 2: w = sg | 0x7f800000u; break;
 		case 3: w = sg | 0x7fc00000u | ((uint32_t)r & 0x3fffff); break;   /* quiet NaN */
 		case 4: w = sg | 0x7f800001u | ((uint32_t)r & 0x1fffff); break;   /* SNaN */
@@ -74,7 +86,7 @@ static int operand(unsigned fmt, uint8_t *b)
 		uint64_t sg = rn(2) ? 0x8000000000000000ull : 0, d;
 		switch (rn(8)) {
 		case 0: d = sg; break;
-		case 1: d = sg | (r & 0xfffffffffffffull); break;
+		case 1: d = sg | (rn(2) ? r & 0xfffffffffffffull : 1ull << rn(52)); break;  /* denormal */
 		case 2: d = sg | 0x7ff0000000000000ull; break;
 		case 3: d = sg | 0x7ff8000000000000ull | (r & 0x7ffffffffffffull); break;
 		case 4: d = sg | 0x7ff0000000000001ull | (r & 0x3ffffffffffffull); break;

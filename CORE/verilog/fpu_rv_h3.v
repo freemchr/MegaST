@@ -13,6 +13,11 @@
 //   $00000000  256 KB RAM: code, data, stack (loaded at configuration from G_HEX)
 //   $10000000  1 KB mailbox (guest $E90000..$E903FF): 32-bit words, bytes in memory order
 //   $20000000  debug byte out, $20000004 exit (simulation only, see sim/fpu_rv)
+//   $30000000  64 x 64 bit multiplier (the engine's mul64To128, fpe_fastk.h FPE_HWMUL): write
+//              A low, A high, B low, B high at +0, +4, +8, +C; read the 128-bit product at the
+//              same offsets, low word first. Each write starts it again; a read waits until
+//              the product of the last write is there (5 clocks: the RISC-V's 32 x 32 MULHU
+//              takes 18 on Hazard3 without MULH_FAST, which does not reach 80 MHz)
 //
 // Buses: Hazard3's instruction port reads port A of the RAM, its data port uses port B (RAM)
 // and the mailbox. Both are AHB-Lite: the address phase puts the address on the RAM, which
@@ -122,6 +127,7 @@ reg   [3:0] dp_be;
 reg  [31:0] dp_addr;
 reg         dp_done;            // write done (RAM), or mailbox read issued / done
 reg         mb_rd_pend;         // mailbox read data comes next clock
+reg   [2:0] mul_cnt = 3'd0;     // multiplier: clocks until mul_p holds the product of the last write
 
 // the RAM write of a data phase, and the RAM read of an address phase in the same clock:
 // the write goes first, the read waits a clock
@@ -151,10 +157,41 @@ reg [31:0] mb_q;
 //   mailbox write: written this clock unless the bridge has the port
 //   mailbox read: the access this clock (mb_now), data next clock
 //   debug port: at once
+//   multiplier: a write at once, a read when the product is there
 assign d_hready = !dp ? 1'b1 :
                   dp_sel[0] ? (dp_wr ? !(ram_wr_now && rd_ap_ram) : 1'b1) :
                   dp_sel[1] ? (dp_wr ? mb_now : mb_rd_pend) :
+                  dp_sel[3] ? (dp_wr || mul_cnt == 3'd0) :
                   1'b1;
+
+// ---------------------------------------------------------------------------
+// multiplier: four 32 x 32 products (DSP), registered twice, then their sum in two steps
+// ---------------------------------------------------------------------------
+reg  [31:0] mul_a0 = 32'd0, mul_a1 = 32'd0, mul_b0 = 32'd0, mul_b1 = 32'd0;
+reg  [63:0] mul_ll, mul_lh, mul_hl, mul_hh, mul_ll2, mul_lh2, mul_hl2, mul_hh2;
+reg  [64:0] mul_mid;
+reg  [63:0] mul_ll3, mul_hh3;
+reg [127:0] mul_p;
+always @(posedge clk_96) begin
+	mul_ll <= mul_a0 * mul_b0; mul_lh <= mul_a0 * mul_b1;
+	mul_hl <= mul_a1 * mul_b0; mul_hh <= mul_a1 * mul_b1;
+	mul_ll2 <= mul_ll; mul_lh2 <= mul_lh; mul_hl2 <= mul_hl; mul_hh2 <= mul_hh;
+	mul_mid <= {1'b0, mul_lh2} + {1'b0, mul_hl2};
+	mul_ll3 <= mul_ll2; mul_hh3 <= mul_hh2;
+	mul_p <= {mul_hh3, mul_ll3} + {31'd0, mul_mid, 32'd0};
+	if (mul_cnt != 3'd0) mul_cnt <= mul_cnt - 3'd1;
+	if (dp && dp_wr && dp_sel[3]) begin
+		case (dp_addr[3:2])
+			2'd0: mul_a0 <= d_hwdata;
+			2'd1: mul_a1 <= d_hwdata;
+			2'd2: mul_b0 <= d_hwdata;
+			default: mul_b1 <= d_hwdata;
+		endcase
+		mul_cnt <= 3'd5;
+	end
+end
+wire [31:0] mul_q = dp_addr[3:2] == 2'd0 ? mul_p[31:0] : dp_addr[3:2] == 2'd1 ? mul_p[63:32] :
+                    dp_addr[3:2] == 2'd2 ? mul_p[95:64] : mul_p[127:96];
 
 // port B: the write of a data phase, else the read of an address phase
 wire [15:0] rb_a  = ram_wr_now ? dp_addr[17:2] : d_haddr[17:2];
@@ -196,7 +233,7 @@ always @(posedge clk_96) begin
 	end
 end
 
-always @(*) d_hrdata = dp_sel[1] ? mb_q : ram_qb;
+always @(*) d_hrdata = dp_sel[1] ? mb_q : dp_sel[3] ? mul_q : ram_qb;
 
 // ---------------------------------------------------------------------------
 // mailbox: as in fpu_rv.v (256 x 32 single port, 4 byte lanes, the bridge first)

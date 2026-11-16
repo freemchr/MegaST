@@ -289,6 +289,10 @@ with `MEGA65` comments:
   (which counts the reset only on `cpu_ce` clocks) never took the reset while the devices did: the
   program ran on with reset video registers (garbage on the screen). Found in simulation (20 of 50
   resets missed the CPU, 0 with the fix). Generic, a candidate for upstream.
+* `rtl/falcon/falcon_fpu_bridge.sv`: with `FALCON_FPU_LOCAL` the STATUS poll gaps `GAP_WAIT` and
+  `GAP_BG` are 1 clock (upstream 4 and 32). Upstream they keep the polls off the DDR3 the CPU uses;
+  here the mailbox is the RISC-V's block RAM (`fpu_rv_h3.v`), so the reply is seen about 3 clocks
+  after the RISC-V writes it instead of up to 9 (or 36 while the CPU runs on).
 * `rtl/AP68030/rtl/core/ap030_exec_c.vh` (`S_CPSCC2`): cpScc to memory sets the operand size (byte)
   and the EA selector again before the EA. An interrupt during the condition's come-again (FPU busy,
   IA) is taken with a mid-instruction frame; after its RTE the size was whatever the handler's last
