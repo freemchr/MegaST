@@ -250,6 +250,26 @@ to 640x512 grey (`viking_scale.sv`), which made it blurry on HDMI. Instead, HDMI
 The core selects the SXGA mode while the Viking picture is shown (`mega65.vhd`). VGA keeps the downscaled
 640x512 picture. MegaST-specific (the 108 MHz entry replaces 148.5 MHz).
 
+### Interlaced Falcon modes woven on HDMI (issue #38)
+
+On an RGB or TV monitor the Falcon's 400 and 480 line modes are interlaced: the Videl shows the even lines
+of the picture in one field and the odd lines in the next. M2M builds `ascal` progressive only (`INTER =>
+false`, `i_fl => '0'`), so HDMI showed each field on its own, scaled to the full height, and the picture
+jumped up and down by a line 50 times a second.
+
+* `digital_pipeline.vhd`: `ascal` with `INTER => true` and `i_fl` from the new port `video_fl_i`; ascal
+  then weaves the two fields into one frame (it detects interlace from a toggling `i_fl`; with `i_fl`
+  constantly 0, as from every other port and the ST, nothing changes).
+* `av_pipeline.vhd`, `framework.vhd`, `top_mega65-r3..r6.vhd`, `CORE/vhdl/mega65.vhd`: the port
+  `video_fl_i`/`video_fl_o` (default `'0'` in the framework). It changes once per field, so it bypasses
+  `crop.vhd`'s register stages.
+* The core drives it from `falcon_videl.sv` (`ilace_fl`: 1 in the field with the odd lines, only with VMD
+  bit 1). ascal places a field one line down when `i_fl` was 0 in the field before (`i_flm` is updated in
+  the clock it is used). Test: `CORE/sim/ascal_ilace/run.sh` (GHDL, Videl-like fields on the HyperRAM model
+  of `ascal_reset`, 24 bpp; every output line must show its own source row, interlaced and progressive).
+
+Generic: other cores with interlaced video can drive `video_fl_o` (a candidate for upstream).
+
 ### OSM colours: palette of the core and colour escape (GEM look, logo)
 
 * `M2M/vhdl/av_pipeline/vga_osm.vhd`: the 16 colours of the attribute bits {dark, R, G, B} come from the
@@ -350,4 +370,10 @@ with `MEGA65` comments:
 QNICE
 -----
 
-No changes (`M2M/QNICE` is the submodule of the M2M V2.0.1 template).
+No changes to its files. `M2M/QNICE` is a submodule; the M2M V2.0.1 template pins `2eb27dd`, MegaST
+pins `5ccb507` (`dev-V1.61`, 2026-11-22) for the FAT32 fixes of the monitor (`monitor/fat32_library.asm`):
+the sector buffer is written back before another handle re-fills it, the 32 bit LBA check, and the end
+of a cluster chain ends a directory (QNICE-FPGA issue #204: a folder whose last cluster is completely
+full failed with "Unknown error while trying to browse. Error code: 2704"). Between the two commits no
+VHDL file that the cores use changes (only the emulator, tests and other QNICE targets). Tests:
+`test_programs/fat32_chain.py` (115 cases) and the QNICE emulator tests in `CORE/sim`.

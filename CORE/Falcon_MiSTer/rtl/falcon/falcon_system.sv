@@ -31,8 +31,8 @@ module falcon_system #(parameter CLK_HZ = 32000000)
 	// MiSTer inputs
 	input      [10:0] ps2_key,
 	input      [24:0] ps2_mouse,
-	input      [31:0] joy0,
-	input      [31:0] joy1,
+	input      [31:0] joy0,         // IKBD joystick port 0 (the mouse port), MiSTer format
+	input      [31:0] joy1,         // IKBD joystick port 1 (the game port)
 	input      [31:0] pad0,         // MEGA65: the enhanced joystick ports (joypads) apart from the
 	input      [31:0] pad1,         // IKBD's joysticks (MiSTer: joy0, joy1)
 	input      [15:0] ana0,         // MiSTer left analog sticks (paddles)
@@ -73,6 +73,7 @@ module falcon_system #(parameter CLK_HZ = 32000000)
 	output            hblank,
 	output            vblank,
 	output            ce_pix,
+	output            ilace_fl,       // field of an interlaced picture (falcon_videl.sv)
 
 	// audio
 	output signed [15:0] audio_l,
@@ -603,7 +604,8 @@ falcon_videl #(.CLK_HZ(CLK_HZ)) videl
 	.monitor_type(monitor),
 	.vid_req(vid_req), .vid_addr(vid_addr), .vid_ack(vid_ack), .vid_data(vid_data), .vid_valid(vid_valid),
 	.r(r), .g(g), .b(b), .hsync(hsync), .vsync(vsync), .hblank(hblank), .vblank(vblank),
-	.ce_pix(ce_pix), .de(videl_de), .de_tb(videl_de_tb), .vbl(videl_vbl), .hbl(videl_hbl)
+	.ce_pix(ce_pix), .de(videl_de), .de_tb(videl_de_tb), .vbl(videl_vbl), .hbl(videl_hbl),
+	.ilace_fl(ilace_fl)
 );
 
 // ---- PSG ----
@@ -656,7 +658,7 @@ falcon_acia #(.CLK_HZ(CLK_HZ)) acia
 	.clk(clk), .reset(dev_reset),
 	`DEVBUS(sel_acia), .bus_addr(dev_addr[2:1]), .bus_dout(acia_dout), .bus_ack(acia_ack),
 	.irq(acia_irq),
-	.ps2_key(ps2_key), .ps2_mouse(ps2_mouse), .joystick_0(joy1), .joystick_1(joy0),   // MiSTer joystick 1 -> ST port 1 (games), 2 -> port 0 (mouse port)
+	.ps2_key(ps2_key), .ps2_mouse(ps2_mouse), .joystick_0(joy0), .joystick_1(joy1),   // MEGA65: joy0 = ST port 0 (mouse port), joy1 = port 1 (games), as main.vhd drives them (issue #37)
 	.midi_rx(midi_rx), .midi_tx(midi_tx)
 );
 

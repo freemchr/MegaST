@@ -123,6 +123,7 @@ entity main is
       video_hs_o              : out std_logic;
       video_hblank_o          : out std_logic;
       video_vblank_o          : out std_logic;
+      video_fl_o              : out std_logic;              -- field of an interlaced picture (HDMI scaler weaves the fields)
       video_31khz_o           : out std_logic;              -- 71 Hz monochrome mode or Viking: no scandoubler
       viking_hdmi_o           : out std_logic;              -- Viking picture shown: HDMI 1280x1024 from the frame buffer
       viking_fb_we_o          : out std_logic;              -- clk_sdram_i: Viking pixels into the HDMI frame buffer
@@ -373,6 +374,7 @@ component falcon_m65 is
       hblank          : out   std_logic;
       vblank          : out   std_logic;
       ce_pix          : out   std_logic;
+      ilace_fl        : out   std_logic;
       audio_l         : out   std_logic_vector(15 downto 0);
       audio_r         : out   std_logic_vector(15 downto 0);
       fdd_led         : out   std_logic;
@@ -435,6 +437,7 @@ signal f_fdd_led      : std_logic;
 signal f_hdd_led      : std_logic;
 signal f_r, f_g, f_b  : std_logic_vector(7 downto 0);
 signal f_hs, f_vs, f_hblank, f_vblank, f_ce : std_logic;
+signal f_ilace_fl     : std_logic;
 signal f_audio_l      : std_logic_vector(15 downto 0);
 signal f_audio_r      : std_logic_vector(15 downto 0);
 signal f_reset        : std_logic;
@@ -904,6 +907,7 @@ begin
             hblank          => f_hblank,
             vblank          => f_vblank,
             ce_pix          => f_ce,
+            ilace_fl        => f_ilace_fl,
             audio_l         => f_audio_l,
             audio_r         => f_audio_r,
             fdd_led         => f_fdd_led,
@@ -951,6 +955,7 @@ begin
       f_hblank       <= '1';
       f_vblank       <= '1';
       f_ce           <= '0';
+      f_ilace_fl     <= '0';
       f_audio_l      <= (others => '0');
       f_audio_r      <= (others => '0');
       f_fdd_led      <= '0';
@@ -990,6 +995,10 @@ begin
    video_hblank_o <= f_hblank       when falcon = '1' else st_hblank;
    video_vblank_o <= f_vblank       when falcon = '1' else st_vblank;
    video_ce_o     <= f_ce           when falcon = '1' else st_ce;
+   -- Falcon interlace (RGB/TV monitor, 400/480 line modes, issue #38): the Videl shows the even lines
+   -- in one field and the odd lines in the next. With the field bit, ascal weaves both into one
+   -- picture on HDMI instead of showing each field on its own (flicker). The ST has no interlace.
+   video_fl_o     <= f_ilace_fl     when falcon = '1' else '0';
    -- the Falcon on an RGB or TV monitor sends 15 kHz (scandoubler on), VGA and mono 31/35 kHz
    video_31khz_o  <= not falcon_monitor_i(0) when falcon = '1' else st_31khz;
 

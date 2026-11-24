@@ -175,7 +175,12 @@ module falcon_videl #(
 	output reg        vbl,
 	output reg        hbl,
 	output reg        field,
-	output reg        underrun
+	output reg        underrun,
+	// field of an interlaced picture for the HDMI scaler (ascal i_fl, which weaves the two fields
+	// into one frame): 1 in the field that shows the odd lines, else 0; constantly 0 without
+	// interlace (VMD bit 1). ascal writes a field one line down when i_fl was 0 in the field
+	// before (i_flm is updated in the same clock it is used): CORE/sim/ascal_ilace
+	output wire       ilace_fl
 );
 
 localparam [1:0] MON_MONO = 2'b00, MON_VGA = 2'b10;   // 01 RGB, 11 TV
@@ -773,6 +778,7 @@ reg  [10:0] go_cnt;        // output display lines started in this frame
 reg         fr_dbl;        // frame-latched VMD bit 0: each source line is
                            //   fetched once and displayed twice
 reg         fr_ilace;      // frame-latched VMD bit 1
+assign ilace_fl = fr_ilace & field;    // field 1 fetches the odd lines (base + stride)
 reg         f_restart;
 reg         f_busy;
 reg  [23:5] fb_addr;

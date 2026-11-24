@@ -43,6 +43,7 @@ entity digital_pipeline is
       video_vs_i               : in  std_logic;
       video_hblank_i           : in  std_logic;
       video_vblank_i           : in  std_logic;
+      video_fl_i               : in  std_logic := '0';  -- MegaST: field of interlaced video
       -- MegaST: 1280x1024 1 bpp frame buffer (Viking card), shown 1:1 instead of the scaler's picture
       -- while viking_fb_enable_i is set (the core selects the SXGA mode at the same time)
       viking_fb_clk_i          : in  std_logic;
@@ -335,7 +336,7 @@ begin
          -- to the next power of two
          RAMSIZE   => to_unsigned(2**f_log2(G_VGA_DX * G_VGA_DY * 3), 32),
 
-         INTER     => false,        -- Not needed: Progressive input only
+         INTER     => true,         -- MegaST: the Falcon's interlaced modes (video_fl_i) are woven
          HEADER    => false,        -- Not needed: Used on MiSTer to read the sampled image back from the ARM side to do screenshots. The header provides informations such as image size.
          -- MegaST: the ST line (744 pixels, 840 with full borders) is wider than the 4:3 area of the 576p,
          -- 720x480 and 640x480 modes; without downscaling, ascal cuts off the right part of the line
@@ -359,7 +360,7 @@ begin
          i_b               => unsigned(video_blue_i),       -- input
          i_hs              => video_hs_i,                   -- input
          i_vs              => video_vs_i,                   -- input
-         i_fl              => '0',                          -- input
+         i_fl              => video_fl_i,                   -- input (MegaST)
          i_de              => not (video_hblank_i or video_vblank_i), -- input
          i_ce              => video_ce_i,                   -- input
          i_clk             => video_clk_i,                  -- input

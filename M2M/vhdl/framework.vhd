@@ -132,6 +132,7 @@ port (
    video_hs_i              : in    std_logic;
    video_hblank_i          : in    std_logic;
    video_vblank_i          : in    std_logic;
+   video_fl_i              : in    std_logic := '0';  -- MegaST: field of interlaced video (ascal i_fl)
 
    -- MegaST: a 1280x1024 1 bpp picture (Viking card) shown 1:1 on HDMI in the SXGA mode
    -- (frame buffer in digital_pipeline.vhd); the defaults switch it off
@@ -897,6 +898,7 @@ begin
          video_hs_i              => video_hs_i,
          video_hblank_i          => video_hblank_i,
          video_vblank_i          => video_vblank_i,
+         video_fl_i              => video_fl_i,              -- MegaST
          viking_fb_clk_i         => viking_fb_clk_i,          -- MegaST
          viking_fb_we_i          => viking_fb_we_i,
          viking_fb_addr_i        => viking_fb_addr_i,

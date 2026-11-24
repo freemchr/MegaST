@@ -103,6 +103,7 @@ port (
    video_hs_o              : out std_logic;
    video_hblank_o          : out std_logic;
    video_vblank_o          : out std_logic;
+   video_fl_o              : out std_logic;   -- MegaST: field of an interlaced picture (ascal i_fl)
 
    -- MegaST: the Viking card's 1280x1024 picture 1:1 on HDMI (frame buffer in digital_pipeline.vhd)
    viking_fb_clk_o         : out std_logic;
@@ -719,6 +720,7 @@ begin
          video_hs_o           => video_hs_o,
          video_hblank_o       => video_hblank_o,
          video_vblank_o       => video_vblank_o,
+         video_fl_o           => video_fl_o,
          video_31khz_o        => main_video_31khz,
          viking_hdmi_o        => main_viking_hdmi,
          viking_fb_we_o       => viking_fb_we_o,

@@ -57,8 +57,8 @@ module falcon_m65 #(
 	// keyboard, mouse, joysticks, clock
 	input     [119:0] kbd_matrix_n,   // ST keyboard matrix, low active, bit col*8+row
 	input      [24:0] ps2_mouse,      // MiSTer format
-	input      [31:0] joy0,           // MiSTer format: 0 right, 1 left, 2 down, 3 up, 4 fire
-	input      [31:0] joy1,
+	input      [31:0] joy0,           // IKBD joystick port 0 (mouse port), MiSTer format: 0 right, 1 left, 2 down, 3 up, 4 fire
+	input      [31:0] joy1,           // IKBD joystick port 1 (game port)
 	input      [31:0] pad0,           // enhanced joystick ports A and B (joypads), MiSTer format
 	input      [31:0] pad1,
 	input      [15:0] ana0,           // paddles of the enhanced ports A and B: [7:0] X, [15:8] Y,
@@ -87,6 +87,7 @@ module falcon_m65 #(
 	output            hblank,
 	output            vblank,
 	output            ce_pix,
+	output            ilace_fl,       // field of an interlaced picture, for the HDMI scaler (ascal i_fl)
 	output     [15:0] audio_l,
 	output     [15:0] audio_r,
 	output            fdd_led,
@@ -460,7 +461,7 @@ falcon_system #(.CLK_HZ(CLK_HZ)) system (
 	.img_mounted(s_mounted), .img_readonly(s_ro), .img_size({32'd0, s_size}),
 	.sd_lba(f_lba), .sd_rd(f_rd), .sd_wr(f_wr), .sd_blk_cnt(f_blk_cnt), .sd_ack(s_ack),
 	.sd_buff_addr(f_buff_addr), .sd_buff_dout(f_buff_dout), .sd_buff_din(f_buff_din), .sd_buff_wr(f_buff_wr),
-	.r(r), .g(g), .b(b), .hsync(hsync), .vsync(vsync), .hblank(hblank), .vblank(vblank), .ce_pix(ce_pix),
+	.r(r), .g(g), .b(b), .hsync(hsync), .vsync(vsync), .hblank(hblank), .vblank(vblank), .ce_pix(ce_pix), .ilace_fl(ilace_fl),
 	.audio_l(audio_l), .audio_r(audio_r),
 	.ext_fd(real_fd), .wd_sel(wd_sel), .wd_addr(wd_addr), .wd_rw(wd_rw), .wd_din(wd_din),
 	.wd_dout(wd_dout), .wd_irq(wd_irq), .wd_drq(wd_drq), .fd_sel_n(fd_sel_n), .fd_side_n(fd_side_n),

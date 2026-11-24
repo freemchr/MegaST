@@ -44,6 +44,7 @@ entity av_pipeline is
       video_hs_i              : in  std_logic;
       video_hblank_i          : in  std_logic;
       video_vblank_i          : in  std_logic;
+      video_fl_i              : in  std_logic := '0';   -- MegaST: field of interlaced video (ascal i_fl)
       -- MegaST: Viking card picture 1:1 on HDMI (see digital_pipeline)
       viking_fb_clk_i         : in  std_logic;
       viking_fb_we_i          : in  std_logic;
@@ -565,6 +566,7 @@ begin
          video_vs_i               => video_crop_vs,
          video_hblank_i           => video_crop_hblank,
          video_vblank_i           => video_crop_vblank,
+         video_fl_i               => video_fl_i,   -- MegaST: changes once per field, no crop delay needed
          viking_fb_clk_i         => viking_fb_clk_i,          -- MegaST
          viking_fb_we_i          => viking_fb_we_i,
          viking_fb_addr_i        => viking_fb_addr_i,

@@ -1,6 +1,20 @@
-Version 1.6 - in progress (1.6-test5)
+Version 1.6 - in progress (1.6-test6)
 =====================================
 
+* **Falcon: joystick in games** (issue #37): the joystick in the ST's joystick port (port 1) reached the
+  Falcon's keyboard processor as port 0, the mouse port. Games that read the joystick through the
+  keyboard processor (STOS, most ST games) saw no joystick. It now arrives as port 1, as on the ST core.
+  The STe joypads ($FF9200) were not affected.
+* **Falcon: interlaced modes without flicker on HDMI** (issue #38): with an RGB or TV monitor, the
+  Falcon's 400 and 480 line modes are interlaced: one field shows the even lines, the next the odd lines.
+  HDMI showed each field on its own, so the picture jumped by a line 50 times a second. The HDMI scaler now
+  weaves both fields into one picture. VGA output and the ST are unchanged.
+* **File browser: "Error code: 2704" in some folders** (QNICE-FPGA issue #204): a folder whose
+  directory exactly fills its last cluster on the SD card (for example about 88 files with long names)
+  stopped the core with "FATAL ERROR: SD Card: Unknown error while trying to browse. Error code:
+  2704", although the card is fine. The FAT32 code of the QNICE firmware read past the end of such a
+  directory. Fixed upstream (QNICE-FPGA by sy2002, found by Mikey351AU); MegaST uses the fixed version,
+  which also writes buffered data back before it reads another file.
 * **Falcon: the FPU is faster** (issue #35): the 68882 runs as a program on a small RISC-V CPU in
   the FPGA, and most of each instruction went into general code around the calculation. A short
   path now does the common instructions (FMOVE, FADD, FSUB, FMUL, FDIV, FSQRT, FABS, FNEG, FCMP,

@@ -101,6 +101,9 @@ simulation):
 * `CORE/sim/ascal_reset/run.sh [trials] [seed]`: the HDMI scaler (ascal, avm_decrease, arbiter, HyperRAM model)
   with resets at random moments, reset button and Help-menu reset (issue #26); `BUG=1` puts the old ascal
   line back (froze 4 of 48), with the fix none of 64
+* `CORE/sim/ascal_ilace/run.sh`: the HDMI scaler with the Falcon's interlaced fields (issue #38): fields like
+  the Videl's (odd rows, even rows, `ilace_fl`) on the HyperRAM model; every output line must show its own
+  source row, interlaced (woven) and progressive
 * `CORE/sim/fastseek/run.sh`: the fast seek of the firmware in the QNICE emulator (FAT32 image
   with fragmented files, compared with the FAT32 library)
 * `CORE/sim/mntmem/run.sh`: remembering the mounted images (`M2M/rom/mntmem.asm`) in the QNICE

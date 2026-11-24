@@ -301,6 +301,7 @@ architecture synthesis of mega65_r4 is
    signal video_green            : std_logic_vector(7 downto 0);
    signal video_blue             : std_logic_vector(7 downto 0);
    signal video_vs               : std_logic;
+   signal video_fl               : std_logic;   -- MegaST
    signal video_hs               : std_logic;
    signal video_hblank           : std_logic;
    signal video_vblank           : std_logic;
@@ -604,6 +605,7 @@ begin
       video_green_i           => video_green,
       video_blue_i            => video_blue,
       video_vs_i              => video_vs,
+      video_fl_i              => video_fl,      -- MegaST
       video_hs_i              => video_hs,
       video_hblank_i          => video_hblank,
       video_vblank_i          => video_vblank,
@@ -776,6 +778,7 @@ begin
          video_green_o           => video_green,
          video_blue_o            => video_blue,
          video_vs_o              => video_vs,
+         video_fl_o              => video_fl,      -- MegaST
          video_hs_o              => video_hs,
          video_hblank_o          => video_hblank,
          video_vblank_o          => video_vblank,
