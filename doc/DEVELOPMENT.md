@@ -106,6 +106,11 @@ simulation):
   source row, interlaced (woven) and progressive
 * `CORE/sim/fastseek/run.sh`: the fast seek of the firmware in the QNICE emulator (FAT32 image
   with fragmented files, compared with the FAT32 library)
+* `CORE/sim/ubcopy/run.sh`: the sector-wise transfer of the hard disk images (`M2M/rom/vd_ubcopy.asm`)
+  in the QNICE emulator: random reads and writes of 1 to 1536 bytes (aligned, unaligned, sequential,
+  across the end of the file, another file taking the SD buffer in between) on fragmented and contiguous
+  FAT32 images, checked against the file content; then the QNICE instructions for 256 KB read and
+  written, new code against the old byte loop (the drive buffer is a RAM array, `VD_UBC_SIM`)
 * `CORE/sim/mntmem/run.sh`: remembering the mounted images (`M2M/rom/mntmem.asm`) in the QNICE
   emulator: path tracking of the file browser, saving to and restoring from `/atarist/stmount` on a
   FAT32 image, with stubs for the rest of the shell
@@ -260,8 +265,10 @@ TOS 4.04 + ICD alike (about 33 KB/s each way), so single transfers must stall fo
 now and then. Upstream
 EmuTOS uses length / 64 since emutos#81. Apply the patch to every new EmuTOS image before a release
 (the offset depends on the build: find `moveq #10,d0; asr.l d0,d6; cmpi.l #200,d6` in a disassembly).
-`tos.img` (ST, ACSI) is unchanged. The real cure is a faster SD path: the firmware writes unbuffered
-drives with one `f32_fwrite` call per byte (`VD_UB_WRITE`, `M2M/rom/shell.asm`).
+`tos.img` (ST, ACSI) is unchanged. The real cure is a faster SD path: up to 1.6-test6 the firmware
+moved unbuffered drives with one `f32_fread` / `f32_fwrite` call per byte (`VD_UB_READ` /
+`VD_UB_WRITE`, `M2M/rom/shell.asm`); since then it copies sector-wise (`M2M/rom/vd_ubcopy.asm`,
+about 8.6 times fewer QNICE instructions; speed on hardware not measured yet).
 
 `tools/JTAG.md` describes the JTAG tools used for debugging on the real hardware (a TE0790 adapter
 and Vivado's hardware manager, no ILA needed).

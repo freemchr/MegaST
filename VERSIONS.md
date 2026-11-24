@@ -1,6 +1,11 @@
-Version 1.6 - in progress (1.6-test6)
+Version 1.6 - in progress (1.6-test7)
 =====================================
 
+* **Hard disks faster** (issue #38): the firmware moved every byte of a hard disk image on its own
+  through the FAT32 code (about 33 KB/s, measured in issue #34). It now copies each sector in one go
+  between the SD card controller and the core, with about 8.6 times fewer instructions of the
+  firmware CPU. ST and Falcon, all hard disk types (ACSI, IDE, SCSI). Floppies are not affected (they
+  are loaded into memory).
 * **Falcon: joystick in games** (issue #37): the joystick in the ST's joystick port (port 1) reached the
   Falcon's keyboard processor as port 0, the mouse port. Games that read the joystick through the
   keyboard processor (STOS, most ST games) saw no joystick. It now arrives as port 1, as on the ST core.

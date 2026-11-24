@@ -86,6 +86,7 @@ Simulate first. Every hardware round trip costs the maintainer time.
 * `CORE/sim/ascal_ilace/run.sh`: HDMI scaler weaving the Falcon's interlaced fields (#38).
 * `CORE/sim/real_floppy/run_wf1772.sh`: WF1772 floppy controller, original vs. clock enable version (4 min).
 * `CORE/sim/fastseek/run.sh`: firmware fast seek in the QNICE emulator.
+* `CORE/sim/ubcopy/run.sh`: sector-wise hard disk transfer of the firmware (`M2M/rom/vd_ubcopy.asm`) in the QNICE emulator.
 * `CORE/sim/mntmem/run.sh`: remembering the mounted images (`/atarist/fcmount`) in the QNICE emulator.
 * `CORE/sim/rosmfix/run.sh [fccfg]`: the check of a loaded settings file (`/atarist/fccfg`) against the menu, QNICE emulator.
 * `CORE/sim/falcon_m65/build.sh` (`FPU=1 MDIR=obj_fpu`): Verilator bench of the Falcon as the core uses it

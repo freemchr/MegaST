@@ -1234,6 +1234,8 @@ _VDUBS_RET      DECRB
                 RET
 
 #include "vd_fastseek.asm"
+; MegaST: sector-wise transfer for VD_UB_READ / VD_UB_WRITE
+#include "vd_ubcopy.asm"
 
 ; Serve a read request of an unbuffered drive
 ; Input:   R8: virtual drive number
@@ -1258,31 +1260,10 @@ _VDUBR_1        MOVE    R0, R8                  ; R2: amount of bytes
                 MOVE    1, R10
                 RSUB    VD_DRV_WRITE, 1
 
-                XOR     R3, R3                  ; R3: transmitted bytes
-_VDUBR_LOOP     CMP     R3, R2                  ; done?
-                RBRA    _VDUBR_DONE, Z
-
-                MOVE    R1, R8                  ; read next byte from file
-                SYSCALL(f32_fread, 1)
-                CMP     0, R10                  ; EOF or error: send zeros
-                RBRA    _VDUBR_2, Z
-                XOR     R9, R9
-_VDUBR_2        MOVE    R9, R4                  ; R4: byte
-
-                MOVE    VD_B_ADDR, R8           ; write buffer: address
-                MOVE    R3, R9
-                RSUB    VD_CAD_WRITE, 1
-                MOVE    VD_B_DOUT, R8           ; write buffer: data out
-                MOVE    R4, R9
-                RSUB    VD_CAD_WRITE, 1
-                MOVE    VD_B_WREN, R8           ; strobe write enable
-                MOVE    1, R9
-                RSUB    VD_CAD_WRITE, 1
-                XOR     R9, R9
-                RSUB    VD_CAD_WRITE, 1
-
-                ADD     1, R3                   ; next byte
-                RBRA    _VDUBR_LOOP, 1
+                ; MegaST: sector-wise transfer (vd_ubcopy.asm)
+                MOVE    R1, R8                  ; file -> drive buffer
+                MOVE    R2, R9
+                RSUB    VD_UB_RDATA, 1
 
 _VDUBR_DONE     MOVE    R0, R8                  ; unassert ACK
                 MOVE    VD_ACK, R9
@@ -1310,26 +1291,15 @@ _VDUBW_1        MOVE    R0, R8                  ; R2: amount of bytes
                 RSUB    VD_DRV_READ, 1
                 MOVE    R8, R2
 
-                XOR     R3, R3                  ; R3: written bytes
-_VDUBW_LOOP     CMP     R3, R2                  ; done?
-                RBRA    _VDUBW_DONE, Z
-
-                MOVE    VD_B_ADDR, R8           ; read buffer: address
-                MOVE    R3, R9
-                RSUB    VD_CAD_WRITE, 1
-                MOVE    R0, R8                  ; read byte from the drive
-                MOVE    VD_B_DIN, R9
-                RSUB    VD_DRV_READ, 1
-                MOVE    R8, R9                  ; write byte to the file
-                MOVE    R1, R8
-                SYSCALL(f32_fwrite, 1)
+                ; MegaST: sector-wise transfer (vd_ubcopy.asm)
+                MOVE    R1, R8                  ; drive buffer -> file
+                MOVE    R2, R9
+                MOVE    R0, R10
+                RSUB    VD_UB_WDATA, 1
                 CMP     0, R9                   ; write successful?
-                RBRA    _VDUBW_2, Z             ; yes
+                RBRA    _VDUBW_DONE, Z          ; yes
                 MOVE    ERR_FATAL_WRITE, R8     ; no, R9 contains err. no.
                 RBRA    FATAL, 1
-
-_VDUBW_2        ADD     1, R3                   ; next byte
-                RBRA    _VDUBW_LOOP, 1
 
 _VDUBW_DONE     MOVE    R1, R8                  ; write the sector buffer
                 SYSCALL(f32_fflush, 1)

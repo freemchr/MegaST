@@ -102,6 +102,14 @@ shorter than 1 ms, and ST software does not need debounced joysticks.
   `FAT32$FILE_SEEK` follows the cluster chain from the start of the file, which takes minutes for large
   images; the chain is scanned once at mount time instead (checkpoints, or a plain calculation for
   contiguous files). Tested with `CORE/sim/fastseek/run.sh` (QNICE emulator).
+* `M2M/rom/vd_ubcopy.asm` (new, included by `shell.asm`): sector-wise transfer. `VD_UB_READ` and
+  `VD_UB_WRITE` call `VD_UB_RDATA` / `VD_UB_WDATA` instead of one `f32_fread` / `f32_fwrite` plus four
+  vdrives calls per byte. Only one byte per sector goes through the FAT32 library (it flushes, follows
+  the cluster chain, loads the sector and owns the SD buffer); the rest of the sector is copied
+  directly between the SD controller (`IO$SD_DATA_POS` / `IO$SD_DATA`) and the drive buffer, and
+  `FDH_INDEX` / `FDH_ACCESS` are advanced like `FAT32$FILE_RWB` does it. About 8.6 times fewer QNICE
+  instructions. Tested with `CORE/sim/ubcopy/run.sh` (QNICE emulator). Note: the firmware now ends at
+  `0x6974`, about 140 words below the `0x7000` MMIO window.
 * `M2M/rom/shell_vars.asm`: checkpoint tables `VD_UB_CP*` for the fast seek.
 * `M2M/rom/strings.asm`: `STR_VD_SCAN` ("Scanning disk image...").
 
