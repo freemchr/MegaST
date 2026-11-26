@@ -91,7 +91,7 @@ Simulate first. Every hardware round trip costs the maintainer time.
 * `CORE/sim/rosmfix/run.sh [fccfg]`: the check of a loaded settings file (`/atarist/fccfg`) against the menu, QNICE emulator.
 * `CORE/sim/falcon_m65/build.sh` (`FPU=1 MDIR=obj_fpu`): Verilator bench of the Falcon as the core uses it
   (`falcon_m65.sv`). `run_prg.sh OUT PROG [DIR] -- [options]` runs a program from `C:\AUTO` (tests in
-  `tests/*.s`: joypad, ikbdjoy, ttram, membench, dsp; or an NF4 demo with its directory, `FASTLOAD=1`);
+  `tests/*.s`: joypad, ikbdjoy, ttram, membench, dsp, ilace + `ilace_check.py`; or an NF4 demo with its directory, `FASTLOAD=1`);
   `simrom.py` makes a faster booting EmuTOS copy for `TOS=`. Options: `--monitor`, `--turbo`, `--fastram`,
   `--rfloppy`, `--pad`, `--joy`, `--wav`, `--nvram`, `--cart`, `--start`/`--done`/`--dump`, `--reset T:US`;
   `XDEFS=+define+BUS_STATS MDIR=obj_bs` logs the clocks of turbo RAM cycles (`falcon_cpubus.sv`),

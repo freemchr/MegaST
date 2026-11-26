@@ -277,6 +277,7 @@ int main(int argc, char **argv) {
     std::vector<uint8_t> fb(2048 * 1200 * 3);
     int fx = 0, fy = 0, maxx = 0, frame_no = 0;
     bool prev_hb = true, prev_vb = true, prev_kbd_rd = false;
+    int fr_fl = 0;
     // vsync as the HDMI scaler (ascal) sees it: sampled with ce_pix, a rising edge ends an input frame
     // (issue #26: HDMI froze after a reset). A gap of more than 40 ms is logged with the number of
     // vblank starts in it.
@@ -443,6 +444,7 @@ int main(int argc, char **argv) {
             prev_vs = top->vsync;
             if (vb && !prev_vb) vs_gap_vb++;
             if (!hb && !vb) {
+                if (fx == 0 && fy == 0) fr_fl = top->ilace_fl;   // ilace_fl at the first DE line (as ascal's i_flm)
                 if (fx < 2048 && fy < 1200) {
                     uint8_t *p = &fb[(fy * 2048 + fx) * 3];
                     p[0] = top->r; p[1] = top->g; p[2] = top->b;
@@ -458,7 +460,7 @@ int main(int argc, char **argv) {
                         fprintf(o, "P6\n%d %d\n255\n", maxx, fy);
                         for (int y = 0; y < fy; y++) fwrite(&fb[y * 2048 * 3], 1, maxx * 3, o);
                         fclose(o);
-                        printf("[%9.3f ms] frame %d: %dx%d\n", now_ms, frame_no, maxx, fy);
+                        printf("[%9.3f ms] frame %d: %dx%d fl %d\n", now_ms, frame_no, maxx, fy, fr_fl);
                     }
                     frame_no++;
                 }

@@ -20,7 +20,7 @@ ghdl -a --std=08 -frelaxed -Wno-hide -Wno-shared --workdir="$W" "$W/ascal.vhd" $
 ghdl -e --std=08 -frelaxed --workdir="$W" -Wl,-L"$W/lib" -o "$W/tb" tb_ascal_ilace
 rc=0
 for il in true false; do
-   out=$("$W/tb" -gG_ILACE=$il --ieee-asserts=disable 2>&1 | grep -v "^$")
+   out=$("$W/tb" -gG_ILACE=$il ${HA:+-gG_HA=$HA} ${LEAD:+-gG_LEAD=$LEAD} --ieee-asserts=disable 2>&1 | grep -v "^$")
    echo "interlaced=$il:"; echo "$out" | grep -E "RESULT|frame |error|bound" | sed "s/^.*(report note): /   /"
    echo "$out" | grep -q "RESULT: OK" || rc=1
 done

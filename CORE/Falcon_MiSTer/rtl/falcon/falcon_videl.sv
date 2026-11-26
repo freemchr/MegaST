@@ -177,9 +177,10 @@ module falcon_videl #(
 	output reg        field,
 	output reg        underrun,
 	// field of an interlaced picture for the HDMI scaler (ascal i_fl, which weaves the two fields
-	// into one frame): 1 in the field that shows the odd lines, else 0; constantly 0 without
-	// interlace (VMD bit 1). ascal writes a field one line down when i_fl was 0 in the field
-	// before (i_flm is updated in the same clock it is used): CORE/sim/ascal_ilace
+	// into one frame): 1 in the field that goes on the odd output lines, else 0; constantly 0
+	// without interlace (VMD bit 1). ascal writes a field one line down when i_fl was 0 in the field
+	// before (i_flm is updated in the same clock it is used): CORE/sim/ascal_ilace. Which field that
+	// is depends on the visible lines above the picture in each field (il_swap, issue #38).
 	output wire       ilace_fl
 );
 
@@ -546,6 +547,14 @@ reg  [3:0] lt_bank;
 reg  [9:0] lt_lwd;
 reg [14:0] de_cnt;
 reg        vbl_done;                // VBL already given in this field
+// MEGA65 (issue #38): interlace weave on HDMI. The two fields can have a different number of visible
+// (unblanked) lines above the first picture line (VFC counts half lines; with TOS's RGB 640x400 the
+// field with the odd rows has one more). ascal weaves by visible line, so ilace_fl must say which
+// field goes on the odd output lines; a fixed choice swapped every pair of lines (combing).
+reg [10:0] il_cnt;                  // visible lines of this field so far (counted at HDB)
+reg        il_seen;                 // the first picture line of this field has come
+reg [10:0] il_lead_e, il_lead_o;    // visible lines above the picture: field 0 (even rows), 1 (odd rows)
+reg        il_swap;                 // the field with the even rows goes on the odd output lines
 
 // positions in base clocks within the line
 wire [9:0]  lt_h   = {1'b0, lt_hht} + 10'd2;
@@ -642,6 +651,7 @@ always @(posedge clk) begin
 		de_cnt <= 15'd0; vbl_done <= 1'b0; lt_lwd <= 10'd0;
 		dl_par <= 1'b0; pend_rep <= 1'b0; pend_dbl <= 1'b0; de_rep <= 1'b0; out_par <= 1'b0; lt_dbl <= 1'b0;
 		field <= 1'b0;
+		il_cnt <= 11'd0; il_seen <= 1'b0; il_lead_e <= 11'd0; il_lead_o <= 11'd0; il_swap <= 1'b0;
 		lt_clk25 <= 1'b0;
 		lt_bpl <= 3'd2; lt_cyc <= 2'd0; lt_sd <= 3'd1; lt_st <= 1'b0; lt_mono <= 1'b0; lt_vco8 <= 1'b1;
 		lt_hht <= 9'd198; lt_hbb <= 9'd0; lt_hbe <= 9'd0; lt_hss <= 9'd0; lt_hdb <= 10'd0;
@@ -687,6 +697,11 @@ always @(posedge clk) begin
 				if (!vbl_done) vbl <= 1'b1;
 				vbl_done <= 1'b0;
 				field <= ~field;
+				// MEGA65: interlace weave (#38). Picture row r must land on output line r + C: field f
+				// puts row 2j+f on visible line lead_f + j, i.e. output line 2*lead_f + 2j + (down).
+				// The odd rows go down unless they start lower (lead_o > lead_e): then the even rows go down.
+				il_cnt <= 11'd0; il_seen <= 1'b0;
+				il_swap <= (il_lead_o > il_lead_e);
 			end
 		end
 		if (hpos == 15'd0) begin
@@ -706,6 +721,13 @@ always @(posedge clk) begin
 		if (hpos == pos_hss) begin hsync_s <= 1'b1; if (!lt_dbl || out_par) hbl <= 1'b1; end
 		if (hpos == pos_hbe) hblank_s <= 1'b0;
 		if (hpos == pos_hbb) hblank_s <= 1'b1;
+		if (hpos == pos_hdb && !vblank_s) begin   // MEGA65: interlace weave (#38)
+			il_cnt <= il_cnt + 11'd1;
+			if (vcond && !il_seen) begin
+				il_seen <= 1'b1;
+				if (field) il_lead_o <= il_cnt; else il_lead_e <= il_cnt;
+			end
+		end
 		if (hpos == pos_hdb) begin
 			line_pend <= vcond;
 			if (vcond) begin
@@ -778,7 +800,7 @@ reg  [10:0] go_cnt;        // output display lines started in this frame
 reg         fr_dbl;        // frame-latched VMD bit 0: each source line is
                            //   fetched once and displayed twice
 reg         fr_ilace;      // frame-latched VMD bit 1
-assign ilace_fl = fr_ilace & field;    // field 1 fetches the odd lines (base + stride)
+assign ilace_fl = fr_ilace & (field ^ il_swap);   // 1: this field goes on the odd output lines (MEGA65, #38)
 reg         f_restart;
 reg         f_busy;
 reg  [23:5] fb_addr;

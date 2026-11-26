@@ -16,20 +16,25 @@ use ieee.math_real.all;
 entity tb_ascal_ilace is
    generic (
       G_ILACE  : boolean := true;
-      G_FRAMES : natural := 12          -- output frames checked
+      G_FRAMES : natural := 12;         -- output frames checked
+      G_HA     : natural := 160;        -- input line width (128 at 24 bpp: a whole number of 128-byte bursts)
+      -- the field with the odd rows has one more visible line above the picture (as TOS's RGB 640x400 on the
+      -- Videl); falcon_videl.sv then puts the field with the even rows on the odd output lines (i_fl inverted)
+      G_LEAD   : boolean := false
    );
 end entity tb_ascal_ilace;
 
 architecture sim of tb_ascal_ilace is
 
    -- input video (Falcon side): 160x120 picture, 25 MHz; interlaced: fields of 60 lines (68 in total)
-   constant I_HT : natural := 200; constant I_HA : natural := 160;
+   constant I_HT : natural := 200; constant I_HA : natural := G_HA;
    function sel(c : boolean; a, b : natural) return natural is
    begin if c then return a; else return b; end if; end function;
    constant I_VT : natural := sel(G_ILACE, 68, 135); constant I_VA : natural := sel(G_ILACE, 60, 120);
    constant I_VS0 : natural := sel(G_ILACE, 63, 125); constant I_VS1 : natural := sel(G_ILACE, 65, 127);
    constant I_HS0 : natural := 170; constant I_HS1 : natural := 185;
 
+   constant LEAD : boolean := G_LEAD and G_ILACE;
    signal hr_clk, i_clk, o_clk : std_logic := '0';
    signal done : boolean := false;
 
@@ -119,8 +124,10 @@ begin
    i_hs <= '1' when core_rst = '0' and i_hc >= I_HS0 and i_hc < I_HS1 else '0';
    i_vs <= '1' when core_rst = '0' and i_vc >= I_VS0 and i_vc < I_VS1 else '0';
    -- field 1 fetches the odd rows (falcon_videl.sv: base + stride)
-   i_row <= 2 * i_vc + 1 when G_ILACE and field = '1' else 2 * i_vc when G_ILACE else i_vc;
-   i_fl  <= field when G_ILACE else '0';   -- falcon_videl.sv ilace_fl
+   i_row <= 255 when G_ILACE and G_LEAD and field = '1' and i_vc = 0 else             -- border line
+            2 * (i_vc - 1) + 1 when G_ILACE and G_LEAD and field = '1' else
+            2 * i_vc + 1 when G_ILACE and field = '1' else 2 * i_vc when G_ILACE else i_vc;
+   i_fl  <= (field xor '1') when G_ILACE and G_LEAD else field when G_ILACE else '0';   -- falcon_videl.sv ilace_fl
    i_r   <= x"00";
    i_g   <= to_unsigned(i_row, 8);
    i_b   <= x"00";
@@ -287,7 +294,9 @@ begin
                if (ln <= 8 or ln > 112) and sp + 4 <= 64 then
                   seq(sp to sp + 2) := integer'image(got + 1000)(2 to 4); seq(sp + 3) := ' '; sp := sp + 4;
                end if;
-               if got /= ln - 1 then
+               -- G_LEAD: the picture starts one output line down, line 0 is the border
+               if (not LEAD and got /= ln - 1) or (LEAD and ln = 1 and got /= 255) or
+                  (LEAD and ln > 1 and got /= ln - 2) then
                   bad := bad + 1;
                   if fb < 0 then fb := ln - 1; fg := got; end if;
                end if;

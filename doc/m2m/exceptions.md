@@ -271,10 +271,17 @@ jumped up and down by a line 50 times a second.
 * `av_pipeline.vhd`, `framework.vhd`, `top_mega65-r3..r6.vhd`, `CORE/vhdl/mega65.vhd`: the port
   `video_fl_i`/`video_fl_o` (default `'0'` in the framework). It changes once per field, so it bypasses
   `crop.vhd`'s register stages.
-* The core drives it from `falcon_videl.sv` (`ilace_fl`: 1 in the field with the odd lines, only with VMD
-  bit 1). ascal places a field one line down when `i_fl` was 0 in the field before (`i_flm` is updated in
-  the clock it is used). Test: `CORE/sim/ascal_ilace/run.sh` (GHDL, Videl-like fields on the HyperRAM model
-  of `ascal_reset`, 24 bpp; every output line must show its own source row, interlaced and progressive).
+* The core drives it from `falcon_videl.sv` (`ilace_fl`: 1 in the field that goes on the odd output
+  lines, only with VMD bit 1). ascal places a field one line down when `i_fl` was 0 in the field before
+  (`i_flm` is updated in the clock it is used), and it counts visible (unblanked) lines, not picture
+  lines. The two fields can have a different number of visible lines above the picture: in TOS's RGB
+  640x400 the field with the odd rows has one more (1.6-test6/7 always put the odd rows down, which
+  swapped every pair of lines). The Videl counts them per field (`il_lead_e`/`il_lead_o`) and puts the
+  even rows down when the odd rows start lower (`il_swap`). Tests: `CORE/sim/ascal_ilace/run.sh` (GHDL,
+  Videl-like fields on the HyperRAM model of `ascal_reset`, 24 bpp; every output line must show its own
+  source row, interlaced and progressive; `LEAD=true`: one more border line in the odd field, `HA=128`:
+  lines of whole bursts) and `CORE/sim/falcon_m65/tests/ilace.s` (the real Videl, RGB 640x400 interlaced;
+  `ilace_check.py` weaves the frames as ascal does: the 400 rows must come in order).
 
 Generic: other cores with interlaced video can drive `video_fl_o` (a candidate for upstream).
 

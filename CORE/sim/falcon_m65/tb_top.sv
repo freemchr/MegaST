@@ -59,6 +59,7 @@ module tb_top (
 	output            hsync,
 	output            vsync,
 	output            ce_pix,
+	output            ilace_fl,         // field of an interlaced picture (ascal i_fl, issue #38)
 	output     [15:0] audio_l,
 	output     [15:0] audio_r,
 
@@ -107,7 +108,7 @@ falcon_m65 #(.CLK_HZ(32083333)) dut (
 	.img_mounted(img_mounted), .img_readonly(1'b0), .img_size(img_size),
 	.sd_lba(sd_lba), .sd_rd(sd_rd), .sd_wr(sd_wr), .sd_ack(sd_ack),
 	.sd_buff_addr(sd_buff_addr), .sd_buff_dout(sd_buff_dout), .sd_buff_din(sd_buff_din), .sd_buff_wr(sd_buff_wr),
-	.r(r), .g(g), .b(b), .hsync(hsync), .vsync(vsync), .hblank(hblank), .vblank(vblank), .ce_pix(ce_pix),
+	.r(r), .g(g), .b(b), .hsync(hsync), .vsync(vsync), .hblank(hblank), .vblank(vblank), .ce_pix(ce_pix), .ilace_fl(ilace_fl),
 	.audio_l(audio_l), .audio_r(audio_r), .fdd_led(), .hdd_led(), .dbg(dbg_f),
 	.midi_rx(1'b1), .midi_tx(), .ser_rx(1'b1), .ser_tx(),
 	.real_fd(real_fd), .fd_retry(1'b1), .rfd_sel_a(rfd_sel_a), .rfd_motor(rfd_motor), .rfd_side(rfd_side),

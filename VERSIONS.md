@@ -1,4 +1,4 @@
-Version 1.6 - in progress (1.6-test7)
+Version 1.6 - in progress (1.6-test8)
 =====================================
 
 * **Hard disks faster** (issue #38): the firmware moved every byte of a hard disk image on its own
@@ -14,6 +14,10 @@ Version 1.6 - in progress (1.6-test7)
   Falcon's 400 and 480 line modes are interlaced: one field shows the even lines, the next the odd lines.
   HDMI showed each field on its own, so the picture jumped by a line 50 times a second. The HDMI scaler now
   weaves both fields into one picture. VGA output and the ST are unchanged.
+  1.6-test8: 1.6-test6 and test7 wove the fields in the wrong order (every two lines swapped, combing
+  on text and edges). In TOS's interlaced RGB modes the field with the odd lines has one more border line
+  above the picture, so its first line belonged below the even field's first line, not above it. The
+  Videl now counts the border lines of each field and tells the scaler which field goes where.
 * **File browser: "Error code: 2704" in some folders** (QNICE-FPGA issue #204): a folder whose
   directory exactly fills its last cluster on the SD card (for example about 88 files with long names)
   stopped the core with "FATAL ERROR: SD Card: Unknown error while trying to browse. Error code:
